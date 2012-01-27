@@ -22,6 +22,13 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
   def is_visible() = is_state(VIS, VIS2VIS)
 
   override def toString = name
+  override def clone =
+  {
+    val res = new HWReg(name, readable, writable)
+    res.state = state
+    res.readers = readers
+    res
+  }
 }
 
 object HWReg
@@ -74,6 +81,16 @@ class HWRegPool
     for (i <- 1 to 31)
       hwregs += new HWReg("x" + i.toString(), true, true)
   }
+
+  override def clone =
+  {
+    val res = new HWRegPool
+
+    for (hwreg <- hwregs)
+      res.hwregs += hwreg.clone
+
+    res
+  }
 }
 
 import HWReg._
@@ -81,6 +98,7 @@ import HWReg._
 class HWRegAllocator
 {
   val regs = new ArrayBuffer[Reg]
+  var allocated = false
 
   def reg_fn(filter: (HWReg) => Boolean, alloc: (HWReg) => Unit, free: (HWReg) => Unit) =
   {
@@ -99,18 +117,26 @@ class HWRegAllocator
 
   def allocate_regs(hwrp: HWRegPool, real: Boolean): Boolean =
   {
-    var hwregs = hwrp.hwregs
-    if (!real) hwregs = hwrp.hwregs.clone()
+    var _hwrp = hwrp
+
+    if (!real)
+      _hwrp = hwrp.clone
 
     for (reg <- regs)
     {
       val regna = reg.asInstanceOf[RegNeedsAlloc]
-      val candidates = hwregs.filter(regna.filter)
-      if (candidates.length == 0) return false
-      val hwreg = candidates(rand_range(0, candidates.length-1))
+      val candidates = _hwrp.hwregs.filter(regna.filter)
+
+      if (candidates.length == 0)
+        return false
+
+      val hwreg = rand_array[HWReg](candidates)
       regna.alloc(hwreg)
       regna.hwreg = hwreg
     }
+
+    if (real)
+      allocated = true
 
     return true
   }

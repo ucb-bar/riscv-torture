@@ -1,6 +1,7 @@
 package torture
 
 import scala.util.Random
+import scala.collection.mutable.ArrayBuffer
 
 object Rand
 {
@@ -26,5 +27,10 @@ object Rand
     var res = rand()
     while (filter(res)) res = rand()
     res
+  }
+
+  def rand_array[T](array: ArrayBuffer[T]) =
+  {
+    array(rand_range(0, array.length-1))
   }
 }

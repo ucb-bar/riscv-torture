@@ -38,7 +38,8 @@ class SeqMem(memsize: Int) extends Seq
     insts += op(reg_dest, RegImm(reg_addr, 0), reg_src)
   }
 
-  val candidates = new ArrayBuffer[() => insts.type]
+  type T = () => insts.type
+  val candidates = new ArrayBuffer[T]
 
   candidates += seq_load_addrfn(LB, rand_addr_b)
   candidates += seq_load_addrfn(LBU, rand_addr_b)
@@ -71,5 +72,5 @@ class SeqMem(memsize: Int) extends Seq
   candidates += seq_amo_addrfn(AMOMAX_D, rand_addr_d)
   candidates += seq_amo_addrfn(AMOMAXU_D, rand_addr_d)
 
-  candidates(rand_range(0, candidates.length-1))()
+  rand_array[T](candidates)()
 }
