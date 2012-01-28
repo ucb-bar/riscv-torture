@@ -12,7 +12,7 @@ object torture extends Application
     val prog = new Prog()
     val s = prog.generate(nseqs, memsize)
 
-    val fw = new FileWriter("test.S")
+    val fw = new FileWriter("output/test.S")
     fw.write(s)
     fw.close()
   }
