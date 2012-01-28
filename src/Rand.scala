@@ -5,6 +5,9 @@ import scala.collection.mutable.ArrayBuffer
 
 object Rand
 {
+  def rand_word: Int = Random.nextInt
+  def rand_dword: Long = Random.nextLong
+
   def rand_range(low: Int, high: Int): Int =
   {
     var span = high - low + 1
@@ -43,11 +46,6 @@ object Rand
       array(i) = array(j)
       array(j) = t
     }
-  }
-
-  def rand_dword: Long =
-  {
-    Random.nextLong
   }
 
   def rand_biased: Long =

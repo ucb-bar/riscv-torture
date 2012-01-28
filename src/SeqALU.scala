@@ -5,6 +5,13 @@ import Rand._
 
 class SeqALU extends Seq
 {
+  def seq_immfn(op: Opcode, immfn: () => Int) = () =>
+  {
+    val dest = reg_write_visible()
+    val imm = Imm(immfn())
+    insts += op(dest, imm)
+  }
+
   def seq_src1(op: Opcode) = () =>
   {
     val src1 = reg_read_any()
@@ -50,6 +57,7 @@ class SeqALU extends Seq
 
   val candidates = new ArrayBuffer[() => insts.type]
 
+  candidates += seq_immfn(LUI, rand_bigimm)
   candidates += seq_src1_immfn(ADDI, rand_imm)
   candidates += seq_src1_immfn(SLLI, rand_shamt)
   candidates += seq_src1_immfn(SLTI, rand_imm)
@@ -59,7 +67,6 @@ class SeqALU extends Seq
   candidates += seq_src1_immfn(SRAI, rand_shamt)
   candidates += seq_src1_immfn(ORI, rand_imm)
   candidates += seq_src1_immfn(ANDI, rand_imm)
-  candidates += seq_src1_immfn(LUI, rand_bigimm)
   candidates += seq_src1_immfn(ADDIW, rand_imm)
   candidates += seq_src1_immfn(SLLIW, rand_shamtw)
   candidates += seq_src1_immfn(SRLIW, rand_shamtw)

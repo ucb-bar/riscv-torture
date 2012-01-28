@@ -2,6 +2,15 @@ package torture
 
 class Inst(opcode: String, val operands: Array[Operand])
 {
+  def is_branch =
+  {
+    opcode == "beq" || opcode == "bne" ||
+    opcode == "blt" || opcode == "bge" ||
+    opcode == "bltu" || opcode == "bgeu"
+  }
+
+  def is_la = opcode == "la"
+
   override def toString = opcode + operands.mkString(" ", ", ", "")
 }
 
@@ -197,3 +206,5 @@ object FENCE_G_CV extends Opcode("fence.g.cv")
 object FENCE_L_CV extends Opcode("fence.l.cv")
 object FENCE_G_V extends Opcode("fence.g.v")
 object FENCE_L_V extends Opcode("fence.l.v")
+
+object ILLEGAL extends Opcode(".word")

@@ -1,11 +1,12 @@
 package torture
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashMap
 import Rand._
 
 class ProgSeg(val name: String)
 {
-  val insts = new ArrayBuffer[Inst]
+  var insts = new ArrayBuffer[Inst]
 
   override def toString = ((name + ":\n") /: insts.map((x) => "\t" + x + "\n"))(_ + _)
 }
@@ -62,9 +63,82 @@ class Prog
 
     if (patch != -1)
     {
+      progsegs.last.insts += ILLEGAL(Label("0x%08x" format rand_word))
       progsegs += ProgSeg()
       inst.operands(patch) = Label(progsegs.last.name)
     }
+  }
+
+  var far_branches = 0
+
+  def resolve_far_branches =
+  {
+    var resolved = false
+
+    val labels = new HashMap[String, Int]
+    var line = 0
+
+    labels += ("crash_backward" -> line)
+    line += 35
+
+    for (progseg <- progsegs)
+    {
+      labels += (progseg.name -> line)
+      line += progseg.insts.length
+    }
+
+    labels += ("reg_dump" -> line)
+    line += 35
+    labels += ("crash_forward" -> line)
+
+    val progsegs_insert = new ArrayBuffer[(ProgSeg, ProgSeg)]
+
+    for (progseg <- progsegs)
+    {
+      val branches = new ArrayBuffer[Inst]
+      line = labels(progseg.name)
+
+      for (inst <- progseg.insts)
+      {
+        if (inst.is_la) line += 1
+        if (inst.is_branch)
+        {
+          //println("%d: %d %s" format (line, math.abs(line - labels(inst.operands(2).asInstanceOf[Label].label)), inst))
+          if (math.abs(line - labels(inst.operands(2).asInstanceOf[Label].label)) > 800)
+            branches += inst
+        }
+        line += 1
+      }
+
+      // only split the first far branch in a progseg
+      if (branches.length > 0)
+      {
+        val label = branches(0).operands(2)
+        branches(0).operands(2) = Label("far_branch_" + far_branches)
+        val idx_split = progseg.insts.indexOf(branches(0)) + 1
+        val (insts, insts_split) = progseg.insts.splitAt(idx_split)
+        insts += J(Label("far_branch_" + (far_branches+1)))
+        progseg.insts = insts
+
+        val progseg_fb0 = new ProgSeg("far_branch_" + far_branches)
+        progseg_fb0.insts += J(label)
+        progsegs_insert += ((progseg, progseg_fb0))
+        val progseg_fb1 = new ProgSeg("far_branch_" + (far_branches+1))
+        progseg_fb1.insts = insts_split
+        progsegs_insert += ((progseg_fb0, progseg_fb1))
+
+        far_branches += 2
+        resolved = true
+      }
+    }
+
+    for ((progseg, progseg_insert) <- progsegs_insert)
+    {
+      val idx_insert = progsegs.indexOf(progseg) + 1
+      progsegs.insert(idx_insert, progseg_insert)
+    }
+
+    resolved
   }
 
   def code_body(nseqs: Int, memsize: Int) =
@@ -94,6 +168,8 @@ class Prog
     progsegs.last.insts += J(Label("reg_dump"))
     rand_permute(progsegs)
 
+    while (resolve_far_branches) {}
+
     ("" /: progsegs)(_ + _) + "\n"
   }
 
@@ -103,7 +179,7 @@ class Prog
     "// nseqs = " + nseqs + "\n" +
     "// memsize = " + memsize + "\n" +
     "\n" +
-    "#include <riscvtest.h>\n" +
+    "#include \"test_riscv.h\"\n" +
     "\n" +
     "\tTEST_RISCV\n"
   }
@@ -116,7 +192,7 @@ class Prog
     "\tj test_start\n" +
     "\n" +
     "crash_backward:\n" +
-    "\tTEST_CRASH\n" +
+    "\tTEST_FAIL\n" +
     "\n" +
     "test_start:\n" +
     "\n" +
@@ -130,7 +206,7 @@ class Prog
     var s = "sreg_init:\n"
     s += "\tla x31, sreg_init_data\n"
     for (i <- 1 to 31)
-      s += "\tld x" + i + ", " + 4*i + "(x31)\n"
+      s += "\tld x" + i + ", " + 8*i + "(x31)\n"
     s += "\n"
     s
   }
@@ -142,7 +218,7 @@ class Prog
     s += "\tla x" + r + ", sreg_output_data\n"
     for (i <- 1 to 31)
       if (i != r && hwrp.hwregs(i).is_visible)
-        s += "\tsd x" + i + ", " + 4*i + "(x" + r + ")\n"
+        s += "\tsd x" + i + ", " + 8*i + "(x" + r + ")\n"
     s += "\n"
     s
   }
@@ -153,9 +229,11 @@ class Prog
     "\tj test_end\n" +
     "\n" +
     "crash_forward:\n" +
-    "\tTEST_CRASH\n" +
+    "\tTEST_FAIL\n" +
     "\n" +
     "test_end:\n" +
+    "\tTEST_PASS\n" +
+    "\n" +
     "\tTEST_CODEEND\n" +
     "\n"
   }
@@ -190,7 +268,7 @@ class Prog
     var s = "\t.align 8\n"
     s += "test_memory:\n"
     for (i <- 0 to memsize/8/2)
-      s += "\t.dword 0x%016x 0x%016x\n" format (rand_dword, rand_dword)
+      s += "\t.dword 0x%016x, 0x%016x\n" format (rand_dword, rand_dword)
     s += "\n"
     s
   }

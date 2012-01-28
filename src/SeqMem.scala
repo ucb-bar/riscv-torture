@@ -35,7 +35,7 @@ class SeqMem(memsize: Int) extends Seq
     val addr = addrfn(memsize)
 
     insts += LA(reg_addr, BaseImm("test_memory", addr))
-    insts += op(reg_dest, RegImm(reg_addr, 0), reg_src)
+    insts += op(reg_dest, reg_src, RegImm(reg_addr, 0))
   }
 
   val candidates = new ArrayBuffer[() => insts.type]

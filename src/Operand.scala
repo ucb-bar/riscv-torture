@@ -1,8 +1,6 @@
 package torture
 
 abstract class Operand
-{
-}
 
 class Reg extends Operand
 {
@@ -13,8 +11,6 @@ class Reg extends Operand
 }
 
 class RegNeedsAlloc(val filter: (HWReg) => Boolean, val alloc: (HWReg) => Unit, val free: (HWReg) => Unit) extends Reg
-{
-}
 
 class Imm(imm: Int) extends Operand
 {
