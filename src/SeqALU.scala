@@ -48,8 +48,7 @@ class SeqALU extends Seq
     insts += op(dest, tmp1, tmp2)
   }
 
-  type T = () => insts.type
-  val candidates = new ArrayBuffer[T]
+  val candidates = new ArrayBuffer[() => insts.type]
 
   candidates += seq_src1_immfn(ADDI, rand_imm)
   candidates += seq_src1_immfn(SLLI, rand_shamt)
@@ -81,5 +80,5 @@ class SeqALU extends Seq
     candidates += seq_src2_zero(op)
   }
 
-  rand_array[T](candidates)()
+  rand_pick(candidates)()
 }

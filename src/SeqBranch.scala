@@ -7,7 +7,7 @@ class SeqBranch extends Seq
 {
   val label_taken = Label("__needs_patch")
   val label_nottakens = ArrayBuffer[Label](Label("crash_backward"), Label("crash_forward"))
-  val label_nottaken = rand_array[Label](label_nottakens)
+  val label_nottaken = rand_pick(label_nottakens)
 
   def helper_two_srcs_same() =
   {
@@ -129,8 +129,7 @@ class SeqBranch extends Seq
     insts += BGEU(regs._1, regs._2, label_nottaken)
   }
 
-  type T = () => insts.type
-  val candidates = new ArrayBuffer[T]
+  val candidates = new ArrayBuffer[() => insts.type]
 
   candidates += seq_taken_j()
   candidates += seq_taken_jal()
@@ -147,5 +146,5 @@ class SeqBranch extends Seq
   candidates += seq_nottaken_bltu()
   candidates += seq_nottaken_bgeu()
 
-  rand_array[T](candidates)()
+  rand_pick(candidates)()
 }

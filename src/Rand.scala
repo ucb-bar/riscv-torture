@@ -29,8 +29,59 @@ object Rand
     res
   }
 
-  def rand_array[T](array: ArrayBuffer[T]) =
+  def rand_pick[T](array: ArrayBuffer[T]) =
   {
     array(rand_range(0, array.length-1))
+  }
+
+  def rand_permute[T](array: ArrayBuffer[T]) =
+  {
+    for (i <- 0 to array.length-1)
+    {
+      val j = rand_range(0, array.length-1)
+      val t = array(i)
+      array(i) = array(j)
+      array(j) = t
+    }
+  }
+
+  def rand_dword: Long =
+  {
+    Random.nextLong
+  }
+
+  def rand_biased: Long =
+  {
+    val value = rand_dword
+    val s = rand_range(0, 17)
+
+    if (s < 9)
+    {
+      val small = rand_range(0, 9).toLong
+
+      s match
+      {
+        // return a value with a single bit set
+        case 0 => (1 << value & 63)
+        case 1 => (1 << value & 63)
+        // return a valueue with a single bit clear
+        case 2 => ~(1 << value & 63)
+        case 3 => ~(1 << value & 63)
+        // return a small integer around zero
+        case 4 => small
+        // return a very large/very small 8b signed number
+        case 5 => ((0x80L + small) << 56) >> 56
+        // return a very large/very small 16b signed number
+        case 6 => ((0x8000L + small) << 48) >> 48
+        // return a very large/very small 32b signed number
+        case 7 => ((0x80000000L + small) << 32) >> 32
+        // return a very large/very small 64b signed number
+        case 8 => 0x800000000000000L + small
+      }
+    }
+    else
+    {
+      value
+    }
   }
 }

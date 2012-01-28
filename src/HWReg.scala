@@ -130,7 +130,7 @@ class HWRegAllocator
       if (candidates.length == 0)
         return false
 
-      val hwreg = rand_array[HWReg](candidates)
+      val hwreg = rand_pick(candidates)
       regna.alloc(hwreg)
       regna.hwreg = hwreg
     }

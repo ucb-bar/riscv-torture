@@ -1,13 +1,13 @@
 package torture
 
-class Inst(opcode: String, operands: List[Operand])
+class Inst(opcode: String, val operands: Array[Operand])
 {
   override def toString = opcode + operands.mkString(" ", ", ", "")
 }
 
 class Opcode(name: String)
 {
-  def apply(opnds: Operand*) = new Inst(name, opnds.toList)
+  def apply(opnds: Operand*) = new Inst(name, opnds.toArray)
 }
 
 object J extends Opcode("j")

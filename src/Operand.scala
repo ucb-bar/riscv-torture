@@ -36,7 +36,7 @@ class RegImm(base: Reg, imm: Int) extends Operand
   override def toString = imm.toString + "(" + base + ")"
 }
 
-class Label(label: String) extends Operand
+class Label(val label: String) extends Operand
 {
   override def toString = label
 }
