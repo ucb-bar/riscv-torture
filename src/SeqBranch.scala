@@ -43,6 +43,8 @@ class SeqBranch extends Seq
     insts += AND(reg_dest1, reg_src1, reg_mask)
     insts += OR(reg_dest2, reg_src2, reg_one)
 
+    // reg_dest1 sign bit 0
+    // reg_dest2 sign bit 1
     (reg_dest1, reg_dest2)
   }
 
@@ -113,8 +115,8 @@ class SeqBranch extends Seq
 
   def seq_nottaken_bge() = () =>
   {
-    val regs = helper_two_srcs_different()
-    insts += BGE(regs._1, regs._2, label_nottaken)
+    val regs = helper_two_srcs_flip_sign_bits()
+    insts += BGE(regs._2, regs._1, label_nottaken)
   }
 
   def seq_nottaken_bltu() = () =>
@@ -125,7 +127,7 @@ class SeqBranch extends Seq
 
   def seq_nottaken_bgeu() = () =>
   {
-    val regs = helper_two_srcs_different()
+    val regs = helper_two_srcs_flip_sign_bits()
     insts += BGEU(regs._1, regs._2, label_nottaken)
   }
 
