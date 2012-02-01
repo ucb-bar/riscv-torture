@@ -15,6 +15,7 @@ asm_tests = \
 
 extra_files = \
 	test_riscv.h \
+	test.ld \
 
 #--------------------------------------------------------------------
 # Build rules
@@ -35,7 +36,7 @@ asm_tests_out  = $(addsuffix .out,  $(asm_tests_bin))
 $(asm_tests_dump): %.dump: %
 	$(RISCV_OBJDUMP) $< > $@
 
-$(asm_tests_bin): %: %.S
+$(asm_tests_bin): %: %.S $(extra_files)
 	$(RISCV_GCC) $(RISCV_GCC_OPTS) $< -o $@
 
 $(asm_tests_out): %.out: %
