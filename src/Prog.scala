@@ -141,12 +141,12 @@ class Prog
     resolved
   }
 
-  def code_body(nseqs: Int, memsize: Int) =
+  def code_body(nseqs: Int, memsize: Int, mix: Map[String, Int]) =
   {
     hwrp.init()
 
     for (i <- 0 to nseqs-1)
-      seqs += InstSeq(memsize)
+      seqs += InstSeq(memsize, mix)
 
     while (!is_seqs_empty)
     {
@@ -289,11 +289,11 @@ class Prog
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, memsize: Int) =
+  def generate(nseqs: Int, memsize: Int, mix: Map[String, Int]) =
   {
     header(nseqs, memsize) +
     code_header() +
-    code_body(nseqs, memsize) +
+    code_body(nseqs, memsize, mix) +
     code_footer() +
     data_header() +
     data_input() +

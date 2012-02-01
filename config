@@ -1,0 +1,5 @@
+torture.nseqs 1000
+torture.memsize 1024
+torture.mix.mem 10
+torture.mix.branch 40
+torture.mix.alu 50

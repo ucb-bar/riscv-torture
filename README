@@ -90,11 +90,6 @@ Future TODO
      target (C++ simulator, RTL simulator, FPGA, or actual chip) and do a
      diff on the output signature
 
- - expose the knobs as a file
-   + currently, to get a different mix of instructions, you need to change
-     the program
-   + the knobs should be hoisted out of the program
-
  - generate statistics of a test to get a sense of coverage
    + statistics should include instruction count of each type
    + statistics should include register usage
