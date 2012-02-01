@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqBranch extends Seq
+class SeqBranch extends InstSeq
 {
   val label_taken = Label("__needs_patch")
   val label_nottakens = ArrayBuffer[Label](Label("crash_backward"), Label("crash_forward"))

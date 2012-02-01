@@ -26,8 +26,8 @@ object ProgSeg
 class Prog
 {
   val hwrp = new HWRegPool()
-  val seqs = new ArrayBuffer[Seq]
-  val seqs_active = new ArrayBuffer[Seq]
+  val seqs = new ArrayBuffer[InstSeq]
+  val seqs_active = new ArrayBuffer[InstSeq]
   val progsegs = new ArrayBuffer[ProgSeg]
 
   def seqs_not_allocated = seqs.filter((x) => !x.allocated)
@@ -146,7 +146,7 @@ class Prog
     hwrp.init()
 
     for (i <- 0 to nseqs-1)
-      seqs += Seq(memsize)
+      seqs += InstSeq(memsize)
 
     while (!is_seqs_empty)
     {

@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class Seq extends HWRegAllocator
+class InstSeq extends HWRegAllocator
 {
   val insts = new ArrayBuffer[Inst]
   var inst_ptr = 0
@@ -18,11 +18,11 @@ class Seq extends HWRegAllocator
   }
 }
 
-object Seq
+object InstSeq
 {
-  def apply(memsize: Int): Seq =
+  def apply(memsize: Int): InstSeq =
   {
-    val candidates = new ArrayBuffer[(Int, () => Seq)]
+    val candidates = new ArrayBuffer[(Int, () => InstSeq)]
 
     candidates += ((40, () => new SeqMem(memsize)))
     candidates += ((10, () => new SeqBranch()))

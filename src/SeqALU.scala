@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqALU extends Seq
+class SeqALU extends InstSeq
 {
   def seq_immfn(op: Opcode, immfn: () => Int) = () =>
   {

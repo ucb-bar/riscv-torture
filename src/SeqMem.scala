@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqMem(memsize: Int) extends Seq
+class SeqMem(memsize: Int) extends InstSeq
 {
   def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
   {
