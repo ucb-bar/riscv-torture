@@ -15,6 +15,8 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
 {
   var state = VIS
   var readers = 0
+  var backup_state = VIS
+  var backup_readers = 0
 
   def is_state(states: HWRegState*) =
     states.toList.map(x => {state == x}).reduceLeft(_ || _)
@@ -22,12 +24,17 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
   def is_visible() = is_state(VIS, VIS2VIS)
 
   override def toString = name
-  override def clone =
+
+  def backup() =
   {
-    val res = new HWReg(name, readable, writable)
-    res.state = state
-    res.readers = readers
-    res
+    backup_state = state
+    backup_readers = readers
+  }
+
+  def restore() =
+  {
+    state = backup_state
+    readers = backup_readers
   }
 }
 
@@ -75,22 +82,21 @@ class HWRegPool
 {
   val hwregs = new ArrayBuffer[HWReg]
 
-  def init() =
-  {
-    hwregs += new HWReg("x0", true, false)
-    for (i <- 1 to 31)
-      hwregs += new HWReg("x" + i.toString(), true, true)
-  }
+  def backup() = { hwregs.map((x) => x.backup()) }
+  def restore() = { hwregs.map((x) => x.restore()) }
+}
 
-  override def clone =
-  {
-    val res = new HWRegPool
+class XRegsPool extends HWRegPool
+{
+  hwregs += new HWReg("x0", true, false)
+  for (i <- 1 to 31)
+    hwregs += new HWReg("x" + i.toString(), true, true)
+}
 
-    for (hwreg <- hwregs)
-      res.hwregs += hwreg.clone
-
-    res
-  }
+class FRegsPool extends HWRegPool
+{
+  for (i <- 0 to 31)
+    hwregs += new HWReg("f" + i.toString(), true, true)
 }
 
 import HWReg._
@@ -100,32 +106,27 @@ class HWRegAllocator
   val regs = new ArrayBuffer[Reg]
   var allocated = false
 
-  def reg_fn(filter: (HWReg) => Boolean, alloc: (HWReg) => Unit, free: (HWReg) => Unit) =
+  def reg_fn(hwrp: HWRegPool, filter: (HWReg) => Boolean, alloc: (HWReg) => Unit, free: (HWReg) => Unit) =
   {
-    val reg = new RegNeedsAlloc(filter, alloc, free)
+    val reg = new RegNeedsAlloc(hwrp, filter, alloc, free)
     regs += reg
     reg
   }
 
-  def reg_read_zero() = { reg_fn(filter_read_zero, alloc_read, free_read) }
-  def reg_read_any() = { reg_fn(filter_read_any, alloc_read, free_read) }
-  def reg_read_visible() = { reg_fn(filter_read_visible, alloc_read, free_read) }
-  def reg_write_ra() = { reg_fn(filter_write_ra, alloc_write(false), free_write) }
-  def reg_write_visible() = { reg_fn(filter_write_visible, alloc_write(true), free_write) }
-  def reg_write_hidden() = { reg_fn(filter_write_hidden, alloc_write(false), free_write) }
-  def reg_write(regs: Reg*) = { reg_fn(filter_write_dep(regs.toList), alloc_write_dep(regs.toList), free_write) }
+  def reg_read_zero(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_zero, alloc_read, free_read) }
+  def reg_read_any(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_any, alloc_read, free_read) }
+  def reg_read_visible(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_visible, alloc_read, free_read) }
+  def reg_write_ra(hwrp: HWRegPool) = { reg_fn(hwrp, filter_write_ra, alloc_write(false), free_write) }
+  def reg_write_visible(hwrp: HWRegPool) = { reg_fn(hwrp, filter_write_visible, alloc_write(true), free_write) }
+  def reg_write_hidden(hwrp: HWRegPool) = { reg_fn(hwrp, filter_write_hidden, alloc_write(false), free_write) }
+  def reg_write(hwrp: HWRegPool, regs: Reg*) = { reg_fn(hwrp, filter_write_dep(regs.toList), alloc_write_dep(regs.toList), free_write) }
 
-  def allocate_regs(hwrp: HWRegPool, real: Boolean): Boolean =
+  def allocate_regs(): Boolean =
   {
-    var _hwrp = hwrp
-
-    if (!real)
-      _hwrp = hwrp.clone
-
     for (reg <- regs)
     {
       val regna = reg.asInstanceOf[RegNeedsAlloc]
-      val candidates = _hwrp.hwregs.filter(regna.filter)
+      val candidates = regna.hwrp.hwregs.filter(regna.filter)
 
       if (candidates.length == 0)
         return false
@@ -135,8 +136,7 @@ class HWRegAllocator
       regna.hwreg = hwreg
     }
 
-    if (real)
-      allocated = true
+    allocated = true
 
     return true
   }

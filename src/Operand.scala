@@ -10,7 +10,11 @@ class Reg extends Operand
   override def toString = hwreg.toString
 }
 
-class RegNeedsAlloc(val filter: (HWReg) => Boolean, val alloc: (HWReg) => Unit, val free: (HWReg) => Unit) extends Reg
+class RegNeedsAlloc(
+  val hwrp: HWRegPool,
+  val filter: (HWReg) => Boolean,
+  val alloc: (HWReg) => Unit,
+  val free: (HWReg) => Unit) extends Reg
 
 class Imm(imm: Int) extends Operand
 {

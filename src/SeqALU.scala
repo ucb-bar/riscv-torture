@@ -3,55 +3,55 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqALU extends InstSeq
+class SeqALU(xregs: HWRegPool) extends InstSeq
 {
   def seq_immfn(op: Opcode, immfn: () => Int) = () =>
   {
-    val dest = reg_write_visible()
+    val dest = reg_write_visible(xregs)
     val imm = Imm(immfn())
     insts += op(dest, imm)
   }
 
   def seq_src1(op: Opcode) = () =>
   {
-    val src1 = reg_read_any()
-    val dest = reg_write(src1)
+    val src1 = reg_read_any(xregs)
+    val dest = reg_write(xregs, src1)
     insts += op(dest, src1, src1)
   }
 
   def seq_src1_immfn(op: Opcode, immfn: () => Int) = () =>
   {
-    val src1 = reg_read_any()
-    val dest = reg_write(src1)
+    val src1 = reg_read_any(xregs)
+    val dest = reg_write(xregs, src1)
     val imm = Imm(immfn())
     insts += op(dest, src1, imm)
   }
 
   def seq_src1_zero(op: Opcode) = () =>
   {
-    val src1 = reg_read_any()
-    val dest = reg_write(src1)
-    val tmp = reg_write_visible()
-    insts += ADDI(tmp, reg_read_zero(), Imm(rand_imm()))
+    val src1 = reg_read_any(xregs)
+    val dest = reg_write(xregs, src1)
+    val tmp = reg_write_visible(xregs)
+    insts += ADDI(tmp, reg_read_zero(xregs), Imm(rand_imm()))
     insts += op(dest, tmp, tmp)
   }
 
   def seq_src2(op: Opcode) = () =>
   {
-    val src1 = reg_read_any()
-    val src2 = reg_read_any()
-    val dest = reg_write(src1, src2)
+    val src1 = reg_read_any(xregs)
+    val src2 = reg_read_any(xregs)
+    val dest = reg_write(xregs, src1, src2)
     insts += op(dest, src1, src2)
   }
 
   def seq_src2_zero(op: Opcode) = () =>
   {
-    val src1 = reg_read_any()
-    val dest = reg_write(src1)
-    val tmp1 = reg_write_visible()
-    val tmp2 = reg_write_visible()
-    insts += ADDI(tmp1, reg_read_zero(), Imm(rand_imm()))
-    insts += ADDI(tmp2, reg_read_zero(), Imm(rand_imm()))
+    val src1 = reg_read_any(xregs)
+    val dest = reg_write(xregs, src1)
+    val tmp1 = reg_write_visible(xregs)
+    val tmp2 = reg_write_visible(xregs)
+    insts += ADDI(tmp1, reg_read_zero(xregs), Imm(rand_imm()))
+    insts += ADDI(tmp2, reg_read_zero(xregs), Imm(rand_imm()))
     insts += op(dest, tmp1, tmp2)
   }
 

@@ -3,12 +3,12 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqMem(memsize: Int) extends InstSeq
+class SeqMem(xregs: HWRegPool, memsize: Int) extends InstSeq
 {
   def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
   {
-    val reg_addr = reg_write_hidden()
-    val reg_dest = reg_write_visible()
+    val reg_addr = reg_write_hidden(xregs)
+    val reg_dest = reg_write_visible(xregs)
     val addr = addrfn(memsize)
     val imm = rand_imm()
 
@@ -18,8 +18,8 @@ class SeqMem(memsize: Int) extends InstSeq
 
   def seq_store_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
   {
-    val reg_addr = reg_write_hidden()
-    val reg_src = reg_read_visible()
+    val reg_addr = reg_write_hidden(xregs)
+    val reg_src = reg_read_visible(xregs)
     val addr = addrfn(memsize)
     val imm = rand_imm()
 
@@ -29,9 +29,9 @@ class SeqMem(memsize: Int) extends InstSeq
 
   def seq_amo_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
   {
-    val reg_addr = reg_write_hidden()
-    val reg_dest = reg_write_visible()
-    val reg_src = reg_read_visible()
+    val reg_addr = reg_write_hidden(xregs)
+    val reg_dest = reg_write_visible(xregs)
+    val reg_src = reg_read_visible(xregs)
     val addr = addrfn(memsize)
 
     insts += LA(reg_addr, BaseImm("test_memory", addr))

@@ -20,20 +20,16 @@ class InstSeq extends HWRegAllocator
 
 object InstSeq
 {
-  def names = List("mem","branch","alu")
-  def apply(memsize: Int, mix: Map[String, Int]): InstSeq =
+  def apply(memsize: Int, prob_tbl: ArrayBuffer[(Int, () => InstSeq)]): InstSeq =
   {
-    val name_to_gen: Map[String, () => InstSeq] = Map( "mem" -> (() => new SeqMem(memsize)),
-                                                       "branch" -> (() => new SeqBranch()),
-                                                       "alu" -> (() => new SeqALU()))
     var p = rand_range(0, 99)
-    for ((name, prob) <- mix)
+    for ((prob, gen_seq) <- prob_tbl)
     {
-      if (p < prob) return name_to_gen(name)()
+      if (p < prob) return gen_seq()
       p -= prob
     }
 
     assert(false, println("Probabilties should have added up to 100%"))
-    new SeqALU()
+    new InstSeq()
   }
 }

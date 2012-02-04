@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqBranch extends InstSeq
+class SeqBranch(xregs: HWRegPool) extends InstSeq
 {
   val label_taken = Label("__needs_patch")
   val label_nottakens = ArrayBuffer[Label](Label("crash_backward"), Label("crash_forward"))
@@ -11,15 +11,15 @@ class SeqBranch extends InstSeq
 
   def helper_two_srcs_same() =
   {
-    val reg_src = reg_read_any()
+    val reg_src = reg_read_any(xregs)
     (reg_src, reg_src)
   }
 
   def helper_two_srcs_different() =
   {
-    val reg_src = reg_read_any()
-    val reg_dest1 = reg_write(reg_src)
-    val reg_dest2 = reg_write(reg_src)
+    val reg_src = reg_read_any(xregs)
+    val reg_dest1 = reg_write(xregs, reg_src)
+    val reg_dest2 = reg_write(xregs, reg_src)
 
     insts += ADDI(reg_dest1, reg_src, Imm(0))
     insts += ADDI(reg_dest2, reg_src, Imm(rand_filter(rand_imm, (x) => x == 0)))
@@ -29,16 +29,16 @@ class SeqBranch extends InstSeq
 
   def helper_two_srcs_flip_sign_bits() =
   {
-    val reg_src1 = reg_read_any()
-    val reg_src2 = reg_read_any()
-    val reg_dest1 = reg_write(reg_src1)
-    val reg_dest2 = reg_write(reg_src2)
-    val reg_one = reg_write_visible()
-    val reg_mask = reg_write_visible()
+    val reg_src1 = reg_read_any(xregs)
+    val reg_src2 = reg_read_any(xregs)
+    val reg_dest1 = reg_write(xregs, reg_src1)
+    val reg_dest2 = reg_write(xregs, reg_src2)
+    val reg_one = reg_write_visible(xregs)
+    val reg_mask = reg_write_visible(xregs)
 
-    insts += ADDI(reg_one, reg_read_zero(), Imm(1))
+    insts += ADDI(reg_one, reg_read_zero(xregs), Imm(1))
     insts += SLL(reg_one, reg_one, Imm(63))
-    insts += ADDI(reg_mask, reg_read_zero(), Imm(-1))
+    insts += ADDI(reg_mask, reg_read_zero(xregs), Imm(-1))
     insts += XOR(reg_mask, reg_mask, reg_one)
     insts += AND(reg_dest1, reg_src1, reg_mask)
     insts += OR(reg_dest2, reg_src2, reg_one)
@@ -55,7 +55,7 @@ class SeqBranch extends InstSeq
 
   def seq_taken_jal() = () =>
   {
-    val reg_x1 = reg_write_ra()
+    val reg_x1 = reg_write_ra(xregs)
     insts += JAL(label_taken)
   }
 

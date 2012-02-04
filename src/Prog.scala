@@ -25,7 +25,8 @@ object ProgSeg
 
 class Prog
 {
-  val hwrp = new HWRegPool()
+  val xregs = new XRegsPool()
+  val fregs = new FRegsPool()
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
   val progsegs = new ArrayBuffer[ProgSeg]
@@ -38,13 +39,18 @@ class Prog
   {
     for (seq <- seqs_not_allocated)
     {
-      if (seq.allocate_regs(hwrp, false))
+      xregs.backup()
+      fregs.backup()
+
+      if (seq.allocate_regs())
       {
-        seq.allocate_regs(hwrp, true)
         seqs_active += seq
       }
       else
       {
+        xregs.restore()
+        fregs.restore()
+
         return
       }
     }
@@ -141,12 +147,22 @@ class Prog
     resolved
   }
 
+  def names = List("xmem","xbranch","xalu")
+
   def code_body(nseqs: Int, memsize: Int, mix: Map[String, Int]) =
   {
-    hwrp.init()
+    val name_to_seq = Map(
+      "xmem" -> (() => new SeqMem(xregs, memsize)),
+      "xbranch" -> (() => new SeqBranch(xregs)),
+      "xalu" -> (() => new SeqALU(xregs)))
+
+    val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
+
+    for ((name, prob) <- mix)
+      prob_tbl += ((prob, name_to_seq(name)))
 
     for (i <- 0 to nseqs-1)
-      seqs += InstSeq(memsize, mix)
+      seqs += InstSeq(memsize, prob_tbl)
 
     while (!is_seqs_empty)
     {
@@ -217,7 +233,7 @@ class Prog
     val r = rand_range(1, 31)
     s += "\tla x" + r + ", sreg_output_data\n"
     for (i <- 1 to 31)
-      if (i != r && hwrp.hwregs(i).is_visible)
+      if (i != r && xregs.hwregs(i).is_visible)
         s += "\tsd x" + i + ", " + 8*i + "(x" + r + ")\n"
     s += "\n"
     s
