@@ -91,6 +91,46 @@ class XRegsPool extends HWRegPool
   hwregs += new HWReg("x0", true, false)
   for (i <- 1 to 31)
     hwregs += new HWReg("x" + i.toString(), true, true)
+
+  def init_regs() =
+  {
+    var s = "xreg_init:\n"
+    s += "\tla x31, xreg_init_data\n"
+    for (i <- 0 to 31)
+      s += "\tld " + hwregs(i) + ", " + 8*i + "(x31)\n"
+    s += "\n"
+    s
+  }
+
+  def save_regs() =
+  {
+    val r = rand_range(1, 31)
+    var s = "\tla x" + r + ", xreg_output_data\n"
+    hwregs(r).state = HID
+    for (i <- 0 to 31)
+      if (hwregs(i).is_visible)
+        s += "\tsd " + hwregs(i) + ", " + 8*i + "(" + hwregs(r) + ")\n"
+    s += "\n"
+    s
+  }
+
+  def init_regs_data() =
+  {
+    var s = "xreg_init_data:\n"
+    for (i <- 0 to 31)
+      s += ("reg_x" + i + "_init:\t.dword " + "0x%016x\n" format rand_biased)
+    s += "\n"
+    s
+  }
+
+  def output_regs_data() =
+  {
+    var s = "xreg_output_data:\n"
+    for (i <- 0 to 31)
+      s += "reg_x" + i + "_output:\t.dword 0x%016x\n" format rand_dword
+    s += "\n"
+    s
+  }
 }
 
 class FRegsPool extends HWRegPool

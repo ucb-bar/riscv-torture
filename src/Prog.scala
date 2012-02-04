@@ -212,36 +212,15 @@ class Prog
     "\n" +
     "test_start:\n" +
     "\n" +
-    init_regs() +
+    xregs.init_regs() +
     "\tj pseg_0\n" +
     "\n"
   }
 
-  def init_regs() =
-  {
-    var s = "sreg_init:\n"
-    s += "\tla x31, sreg_init_data\n"
-    for (i <- 1 to 31)
-      s += "\tld x" + i + ", " + 8*i + "(x31)\n"
-    s += "\n"
-    s
-  }
-
-  def save_regs() =
-  {
-    var s = "reg_dump:\n"
-    val r = rand_range(1, 31)
-    s += "\tla x" + r + ", sreg_output_data\n"
-    for (i <- 1 to 31)
-      if (i != r && xregs.hwregs(i).is_visible)
-        s += "\tsd x" + i + ", " + 8*i + "(x" + r + ")\n"
-    s += "\n"
-    s
-  }
-
   def code_footer() =
   {
-    save_regs() +
+    "reg_dump:\n" +
+    xregs.save_regs() +
     "\tj test_end\n" +
     "\n" +
     "crash_forward:\n" +
@@ -261,24 +240,6 @@ class Prog
     "\n"
   }
 
-  def init_regs_data() =
-  {
-    var s = "sreg_init_data:\n"
-    for (i <- 0 to 31)
-      s += ("reg_x" + i + "_init:\t.dword " + "0x%016x\n" format rand_biased)
-    s += "\n"
-    s
-  }
-
-  def output_regs_data() =
-  {
-    var s = "sreg_output_data:\n"
-    for (i <- 0 to 31)
-      s += "reg_x" + i + "_output:\t.dword 0x%016x\n" format rand_dword
-    s += "\n"
-    s
-  }
-
   def output_mem_data(memsize: Int) =
   {
     var s = "\t.align 8\n"
@@ -291,14 +252,14 @@ class Prog
 
   def data_input() =
   {
-    init_regs_data()
+    xregs.init_regs_data()
   }
 
   def data_output(memsize: Int) =
   {
     "\tTEST_DATABEGIN\n" +
     "\n" +
-    output_regs_data() +
+    xregs.output_regs_data() +
     output_mem_data(memsize) +
     "\tTEST_DATAEND\n"
   }
