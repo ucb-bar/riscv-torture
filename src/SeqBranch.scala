@@ -22,7 +22,7 @@ class SeqBranch(xregs: HWRegPool) extends InstSeq
     val reg_dest2 = reg_write(xregs, reg_src)
 
     insts += ADDI(reg_dest1, reg_src, Imm(0))
-    insts += ADDI(reg_dest2, reg_src, Imm(rand_filter(rand_imm, (x) => x == 0)))
+    insts += ADDI(reg_dest2, reg_src, Imm(rand_filter(rand_imm, (x) => x != 0)))
 
     (reg_dest1, reg_dest2)
   }

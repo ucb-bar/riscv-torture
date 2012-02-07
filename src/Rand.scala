@@ -28,7 +28,7 @@ object Rand
   def rand_filter(rand: () => Int, filter: (Int) => Boolean) =
   {
     var res = rand()
-    while (filter(res)) res = rand()
+    while (!filter(res)) res = rand()
     res
   }
 
