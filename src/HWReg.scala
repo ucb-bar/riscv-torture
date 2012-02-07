@@ -18,8 +18,7 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
   var backup_state = VIS
   var backup_readers = 0
 
-  def is_state(states: HWRegState*) =
-    states.toList.map(x => {state == x}).reduceLeft(_ || _)
+  def is_state(states: HWRegState*) = states.toList.contains(state)
 
   def is_visible() = is_state(VIS, VIS2VIS)
 
@@ -42,18 +41,26 @@ object HWReg
 {
   def filter_read_zero = (hwreg: HWReg) => hwreg.name == "x0"
   def filter_read_any = (hwreg: HWReg) => hwreg.readable
+  def filter_read_any_other(other: Reg)(hwreg: HWReg) = (hwreg.readable && hwreg.name != other.hwreg.name)
   def filter_read_visible = (hwreg: HWReg) => hwreg.readable && hwreg.is_state(VIS,VIS2VIS)
   def filter_write_ra = (hwreg: HWReg) => hwreg.name == "x1" && filter_write_visible(hwreg)
   def filter_write_visible = (hwreg: HWReg) => hwreg.writable && hwreg.is_state(VIS,HID)
   def filter_write_hidden = (hwreg: HWReg) => hwreg.writable && (hwreg.is_state(HID) || hwreg.is_state(VIS) && hwreg.readers == 0)
+  def filter_write_visible_other(other: Reg)(hwreg: HWReg) = (hwreg.name != other.hwreg.name && hwreg.writable && hwreg.is_state(VIS,HID))
+  def filter_write_hidden_other(other: Reg)(hwreg: HWReg) = (hwreg.name != other.hwreg.name && hwreg.writable && (hwreg.is_state(HID) || hwreg.is_state(VIS) && hwreg.readers == 0))
   def filter_write_dep(regs: List[Reg]) =
   {
-    if (regs.map(x => {x.hwreg.is_visible()}).reduceLeft(_ && _)) filter_write_visible
+    if (regs.forall(_.hwreg.is_visible)) filter_write_visible
     else filter_write_hidden
+  }
+  def filter_write_dep_other(other: Reg, regs: List[Reg]) =
+  {
+    if (regs.forall(_.hwreg.is_visible)) filter_write_visible_other(other) _
+    else filter_write_hidden_other(other) _
   }
 
   def alloc_read = (hwreg: HWReg) => hwreg.readers += 1
-  def alloc_write(visible: Boolean) = (hwreg: HWReg) =>
+  def alloc_write(visible: Boolean)(hwreg: HWReg) =
   {
     if (hwreg.state == VIS)
     {
@@ -67,7 +74,7 @@ object HWReg
     }
     else println("bug in do_write")
   }
-  def alloc_write_dep(regs: List[Reg]) = alloc_write(regs.map(x => {x.hwreg.is_visible()}).reduceLeft(_ && _))
+  def alloc_write_dep(regs: List[Reg]) = alloc_write(regs.forall(_.hwreg.is_visible)) _
 
   def free_read = (hwreg: HWReg) => hwreg.readers -= 1
   def free_write = (hwreg: HWReg) =>
@@ -155,11 +162,13 @@ class HWRegAllocator
 
   def reg_read_zero(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_zero, alloc_read, free_read) }
   def reg_read_any(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_any, alloc_read, free_read) }
+  def reg_read_any_other(hwrp: HWRegPool, other: Reg) = { reg_fn(hwrp, filter_read_any_other(other), alloc_read, free_read) }
   def reg_read_visible(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_visible, alloc_read, free_read) }
   def reg_write_ra(hwrp: HWRegPool) = { reg_fn(hwrp, filter_write_ra, alloc_write(false), free_write) }
   def reg_write_visible(hwrp: HWRegPool) = { reg_fn(hwrp, filter_write_visible, alloc_write(true), free_write) }
   def reg_write_hidden(hwrp: HWRegPool) = { reg_fn(hwrp, filter_write_hidden, alloc_write(false), free_write) }
   def reg_write(hwrp: HWRegPool, regs: Reg*) = { reg_fn(hwrp, filter_write_dep(regs.toList), alloc_write_dep(regs.toList), free_write) }
+  def reg_write_other(hwrp: HWRegPool, other: Reg, regs: Reg*) = { reg_fn(hwrp, filter_write_dep_other(other, regs.toList), alloc_write_dep(regs.toList), free_write) }
 
   def allocate_regs(): Boolean =
   {
