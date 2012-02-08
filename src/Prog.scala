@@ -56,22 +56,52 @@ class Prog
     }
   }
 
+  var jalr_labels = new ArrayBuffer[Label]
+
   def add_inst(inst: Inst) =
   {
     if (progsegs.length == 0)
       progsegs += ProgSeg()
 
-    val filter = (x: Operand) =>
-      x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("patch") != -1
-    val patch = inst.operands.indexWhere(filter)
-
     progsegs.last.insts += inst
 
-    if (patch != -1)
+    val branch_filter = (x: Operand) =>
+      x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("branch_patch") != -1
+    val branch_patch = inst.operands.indexWhere(branch_filter)
+    if (branch_patch != -1)
     {
       progsegs.last.insts += ILLEGAL(Label("0x%08x" format rand_word))
       progsegs += ProgSeg()
-      inst.operands(patch) = Label(progsegs.last.name)
+      inst.operands(branch_patch) = Label(progsegs.last.name)
+    }
+
+    val jalr_filter = (x: Operand) =>
+      x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("jalr_patch2") != -1
+    val jalr_patch = inst.operands.indexWhere(jalr_filter)
+    if (jalr_patch != -1)
+    {
+      progsegs.last.insts += ILLEGAL(Label("0x%08x" format rand_word))
+      progsegs += ProgSeg()
+      jalr_labels += Label(progsegs.last.name)
+      inst.operands(jalr_patch) = Imm(0)
+    }
+  }
+
+  def resolve_jalr_las =
+  {
+    var jalr_count = 0
+    val jalr_la_filter = (x: Operand) =>
+      x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("jalr_patch1") != -1
+    for (progseg <- progsegs)
+    {
+      for (inst <- progseg.insts)
+      {
+        val jalr_la_patch = inst.operands.indexWhere(jalr_la_filter)
+        if (jalr_la_patch != -1) {
+          inst.operands(jalr_la_patch) = jalr_labels(jalr_count)
+          jalr_count += 1
+        }
+      }
     }
   }
 
@@ -182,6 +212,8 @@ class Prog
     }
 
     progsegs.last.insts += J(Label("reg_dump"))
+
+    resolve_jalr_las
     rand_permute(progsegs)
 
     while (resolve_far_branches) {}

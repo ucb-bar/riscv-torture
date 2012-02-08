@@ -5,7 +5,7 @@ import Rand._
 
 class SeqBranch(xregs: HWRegPool) extends InstSeq
 {
-  val taken = Label("__needs_patch")
+  val taken = Label("__needs_branch_patch")
   val nottakens = ArrayBuffer[Label](Label("crash_backward"), Label("crash_forward"))
   val nottaken = rand_pick(nottakens)
   def reverse_label(l: Label) = if(l == taken) nottaken else taken
@@ -118,12 +118,19 @@ class SeqBranch(xregs: HWRegPool) extends InstSeq
   def seq_taken_jalr(funct3: String) = () =>
   {
     val reg_x1 = reg_write_ra(xregs)
-    val reg_src1 = reg_read_any(xregs)
+    val reg_src1 = reg_read_zero(xregs)
     val reg_dst1 = reg_write_hidden(xregs)
+    val reg_dst2 = reg_write_hidden(xregs)
     funct3 match {
-      case "c" => insts += JALR_C(reg_dst1, reg_src1, taken)
-      case "r" => insts += JALR_R(reg_dst1, reg_src1, taken)
-      case "j" => insts += JALR_J(reg_dst1, reg_src1, taken)
+      case "c" => 
+        insts += LA(reg_dst1, Label("__needs_jalr_patch1"))
+        insts += JALR(reg_dst2, reg_dst1, Label("__needs_jalr_patch2"))//TODO: "jalr.c" is invalid opcode?
+      case "r" => 
+        insts += LA(reg_dst1,  Label("__needs_jalr_patch1"))
+        insts += JALR_R(reg_dst2, reg_dst1, Label("__needs_jalr_patch2"))
+      case "j" => 
+        insts += LA(reg_dst1,  Label("__needs_jalr_patch1"))
+        insts += JALR_J(reg_dst2, reg_dst1,  Label("__needs_jalr_patch2"))
       case _ => insts += RDNPC(reg_dst1)
     }
   }
@@ -194,7 +201,7 @@ class SeqBranch(xregs: HWRegPool) extends InstSeq
 
   candidates += seq_taken_j()
   candidates += seq_taken_jal()
-  List("rdnpc").map( candidates += seq_taken_jalr(_))
+  List("c","r","j","rdnpc").map( candidates += seq_taken_jalr(_))
 
   reversible_tests.foreach( t => candidates += get_two_regs_and_branch_with_label(t._1, t._2, t._3, false))
   chiral_tests.foreach( t => candidates += get_two_regs_and_branch_with_label(t._1, t._2, t._3, false))

@@ -2,12 +2,9 @@ package torture
 
 class Inst(opcode: String, val operands: Array[Operand])
 {
-  def is_branch =
-  {
-    opcode == "beq" || opcode == "bne" ||
-    opcode == "blt" || opcode == "bge" ||
-    opcode == "bltu" || opcode == "bgeu"
-  }
+  def is_branch = List("beq", "bne", "blt", "bge", "bltu", "bgeu").contains(opcode)
+
+  def is_jalr = List("jalr", "jalr.c", "jalr.j", "jalr.r").contains(opcode)
 
   def is_la = opcode == "la"
 
