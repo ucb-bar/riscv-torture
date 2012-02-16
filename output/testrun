@@ -9,8 +9,6 @@ progname = sys.argv[len(sys.argv)-1]
 fesvr_args = sys.argv[1:len(sys.argv)-1]
 
 proc = subprocess.Popen(['riscv-readelf', '-Ws', progname], stdout=subprocess.PIPE)
-(pid, code) = os.waitpid(proc.pid, 0)
-code == 0 or sys.exit(-1)
 
 found_begin = False
 found_end = False
@@ -23,6 +21,9 @@ for line in proc.stdout.readlines():
     line = re.split('\s*', line)
     sig_len = int(line[2], 16)
     found_end = True
+
+(pid, code) = os.waitpid(proc.pid, 0)
+code == 0 or sys.exit(-1)
 
 if not found_begin or not found_end:
   print "couldn't find the .test_signature section in %s" % progname
