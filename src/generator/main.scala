@@ -1,12 +1,11 @@
 package torture
 
-
 import java.io.FileWriter
 import java.io.FileInputStream
 import java.util.Properties
 import scala.collection.JavaConversions._
 
-object torture extends Application
+object generator extends Application
 {
   override def main(args: Array[String]) =
   {
