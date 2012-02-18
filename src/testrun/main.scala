@@ -4,6 +4,7 @@ package testrun
 import scopt.OptionParser
 import scala.sys.process._
 import scala.collection.mutable.ArrayBuffer
+import java.io.FileWriter
 
 case class Options(var testAsmName: Option[String] = None,
   var testBinName: Option[String] = None,
@@ -61,12 +62,17 @@ object TestRunner extends Application
           val bad_sims  = res.filter(_._3 != Matched).map(_._2)
           if (bad_sims.length > 0) {
             println("///////////////////////////////////////////////////////")
-            println("Failed for " + binName + ":")
+            println("Simulation failed for " + binName + ":")
             fail_names.foreach(n => println("\t"+n))
-            println("Mismatched Sigs " + binName + ":")
+            println("Mismatched sigs for " + binName + ":")
             mism_names.foreach(n => println("\t"+n))
             println("///////////////////////////////////////////////////////")
-            if(opts.seekOutFailure.getOrElse(true)) seekOutFailure(binName, bad_sims)
+            if(opts.seekOutFailure.getOrElse(true)) {
+              val failName = seekOutFailure(binName, bad_sims)
+              println("///////////////////////////////////////////////////////")
+              println("Failing pseg identified. Binary at " + failName)
+              println("///////////////////////////////////////////////////////")
+            }
           } else {
             println("///////////////////////////////////////////////////////")
             println("All signatures match for " + binName)
@@ -81,7 +87,7 @@ object TestRunner extends Application
   }
 
   def compileAsmToBin(asmFileName: String): Option[String] = {  
-    assert(asmFileName.endsWith(".S"))
+    assert(asmFileName.endsWith(".S"), println("Filename does not end in .S"))
     val binFileName = asmFileName.dropRight(2)
     val pb = Process("riscv-gcc -O2 -nostdlib -nostartfiles -T output/test.ld " + asmFileName + " -o " + binFileName)
     val exitCode = pb.!
@@ -143,9 +149,38 @@ object TestRunner extends Application
     })
   }
 
-  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)]) =  
-  {
-    println("TODO")
+  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)]): String = {
+    // Find failing asm file
+    val source = scala.io.Source.fromFile(bin+".S")
+    val lines = source.mkString
+    source.close()
+
+    // For all psegs
+    val psegFinder = """pseg_\d+""".r
+    val psegNums: List[Int] = psegFinder.findAllIn(lines).map(_.drop(5).toInt).toList
+    for( p <- psegNums.min to psegNums.max) {
+      // Replace jump to pseg with jump to reg_dump
+      val psegReplacer = ("pseg_" + p + ":\\n").r
+      val newAsmSource = psegReplacer.replaceAllIn(lines, "pseg_" + p + ":\n\tj reg_dump\n")
+      val newAsmName = bin + "_pseg_" + p + ".S"
+      val fw = new FileWriter(newAsmName)
+      fw.write(newAsmSource)
+      fw.close()
+
+      // Compile new asm and test on sims
+      val newBinName = compileAsmToBin(newAsmName)
+      newBinName match {
+        case Some(b) => {
+          val res = runSimulators(b, simulators)   
+          if (!res.forall(_._3 == Matched)) {
+            return b
+          }
+        }
+        case None => println("Warning: Subset test could not compile.")    
+      }
+    }
+    println("Warning: No subset tests could compile.")
+    bin
   } 
 
 }
