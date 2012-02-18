@@ -19,7 +19,9 @@ object TortureBuild extends Build
   import BuildSettings._
 
   lazy val torture = Project(id = "torture", base = file("."), settings = buildSettings) aggregate(generator, testrun, overnight)
-  lazy val generator = Project(id = "generator", base = file("generator"), settings = buildSettings)
-  lazy val testrun = Project(id = "testrun", base = file("testrun"), settings = buildSettings) dependsOn(generator)
-  lazy val overnight = Project(id = "overnight", base = file("overnight"), settings = buildSettings) dependsOn(testrun)
+  lazy val generator = Project(id = "generator", base = file("generator"), settings = buildSettings ++ Seq(libraryDependencies ++= scopt))
+  lazy val testrun = Project(id = "testrun", base = file("testrun"), settings = buildSettings ++ Seq(libraryDependencies ++= scopt)) dependsOn(generator)
+  lazy val overnight = Project(id = "overnight", base = file("overnight"), settings = buildSettings ++ Seq(libraryDependencies ++= scopt)) dependsOn(testrun)
+
+  val scopt = Seq("com.github.scopt" %% "scopt" % "1.1.3")
 }
