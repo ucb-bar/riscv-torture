@@ -40,6 +40,7 @@ object Generator extends Application
     assert (mix.keys.forall(List("xmem","xbranch","xalu") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
     val prog = new Prog()
+    ProgSeg.cnt = 0
     val s = prog.generate(nseqs, memsize, mix)
 
     val oname = "output/" + outFileName + ".S"
