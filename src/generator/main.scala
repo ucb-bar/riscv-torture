@@ -15,7 +15,7 @@ object Generator extends Application
   var opts = new Options()
   override def main(args: Array[String]) =
   {
-    val parser = new OptionParser("generator") {
+    val parser = new OptionParser("generator/run") {
       opt("o", "output", "<filename>", "output filename", {s: String => opts.outFileName = Some(s)})
       opt("C", "config", "<file>", "config file", {s: String => opts.confFileName = Some(s)})
     }

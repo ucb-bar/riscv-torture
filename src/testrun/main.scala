@@ -10,8 +10,8 @@ case class Options(var testAsmName: Option[String] = None,
   var testBinName: Option[String] = None,
   var cSimPath: Option[String] = None,
   var rtlSimPath: Option[String] = None,
-  var seekOutFailure: Option[Boolean] = None
-)
+  var seekOutFailure: Option[Boolean] = None,
+  var confFileName: Option[String] = None)
 
 abstract sealed class Result
 case object Failed extends Result
@@ -23,65 +23,74 @@ object TestRunner extends Application
   var opts = new Options()
   override def main(args: Array[String]) =
   {
-    val parser = new OptionParser("generator") {
+    val parser = new OptionParser("testrun/run") {
+      opt("C", "config", "<file>", "config file", {s: String => opts.confFileName = Some(s)})
       opt("a", "asm", "<file>", "input ASM file", {s: String => opts.testAsmName = Some(s)})
       opt("c", "csim", "<file>", "C simulator", {s: String => opts.cSimPath = Some(s)})
       opt("r", "rtlsim", "<file>", "RTL simulator", {s: String => opts.rtlSimPath = Some(s)})
       booleanOpt("s", "seek", "<boolean>", "Seek for failing pseg", {b: Boolean => opts.seekOutFailure = Some(b)})
     }
     if (parser.parse(args)) {
+      val confFileName = opts.confFileName.getOrElse("config")
+      testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.confFileName)
+    }
+  }
 
-      // Figure out which binary file to test
-      val finalBinName = opts.testAsmName match {
-        case Some(asmName) => compileAsmToBin(asmName)
-        case None => {
-          val gen = generator.Generator
-          val newAsmName = gen.generate("config", "test")
-          compileAsmToBin(newAsmName)
+  def testrun(testAsmName: Option[String], cSimPath: Option[String], rtlSimPath: Option[String], doSeek: Option[Boolean], confFileName: Option[String]): (Boolean, Option[Seq[String]]) = 
+  {
+    // Figure out which binary file to test
+    val finalBinName = testAsmName match {
+      case Some(asmName) => compileAsmToBin(asmName)
+      case None => {
+        val gen = generator.Generator
+        val newAsmName = gen.generate(confFileName.getOrElse("config"), "test")
+        compileAsmToBin(newAsmName)
+      }
+    }
+
+    // Add the simulators that should be tested
+    val simulators = new ArrayBuffer[(String) => (String, String)]
+    simulators += (runIsaSim _)
+    cSimPath match { 
+      case Some(p) => simulators += (runCSim(p) _ ) 
+      case None =>
+    }
+    rtlSimPath match { 
+      case Some(p) => simulators += (runRtlSim(p) _ )  
+      case None => 
+    }
+
+    // Test the simulators on the complete binary
+    finalBinName match {
+      case Some(binName) => {
+        val res = runSimulators(binName, simulators)   
+        val fail_names = res.filter(_._3 == Failed).map(_._1.toString)
+        val mism_names = res.filter(_._3 == Mismatched).map(_._1.toString)
+        val bad_sims  = res.filter(_._3 != Matched).map(_._2)
+        if (bad_sims.length > 0) {
+          println("///////////////////////////////////////////////////////")
+          println("//  Simulation failed for " + binName + ":")
+          fail_names.foreach(n => println("\t"+n))
+          println("//  Mismatched sigs for " + binName + ":")
+          mism_names.foreach(n => println("\t"+n))
+          println("///////////////////////////////////////////////////////")
+          if(doSeek.getOrElse(true)) {
+            val failName = seekOutFailure(binName, bad_sims)
+            println("///////////////////////////////////////////////////////")
+            println("//  Failing pseg identified. Binary at " + failName)
+            println("///////////////////////////////////////////////////////")
+            (true, Some(failName.split("/")))
+          } else (true, Some(binName.split("/")))
+        } else {
+          println("///////////////////////////////////////////////////////")
+          println("//  All signatures match for " + binName)
+          println("///////////////////////////////////////////////////////")
+          (false, Some(binName.split("/")))
         }
       }
-
-      // Add the simulators that should be tested
-      val simulators = new ArrayBuffer[(String) => (String, String)]
-      simulators += (runIsaSim _)
-      opts.cSimPath   match { 
-        case Some(p) => simulators += (runCSim(p) _ ) 
-        case None =>
-      }
-      opts.rtlSimPath match { 
-        case Some(p) => simulators += (runRtlSim(p) _ )  
-        case None => 
-      }
-
-      // Test the simulators on the complete binary
-      finalBinName match {
-        case Some(binName) => {
-          val res = runSimulators(binName, simulators)   
-          val fail_names = res.filter(_._3 == Failed).map(_._1.toString)
-          val mism_names = res.filter(_._3 == Mismatched).map(_._1.toString)
-          val bad_sims  = res.filter(_._3 != Matched).map(_._2)
-          if (bad_sims.length > 0) {
-            println("///////////////////////////////////////////////////////")
-            println("Simulation failed for " + binName + ":")
-            fail_names.foreach(n => println("\t"+n))
-            println("Mismatched sigs for " + binName + ":")
-            mism_names.foreach(n => println("\t"+n))
-            println("///////////////////////////////////////////////////////")
-            if(opts.seekOutFailure.getOrElse(true)) {
-              val failName = seekOutFailure(binName, bad_sims)
-              println("///////////////////////////////////////////////////////")
-              println("Failing pseg identified. Binary at " + failName)
-              println("///////////////////////////////////////////////////////")
-            }
-          } else {
-            println("///////////////////////////////////////////////////////")
-            println("All signatures match for " + binName)
-            println("///////////////////////////////////////////////////////")
-          }
-        }
-        case None => {
-          println("Error: ASM file could not be compiled or generated.")
-        }
+      case None => {
+        println("Error: ASM file could not be compiled or generated.")
+        (false, None)
       }
     }
   }
@@ -129,7 +138,7 @@ object TestRunner extends Application
   }
 
   def runRtlSim(sim: String)(bin: String): (String, String) = {
-    ("RTL Simulator", runSim(bin, Seq("-c"+sim)))
+    ("RTL Simulator", runSim(bin, Seq("-c"+sim, "+max-cycles=10000000")))
   }
 
   def runIsaSim(bin: String): (String, String) = {
