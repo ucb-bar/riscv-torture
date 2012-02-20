@@ -129,8 +129,7 @@ object TestRunner extends Application
   }
 
   def runRtlSim(sim: String)(bin: String): (String, String) = {
-    val temp = ("RTL","Not done")
-    temp
+    ("RTL Simulator", runSim(bin, Seq("-c"+sim)))
   }
 
   def runIsaSim(bin: String): (String, String) = {
