@@ -11,6 +11,7 @@ case class Options(var testAsmName: Option[String] = None,
   var cSimPath: Option[String] = None,
   var rtlSimPath: Option[String] = None,
   var seekOutFailure: Option[Boolean] = None,
+  var dumpSigs: Option[Boolean] = None,
   var confFileName: Option[String] = None)
 
 abstract sealed class Result
@@ -29,14 +30,20 @@ object TestRunner extends Application
       opt("c", "csim", "<file>", "C simulator", {s: String => opts.cSimPath = Some(s)})
       opt("r", "rtlsim", "<file>", "RTL simulator", {s: String => opts.rtlSimPath = Some(s)})
       booleanOpt("s", "seek", "<boolean>", "Seek for failing pseg", {b: Boolean => opts.seekOutFailure = Some(b)})
+      booleanOpt("d", "dump", "<boolean>", "Dump mistmatched signatures", {b: Boolean => opts.dumpSigs = Some(b)})
     }
     if (parser.parse(args)) {
       val confFileName = opts.confFileName.getOrElse("config")
-      testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.confFileName)
+      testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.dumpSigs, opts.confFileName)
     }
   }
 
-  def testrun(testAsmName: Option[String], cSimPath: Option[String], rtlSimPath: Option[String], doSeek: Option[Boolean], confFileName: Option[String]): (Boolean, Option[Seq[String]]) = 
+  def testrun(testAsmName:  Option[String], 
+              cSimPath:     Option[String], 
+              rtlSimPath:   Option[String], 
+              doSeek:       Option[Boolean], 
+              dumpSigs:     Option[Boolean],
+              confFileName: Option[String]): (Boolean, Option[Seq[String]]) = 
   {
     // Figure out which binary file to test
     val finalBinName = testAsmName match {
@@ -63,7 +70,7 @@ object TestRunner extends Application
     // Test the simulators on the complete binary
     finalBinName match {
       case Some(binName) => {
-        val res = runSimulators(binName, simulators)   
+        val res = runSimulators(binName, simulators, dumpSigs.getOrElse(false) && !doSeek.getOrElse(true) )   
         val fail_names = res.filter(_._3 == Failed).map(_._1.toString)
         val mism_names = res.filter(_._3 == Mismatched).map(_._1.toString)
         val bad_sims  = res.filter(_._3 != Matched).map(_._2)
@@ -75,7 +82,7 @@ object TestRunner extends Application
           mism_names.foreach(n => println("\t"+n))
           println("///////////////////////////////////////////////////////")
           if(doSeek.getOrElse(true)) {
-            val failName = seekOutFailure(binName, bad_sims)
+            val failName = seekOutFailure(binName, bad_sims, dumpSigs.getOrElse(false))
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)
             println("///////////////////////////////////////////////////////")
@@ -148,18 +155,18 @@ object TestRunner extends Application
   }
 
   def runCSim(sim: String)(bin: String): (String, String) = {
-    ("C Simulator", runSim(bin, Seq("-c"+sim)))
+    ("C_Simulator", runSim(bin, Seq("-c"+sim)))
   }
 
   def runRtlSim(sim: String)(bin: String): (String, String) = {
-    ("RTL Simulator", runSim(bin, Seq("-c"+sim, "+max-cycles=10000000")))
+    ("RTL_Simulator", runSim(bin, Seq("-quiet","-c"+sim, "+silent=1", "+max-cycles=10000000")))
   }
 
   def runIsaSim(bin: String): (String, String) = {
-    ("ISA Simulator", runSim(bin, Seq("-testrun")))
+    ("ISA_Simulator", runSim(bin, Seq("-testrun")))
   }
 
-  def runSimulators(bin: String, simulators: Seq[(String) => (String, String)]): Seq[(String, (String) => (String, String), Result)] = { 
+  def runSimulators(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): Seq[(String, (String) => (String, String), Result)] = { 
     if(simulators.length == 0) println("Warning: No simulators specified for comparison. Comparing ISA to ISA...")
     val isa_sig = runIsaSim(bin)._2
     simulators.map( sim => {
@@ -167,11 +174,19 @@ object TestRunner extends Application
       val res = if(isa_sig != sig) Mismatched
                 else if (sig == "SIM CRASHED") Failed
                 else Matched
+      if(res == Mismatched && dumpSigs) {
+        val fwISA = new FileWriter(bin + "-ISA_Simulator.sig")
+        fwISA.write(isa_sig)
+        fwISA.close()
+        val fw = new FileWriter(bin + "-" + name + ".sig")
+        fw.write(sig)
+        fw.close()
+      }
       (name, sim, res)
     })
   }
 
-  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)]): String = {
+  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): String = {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
     val lines = source.mkString
@@ -193,7 +208,7 @@ object TestRunner extends Application
       val newBinName = compileAsmToBin(newAsmName)
       newBinName match {
         case Some(b) => {
-          val res = runSimulators(b, simulators)   
+          val res = runSimulators(b, simulators, dumpSigs)   
           if (!res.forall(_._3 == Matched)) {
             return b
           }

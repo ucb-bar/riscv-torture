@@ -46,16 +46,12 @@ object Overnight extends Application
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
         val newAsmName = generator.Generator.generate(confFileName, baseName)
-        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), opts.cSimPath, opts.rtlSimPath, Some(true), Some(confFileName)) 
+        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), opts.cSimPath, opts.rtlSimPath, Some(true), Some(true), Some(confFileName)) 
         if(failed) {
           errCount += 1
           test foreach { t =>
-            val srcBin  = Path(t:_*)
-            val srcAsm  = Path((t.init :+ (t.last + ".S")):_*)
-            val srcDump = Path((t.init :+ (t.last + ".dump")):_*)
-            srcBin.copyTo(permDir / t.last)
-            srcAsm.copyTo(permDir / (t.last + ".S"))
-            srcDump.copyTo(permDir / (t.last + ".dump"))
+            val permFiles:PathSet[Path] = Path(t.init:_*) * (t.last + "*")
+            permFiles.foreach( f => f.copyTo( permDir / f.name))
           }
         } 
         test foreach { t =>

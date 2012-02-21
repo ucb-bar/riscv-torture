@@ -70,7 +70,7 @@ the test into many subtests and searches for which exact program segment
 reveals the failure. It takes the following command line arguments:
 
 Usage: testrun/run [options] 
-  -C <file> | --config <file>
+ -C <file> | --config <file>
         config file
   -a <file> | --asm <file>
         input ASM file
@@ -80,6 +80,8 @@ Usage: testrun/run [options]
         RTL simulator
   -s <boolean> | --seek <boolean>
         Seek for failing pseg
+  -d <boolean> | --dump <boolean>
+        Dump mismatched signatures
 
 If you don't specify a asm file, a random one will be generated for you.
 You can only generate tests with one instruction mix at a time (based on
@@ -88,6 +90,8 @@ with the -r and -c flags, they just determines the name used to describe
 whose diff failed. By default, a failed diff will result in the subtest 
 sweep occuring, but this search can be diasbled. Note that the pseg ID
 reported is actually the pseg following the pseg containing the error.
+You can optionally dump mistmatched signatures to the dir containing the 
+asm file under test.
 
 ---------------------------------------------------------------------------
 Generator Overview
