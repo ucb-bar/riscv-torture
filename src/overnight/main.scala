@@ -50,10 +50,12 @@ object Overnight extends Application
         if(failed) {
           errCount += 1
           test foreach { t =>
-            val srcBin = Path(t:_*)
-            val srcAsm = Path((t.init :+ (t.last + ".S")):_*)
+            val srcBin  = Path(t:_*)
+            val srcAsm  = Path((t.init :+ (t.last + ".S")):_*)
+            val srcDump = Path((t.init :+ (t.last + ".dump")):_*)
             srcBin.copyTo(permDir / t.last)
             srcAsm.copyTo(permDir / (t.last + ".S"))
+            srcDump.copyTo(permDir / (t.last + ".dump"))
           }
         } 
         test foreach { t =>

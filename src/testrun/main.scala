@@ -79,8 +79,12 @@ object TestRunner extends Application
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)
             println("///////////////////////////////////////////////////////")
+            dumpFromBin(failName)
             (true, Some(failName.split("/")))
-          } else (true, Some(binName.split("/")))
+          } else {
+            dumpFromBin(binName)
+            (true, Some(binName.split("/")))
+          }
         } else {
           println("///////////////////////////////////////////////////////")
           println("//  All signatures match for " + binName)
@@ -98,9 +102,19 @@ object TestRunner extends Application
   def compileAsmToBin(asmFileName: String): Option[String] = {  
     assert(asmFileName.endsWith(".S"), println("Filename does not end in .S"))
     val binFileName = asmFileName.dropRight(2)
-    val pb = Process("riscv-gcc -O2 -nostdlib -nostartfiles -T output/test.ld " + asmFileName + " -o " + binFileName)
+    val pb = Process("riscv-gcc -O2 -nostdlib -nostartfiles -Ioutput -T output/test.ld " + asmFileName + " -o " + binFileName)
     val exitCode = pb.!
     if (exitCode == 0) Some(binFileName) else None
+  }
+
+  def dumpFromBin(binFileName: String): Option[String] = {
+    val dumpFileName = binFileName + ".dump"
+    val pd = Process("riscv-objdump --disassemble-all --disassemble-zeroes --section=.text --section=.data " + binFileName)
+    val dump = pd.!!
+    val fw = new FileWriter(dumpFileName)
+    fw.write(dump)
+    fw.close()
+    Some(dumpFileName)
   }
 
   def runSim(bin: String, args: Seq[String]): String = {
