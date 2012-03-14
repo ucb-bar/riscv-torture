@@ -30,7 +30,6 @@ _start:                                                                 \
 #-----------------------------------------------------------------------
 
 #define TEST_FAIL                                                       \
-        cflush;                                                         \
         fence;                                                          \
         li  x1, 2;                                                      \
         mtpcr x1, cr16;                                                 \
@@ -38,7 +37,6 @@ _start:                                                                 \
         nop;                                                            \
 
 #define TEST_PASS                                                       \
-        cflush;                                                         \
         fence;                                                          \
         li  x1, 1;                                                      \
         mtpcr x1, cr16;                                                 \
