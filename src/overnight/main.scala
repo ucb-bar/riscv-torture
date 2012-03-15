@@ -50,7 +50,10 @@ object Overnight extends Application
         if(failed) {
           errCount += 1
           test foreach { t =>
+            println(t)
+            println(t.last)
             val permFiles:PathSet[Path] = Path(t.init:_*) * (t.last + "*")
+            println(permFiles.mkString)
             permFiles.foreach( f => f.copyTo( permDir / f.name))
           }
         } 
