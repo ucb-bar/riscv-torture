@@ -140,7 +140,7 @@ class XRegsPool extends HWRegPool
   }
 }
 
-class FRegMaster()
+class FRegsMaster()
 {
   val s_reg_num = (0  to 15) // TODO RANDOMIZE
   val d_reg_num = (16 to 31)
@@ -177,8 +177,8 @@ class FRegMaster()
   def save_regs() = // Wrapper function
   {
     var s = "freg_save:\n"
-    s += s_regpool.init_regs()
-    s += d_regpool.init_regs()
+    s += s_regpool.save_regs()
+    s += d_regpool.save_regs()
     s += "\n"
     s
   }
@@ -202,7 +202,7 @@ class FRegMaster()
   }
 }
 
-class FRegsPool(reg_nums: Array[Int] = 0 to 31, name: String = "freg_d", inst_ld: String = "fld", inst_sd: String = "fsd") extends HWRegPool
+class FRegsPool(reg_nums: Array[Int] = (0 to 31).toArray, name: String = "freg_d", inst_ld: String = "fld", inst_sd: String = "fsd") extends HWRegPool
 {
   for (i <- reg_nums)
     hwregs += new HWReg("f" + i.toString(), true, true)
@@ -211,9 +211,9 @@ class FRegsPool(reg_nums: Array[Int] = 0 to 31, name: String = "freg_d", inst_ld
   def init_regs() =
   {
     var s = name + "_init:\n"
-    s += "\tla x1, " + name + "_init_data\n"
-    for (i <- reg_nums)
-      s += "\t" + inst_ld + " " + hwregs(i) + ", " + 8*i + "(x1)\n"
+    s += "\tla x1, freg_init_data\n"
+    for ((i, curreg) <- reg_nums.zip(hwregs))
+      s += "\t" + inst_ld + " " + curreg + ", " + 8*i + "(x1)\n"
     s += "\n"
     s
   }
@@ -221,12 +221,12 @@ class FRegsPool(reg_nums: Array[Int] = 0 to 31, name: String = "freg_d", inst_ld
   // NOTE: This must be called AFTER scalar core init since x1 needed for memory addressing
   def save_regs() =
   {
-    var s = "\tla x1, " + name + "_output_data\n"
+    var s = "\tla x1, freg_output_data\n"
     // NOTE: x31 in XRegsPool 'should' be declared hidden here; however, it is assumed XRegs has already saved.
     //        Thus, the issue is moot.
-    for (i <- reg_nums)
-      if (hwregs(i).is_visible)
-        s += "\t" + inst_sd + " " + hwregs(i) + ", " + 8*i + "(" + hwregs(r) + ")\n"
+    for ((i, curreg) <- reg_nums.zip(hwregs))
+      if (curreg.is_visible)
+        s += "\t" + inst_sd + " " + curreg + ", " + 8*i + "(x1)\n"
     s += "\n"
     s
   }
