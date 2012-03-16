@@ -26,7 +26,9 @@ object ProgSeg
 class Prog
 {
   val xregs = new XRegsPool()
-  val fregs = new FRegsPool()
+  val fregs = new FRegsMaster()
+  val (fregs_s, fregs_d) = fregs.extract_pools()
+  
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
   val progsegs = new ArrayBuffer[ProgSeg]
@@ -244,6 +246,7 @@ class Prog
     "\n" +
     "test_start:\n" +
     "\n" +
+    fregs.init_regs() + // fregs must be initialized before xregs!
     xregs.init_regs() +
     "\tj pseg_0\n" +
     "\n"
@@ -253,6 +256,7 @@ class Prog
   {
     "reg_dump:\n" +
     xregs.save_regs() +
+    fregs.save_regs() + // fregs must be saved after xregs!
     "\tj test_end\n" +
     "\n" +
     "crash_forward:\n" +
@@ -284,7 +288,8 @@ class Prog
 
   def data_input() =
   {
-    xregs.init_regs_data()
+    xregs.init_regs_data() +
+    fregs.init_regs_data()
   }
 
   def data_output(memsize: Int) =
@@ -292,6 +297,7 @@ class Prog
     "\tTEST_DATABEGIN\n" +
     "\n" +
     xregs.output_regs_data() +
+    fregs.output_regs_data() +
     output_mem_data(memsize) +
     "\tTEST_DATAEND\n"
   }
