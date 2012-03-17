@@ -179,14 +179,15 @@ class Prog
     resolved
   }
 
-  def names = List("xmem","xbranch","xalu")
+  def names = List("xmem","xbranch","xalu","fgen")
 
   def code_body(nseqs: Int, memsize: Int, mix: Map[String, Int]) =
   {
     val name_to_seq = Map(
       "xmem" -> (() => new SeqMem(xregs, memsize)),
       "xbranch" -> (() => new SeqBranch(xregs)),
-      "xalu" -> (() => new SeqALU(xregs)))
+      "xalu" -> (() => new SeqALU(xregs)),
+      "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)))
 
     val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
 
