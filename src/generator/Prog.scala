@@ -238,6 +238,7 @@ class Prog
   {
     "\n" +
     "\tTEST_CODEBEGIN\n" +
+    "\tTEST_FP_ENABLE\n" +
     "\n" +
     "\tj test_start\n" +
     "\n" +
