@@ -235,11 +235,11 @@ class Prog
     "\tTEST_RISCV\n"
   }
 
-  def code_header() =
+  def code_header(using_fpu: Boolean) =
   {
     "\n" +
     "\tTEST_CODEBEGIN\n" +
-    "\tTEST_FP_ENABLE\n" +
+    (if(using_fpu) "\tTEST_FP_ENABLE\n" else "") +
     "\n" +
     "\tj test_start\n" +
     "\n" +
@@ -248,17 +248,19 @@ class Prog
     "\n" +
     "test_start:\n" +
     "\n" +
-    fregs.init_regs() + // fregs must be initialized before xregs!
+    // fregs must be initialized before xregs!
+    (if(using_fpu) fregs.init_regs() else "")  +
     xregs.init_regs() +
     "\tj pseg_0\n" +
     "\n"
   }
 
-  def code_footer() =
+  def code_footer(using_fpu: Boolean) =
   {
     "reg_dump:\n" +
+    // fregs must be saved after xregs
     xregs.save_regs() +
-    fregs.save_regs() + // fregs must be saved after xregs!
+    (if(using_fpu) fregs.save_regs() else "") +
     "\tj test_end\n" +
     "\n" +
     "crash_forward:\n" +
@@ -288,18 +290,18 @@ class Prog
     s
   }
 
-  def data_input() =
+  def data_input(using_fpu: Boolean) =
   {
     xregs.init_regs_data() +
-    fregs.init_regs_data()
+    (if(using_fpu) fregs.init_regs_data() else "")
   }
 
-  def data_output(memsize: Int) =
+  def data_output(using_fpu: Boolean, memsize: Int) =
   {
     "\tTEST_DATABEGIN\n" +
     "\n" +
     xregs.output_regs_data() +
-    fregs.output_regs_data() +
+    (if(using_fpu) fregs.output_regs_data() else "") +
     output_mem_data(memsize) +
     "\tTEST_DATAEND\n"
   }
@@ -308,13 +310,16 @@ class Prog
 
   def generate(nseqs: Int, memsize: Int, mix: Map[String, Int]) =
   {
+    // Check if generating any FP operations
+    val using_fpu = mix.filterKeys(List("fgen") contains _).values.reduce(_+_) > 0
+
     header(nseqs, memsize) +
-    code_header() +
+    code_header(using_fpu) +
     code_body(nseqs, memsize, mix) +
-    code_footer() +
+    code_footer(using_fpu) +
     data_header() +
-    data_input() +
-    data_output(memsize) +
+    data_input(using_fpu) +
+    data_output(using_fpu, memsize) +
     data_footer()
   }
 }
