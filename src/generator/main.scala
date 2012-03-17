@@ -37,7 +37,7 @@ object Generator extends Application
 
   def generate(nseqs: Int, memsize: Int, mix: Map[String,Int], outFileName: String): String = {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
-    assert (mix.keys.forall(List("xmem","xbranch","xalu") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
+    assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
     val prog = new Prog()
     ProgSeg.cnt = 0
