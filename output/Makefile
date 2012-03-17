@@ -15,6 +15,9 @@ asm_tests = \
 
 extra_files = \
 	test_riscv.h \
+	test_riscv_vm.h \
+	vm.c \
+	entry.S \
 	test.ld \
 
 #--------------------------------------------------------------------
@@ -22,7 +25,7 @@ extra_files = \
 #--------------------------------------------------------------------
 
 RISCV_GCC = riscv-gcc
-RISCV_GCC_OPTS = -O2 -nostdlib -nostartfiles -T test.ld
+RISCV_GCC_OPTS = -std=gnu99 -O2 -nostdlib -nostartfiles -T test.ld entry.S vm.c -lc
 RISCV_OBJDUMP = riscv-objdump --disassemble-all --disassemble-zeroes --section=.text --section=.data
 RISCV_SIM = fesvr -testrun
 
@@ -37,7 +40,7 @@ $(asm_tests_dump): %.dump: %
 	$(RISCV_OBJDUMP) $< > $@
 
 $(asm_tests_bin): %: %.S $(extra_files)
-	$(RISCV_GCC) $(RISCV_GCC_OPTS) $< -o $@
+	$(RISCV_GCC) $< $(RISCV_GCC_OPTS) -o $@
 
 $(asm_tests_out): %.out: %
 	$(RISCV_SIM) $< > $@

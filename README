@@ -23,7 +23,7 @@ Make a single test:
 % fesvr -testrun test
 
 Take an existing test and diff the signatures of ISA and C simulators:
-% sbt 'testrun/run -a output/test -c ../riscv-rocket/emulator/emulator'
+% sbt 'testrun/run -a output/test.S -c ../riscv-rocket/emulator/emulator'
 
 Generate a random test and diff the signatures of ISA and RTL simulators:
 % sbt 'testrun/run -r ../riscv-rocket/vlsi/build/vcs-sim-rtl/sim'

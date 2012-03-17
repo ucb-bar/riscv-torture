@@ -109,7 +109,7 @@ object TestRunner extends Application
   def compileAsmToBin(asmFileName: String): Option[String] = {  
     assert(asmFileName.endsWith(".S"), println("Filename does not end in .S"))
     val binFileName = asmFileName.dropRight(2)
-    val pb = Process("riscv-gcc -O2 -nostdlib -nostartfiles -Ioutput -T output/test.ld " + asmFileName + " -o " + binFileName)
+    val pb = Process("riscv-gcc " + asmFileName + " -std=gnu99 -O2 -nostdlib -nostartfiles -T output/test.ld output/entry.S output/vm.c -lc -o " + binFileName)
     val exitCode = pb.!
     if (exitCode == 0) Some(binFileName) else None
   }
@@ -146,6 +146,7 @@ object TestRunner extends Application
     }
     
     val cmd = Seq("fesvr") ++ args ++ Seq("-testsig", sig_addr.toString, (sig_len-sig_addr).toString, bin)
+    println(cmd)
     val out = try {
       cmd.!!
     } catch {
