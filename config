@@ -4,3 +4,4 @@ torture.mix.xmem 10
 torture.mix.xbranch 40
 torture.mix.xalu 50
 torture.mix.fgen 0
+torture.mix.fax 0

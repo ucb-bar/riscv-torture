@@ -177,9 +177,10 @@ Future TODO
    + statistics should include instruction count of each type
    + statistics should include register usage
 
- - add floating point tests
-   + add floating point sequences
-   + extend register allocator to incorporate floating point registers
+ - complete floating point tests
+   + add floating point memory move tests
+   + improve floating point init randomization
+   + add rounding modes tests
 
  - add vector tests
    + define what a vector test should do

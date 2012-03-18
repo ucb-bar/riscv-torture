@@ -142,8 +142,27 @@ class XRegsPool extends HWRegPool
 
 class FRegsMaster()
 {
-  val s_reg_num = (0  to 15) // TODO RANDOMIZE
-  val d_reg_num = (16 to 31)
+  val s_reg_num = new ArrayBuffer[Int]
+  val d_reg_num = new ArrayBuffer[Int]
+
+  for (n <- 0 to 31)
+    if(rand_range(0, 1) == 0) s_reg_num += n
+    else d_reg_num += n
+
+  // Ensure each pool has at least 5 members
+  while(s_reg_num.length < 5)
+  {
+    val mv_n = rand_pick(d_reg_num)
+    d_reg_num -= mv_n
+    s_reg_num += mv_n
+  }
+  
+  while(d_reg_num.length < 5)
+  {
+    val mv_n = rand_pick(s_reg_num)
+    s_reg_num -= mv_n
+    d_reg_num += mv_n
+  }
   
   val s_regpool = new FRegsPool(s_reg_num.toArray, "freg_s", "flw", "fsw")
   val d_regpool = new FRegsPool(d_reg_num.toArray, "freg_d", "fld", "fsd")

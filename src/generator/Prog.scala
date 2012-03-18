@@ -179,7 +179,7 @@ class Prog
     resolved
   }
 
-  def names = List("xmem","xbranch","xalu","fgen")
+  def names = List("xmem","xbranch","xalu","fgen","fax")
 
   def code_body(nseqs: Int, memsize: Int, mix: Map[String, Int]) =
   {
@@ -187,7 +187,8 @@ class Prog
       "xmem" -> (() => new SeqMem(xregs, memsize)),
       "xbranch" -> (() => new SeqBranch(xregs)),
       "xalu" -> (() => new SeqALU(xregs)),
-      "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)))
+      "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
+      "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)))
 
     val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
 
@@ -311,7 +312,7 @@ class Prog
   def generate(nseqs: Int, memsize: Int, mix: Map[String, Int]) =
   {
     // Check if generating any FP operations
-    val using_fpu = mix.filterKeys(List("fgen") contains _).values.reduce(_+_) > 0
+    val using_fpu = mix.filterKeys(List("fgen","fax") contains _).values.reduce(_+_) > 0
 
     header(nseqs, memsize) +
     code_header(using_fpu) +
