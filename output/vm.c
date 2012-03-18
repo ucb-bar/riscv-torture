@@ -87,6 +87,59 @@ void handle_fault(unsigned long addr)
   __builtin___clear_cache(0,0);
 }
 
+void restore_vector(trapframe_t* tf)
+{
+  mtpcr(PCR_VECBANK, tf->vecbank);
+
+  int nxregs = (tf->veccfg>>12)&0x3f;
+  int nfregs = (tf->veccfg>>18)&0x3f;
+  int vlen = tf->veccfg&0xfff;
+  vvcfg(nxregs, nfregs);
+  vsetvl(vlen);
+
+  vxcpthold();
+
+  int idx = 0;
+  long dword, cmd, pf;
+  int first = 1;
+
+  while (1)
+  {
+    dword = tf->evac[idx++];
+
+    if (dword < 0) break;
+
+    if (dword_bit_cnt(dword))
+    {
+      venqcnt(dword, pf | (dword_bit_cmd(tf->evac[idx]) << 1));
+    }
+    else
+    {
+      if (!first)
+      {
+        venqcmd(cmd, pf);
+      }
+
+      first = 0;
+      cmd = dword;
+      pf = dword_bit_pf(cmd);
+
+      if (dword_bit_imm1(cmd))
+      {
+        venqimm1(tf->evac[idx++], pf);
+      }
+      if (dword_bit_imm2(cmd))
+      {
+        venqimm2(tf->evac[idx++], pf);
+      }
+    }
+  }
+  if (!first)
+  {
+    venqcmd(cmd, pf);
+  }
+}
+
 void handle_trap(trapframe_t* tf)
 {
   switch(tf->cause)
@@ -101,16 +154,22 @@ void handle_trap(trapframe_t* tf)
       break;
     case CAUSE_FAULT_LOAD:
     case CAUSE_FAULT_STORE:
+    case CAUSE_VECTOR_FAULT_FETCH:
+    case CAUSE_VECTOR_FAULT_LOAD:
+    case CAUSE_VECTOR_FAULT_STORE:
       handle_fault(tf->badvaddr);
       break;
     default:
       assert(0);
   }
+  restore_vector(tf);
   pop_tf(tf);
 }
 
 void vm_boot(long test_addr, long seed)
 {
+  assert(SIZEOF_TRAPFRAME_T == sizeof(trapframe_t));
+
   seed = 1 + (seed % MAX_TEST_PAGES);
   freelist_head = RELOC(&freelist_nodes[0]);
   freelist_tail = RELOC(&freelist_nodes[MAX_TEST_PAGES-1]);

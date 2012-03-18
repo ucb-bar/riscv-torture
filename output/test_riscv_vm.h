@@ -62,6 +62,33 @@ _start:                                                                 \
           asm volatile ("mfpcr %0,cr%1" : "=r"(__tmp) : "i"(reg)); \
           __tmp; })
 
+#define vvcfg(nxregs, nfregs) ({ \
+          asm volatile ("vvcfg %0,%1" : : "r"(nxregs), "r"(nfregs)); })
+
+#define vsetvl(vl) ({ long __tmp; \
+          asm volatile ("vsetvl %0,%1" : "=r"(__tmp) : "r"(vl)); })
+
+#define dword_bit_cmd(dw) ((dw >> 32) & 0x1)
+#define dword_bit_cnt(dw) (!dword_bit_cmd(dw))
+#define dword_bit_imm1(dw) ((dw >> 35) & 0x1)
+#define dword_bit_imm2(dw) ((dw >> 34) & 0x1)
+#define dword_bit_pf(dw) ((dw >> 36) & 0x1)
+
+#define vxcpthold() ({ \
+          asm volatile ("vxcpthold"); })
+
+#define venqcmd(bits, pf) ({ \
+          asm volatile ("venqcmd %0,%1" : : "r"(bits), "r"(pf)); })
+
+#define venqimm1(bits, pf) ({ \
+          asm volatile ("venqimm1 %0,%1" : : "r"(bits), "r"(pf)); })
+
+#define venqimm2(bits, pf) ({ \
+          asm volatile ("venqimm2 %0,%1" : : "r"(bits), "r"(pf)); })
+ 
+#define venqcnt(bits, pf) ({ \
+          asm volatile ("venqcnt %0,%1" :: "r"(bits), "r"(pf)); })
+
 #define PCR_SR       0
 #define PCR_EPC      1
 #define PCR_BADVADDR 2
@@ -77,7 +104,8 @@ _start:                                                                 \
 #define PCR_K1       13
 #define PCR_TOHOST   16
 #define PCR_FROMHOST 17
-#define PCR_CONSOLE  18
+#define PCR_VECBANK  18
+#define PCR_VECCFG   19
 
 #define CAUSE_MISALIGNED_FETCH 0
 #define CAUSE_FAULT_FETCH 1
@@ -99,7 +127,15 @@ _start:                                                                 \
 #define CAUSE_IRQ5 21
 #define CAUSE_IRQ6 22
 #define CAUSE_IRQ7 23
-#define NUM_CAUSES 24
+#define CAUSE_VECTOR_MISALIGNED_FETCH 24
+#define CAUSE_VECTOR_FAULT_FETCH 25
+#define CAUSE_VECTOR_ILLEGAL_INSTRUCTION 26
+#define CAUSE_VECTOR_ILLEGAL_COMMAND 27
+#define CAUSE_VECTOR_MISALIGNED_LOAD 28
+#define CAUSE_VECTOR_MISALIGNED_STORE 29
+#define CAUSE_VECTOR_FAULT_LOAD 30
+#define CAUSE_VECTOR_FAULT_STORE 31
+#define NUM_CAUSES 32
 
 #define SR_ET    0x00000001
 #define SR_EF    0x00000002
@@ -122,6 +158,8 @@ _start:                                                                 \
 #define PGSHIFT 13
 #define PGSIZE (1 << PGSHIFT)
 
+#define SIZEOF_TRAPFRAME_T 1336
+
 #ifndef __ASSEMBLER__
 
 
@@ -140,6 +178,9 @@ typedef struct
   long badvaddr;
   long cause;
   long insn;
+  long vecbank;
+  long veccfg;
+  long evac[128];
 } trapframe_t;
 #endif
 
