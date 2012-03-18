@@ -178,7 +178,7 @@ Future TODO
    + statistics should include register usage
 
  - complete floating point tests
-   + add floating point move/convert sequences
+   + add floating point memory move tests
    + improve floating point init randomization
    + add rounding modes tests
 
