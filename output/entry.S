@@ -78,10 +78,6 @@ save_tf:  # write the trap frame onto the stack
   mfpcr  x3,ASM_CR(PCR_VECCFG)        # veccfg
   STORE  x3,38*REGBYTES(x2)
 
-  addi x3, x2, 39*REGBYTES
-  vxcptevac x3
-  vxcptwait
-
   ret
   .end  save_tf
 
@@ -141,18 +137,32 @@ trap_entry:
   mtpcr ra,ASM_CR(PCR_K0)
   mtpcr x2,ASM_CR(PCR_K1)
 
-  # when coming from kernel, continue below its stack
+  # coming from kernel?
   mfpcr ra,ASM_CR(PCR_SR)
   and   ra,ra,SR_PS
-  add   x2, sp, -SIZEOF_TRAPFRAME_T
   bnez  ra, 1f
-  la    x2,stack_top-SIZEOF_TRAPFRAME_T+MAX_TEST_PAGES*PGSIZE
-  add   x2,x2,ra
 
-1:jal   save_tf
+  # no, so start at the top of the stack
+  la    x2,stack_top+MAX_TEST_PAGES*PGSIZE-SIZEOF_TRAPFRAME_T
+  jal   save_tf
   move  sp,x2
+  mfpcr ra,ASM_CR(PCR_SR)
+  ori   ra,ra,1
+  mtpcr ra,ASM_CR(PCR_SR)
   move  a0,x2
-  jal    handle_trap
+  addi  x2,x2,39*REGBYTES
+  vxcptsave x2
+  jal   handle_trap
+
+  # when coming from kernel, continue below its stack
+1:add   x2, sp, -SIZEOF_TRAPFRAME_T
+  jal   save_tf
+  move  sp,x2
+  mfpcr ra,ASM_CR(PCR_SR)
+  ori   ra,ra,1
+  mtpcr ra,ASM_CR(PCR_SR)
+  move  a0,x2
+  jal   handle_trap
   .end  trap_entry
 
   .bss

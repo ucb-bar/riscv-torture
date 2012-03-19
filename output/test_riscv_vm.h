@@ -68,14 +68,25 @@ _start:                                                                 \
 #define vsetvl(vl) ({ long __tmp; \
           asm volatile ("vsetvl %0,%1" : "=r"(__tmp) : "r"(vl)); })
 
+#define vcfg(word) ({ vvcfg((word)>>12, (word)>>18); vsetvl((word)); })
+
 #define dword_bit_cmd(dw) ((dw >> 32) & 0x1)
 #define dword_bit_cnt(dw) (!dword_bit_cmd(dw))
 #define dword_bit_imm1(dw) ((dw >> 35) & 0x1)
 #define dword_bit_imm2(dw) ((dw >> 34) & 0x1)
 #define dword_bit_pf(dw) ((dw >> 36) & 0x1)
 
+#define fencevl() ({ \
+          asm volatile ("fence.v.l" ::: "memory"); })
+
+#define vxcptkill() ({ \
+          asm volatile ("vxcptkill"); })
+
 #define vxcpthold() ({ \
           asm volatile ("vxcpthold"); })
+
+#define vxcptwait() ({ \
+          asm volatile ("vxcptwait"); })
 
 #define venqcmd(bits, pf) ({ \
           asm volatile ("venqcmd %0,%1" : : "r"(bits), "r"(pf)); })

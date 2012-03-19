@@ -87,16 +87,22 @@ void handle_fault(unsigned long addr)
   __builtin___clear_cache(0,0);
 }
 
-void restore_vector(trapframe_t* tf)
+void emulate_vxcptsave(trapframe_t* tf)
 {
-  mtpcr(PCR_VECBANK, tf->vecbank);
+  long where = tf->gpr[(tf->insn >> 22) & 0x1F];
 
-  int nxregs = (tf->veccfg>>12)&0x3f;
-  int nfregs = (tf->veccfg>>18)&0x3f;
-  int vlen = tf->veccfg&0xfff;
-  vvcfg(nxregs, nfregs);
-  vsetvl(vlen);
+  asm volatile ("vxcptevac %0" : : "r"(where));
+  vxcptwait();
+  fencevl();
+}
 
+void emulate_vxcptrestore(trapframe_t* tf)
+{
+  long* where = (long*)tf->gpr[(tf->insn >> 22) & 0x1F];
+
+  vxcptkill();
+  vxcptwait();
+  vcfg(tf->veccfg);
   vxcpthold();
 
   int idx = 0;
@@ -105,13 +111,13 @@ void restore_vector(trapframe_t* tf)
 
   while (1)
   {
-    dword = tf->evac[idx++];
+    dword = where[idx++];
 
     if (dword < 0) break;
 
     if (dword_bit_cnt(dword))
     {
-      venqcnt(dword, pf | (dword_bit_cmd(tf->evac[idx]) << 1));
+      venqcnt(dword, pf | (dword_bit_cmd(where[idx]) << 1));
     }
     else
     {
@@ -126,11 +132,11 @@ void restore_vector(trapframe_t* tf)
 
       if (dword_bit_imm1(cmd))
       {
-        venqimm1(tf->evac[idx++], pf);
+        venqimm1(where[idx++], pf);
       }
       if (dword_bit_imm2(cmd))
       {
-        venqimm2(tf->evac[idx++], pf);
+        venqimm2(where[idx++], pf);
       }
     }
   }
@@ -140,29 +146,44 @@ void restore_vector(trapframe_t* tf)
   }
 }
 
+void restore_vector(trapframe_t* tf)
+{
+  mtpcr(PCR_VECBANK, tf->vecbank);
+  vcfg(tf->veccfg);
+
+  asm volatile("vxcptrestore %0" : : "r"(tf->evac) : "memory");
+}
+
 void handle_trap(trapframe_t* tf)
 {
-  switch(tf->cause)
+  if (tf->cause == CAUSE_SYSCALL)
   {
-    case CAUSE_SYSCALL:
-      for (long i = 1; i < MAX_TEST_PAGES; i++)
-        evict(i*PGSIZE);
-      mtpcr(PCR_TOHOST, tf->gpr[4]);
-      while(1);
-    case CAUSE_FAULT_FETCH:
-      handle_fault(tf->epc);
-      break;
-    case CAUSE_FAULT_LOAD:
-    case CAUSE_FAULT_STORE:
-    case CAUSE_VECTOR_FAULT_FETCH:
-    case CAUSE_VECTOR_FAULT_LOAD:
-    case CAUSE_VECTOR_FAULT_STORE:
-      handle_fault(tf->badvaddr);
-      break;
-    default:
-      assert(0);
+    for (long i = 1; i < MAX_TEST_PAGES; i++)
+      evict(i*PGSIZE);
+    mtpcr(PCR_TOHOST, tf->gpr[4]);
+    while(1);
   }
-  restore_vector(tf);
+  else if (tf->cause == CAUSE_FAULT_FETCH)
+    handle_fault(tf->epc);
+  else if (tf->cause == CAUSE_ILLEGAL_INSTRUCTION)
+  {
+    if ((tf->insn & 0xF83FFFFF) == 0x1007B)
+      emulate_vxcptsave(tf);
+    else if ((tf->insn & 0xF83FFFFF) == 0x100FB)
+      emulate_vxcptrestore(tf);
+    else
+      assert(0);
+    tf->epc += 4;
+  }
+  else if (tf->cause == CAUSE_FAULT_LOAD || tf->cause == CAUSE_FAULT_STORE ||
+           tf->cause == CAUSE_VECTOR_FAULT_LOAD || tf->cause == CAUSE_VECTOR_FAULT_STORE ||
+           tf->cause == CAUSE_VECTOR_FAULT_FETCH)
+    handle_fault(tf->badvaddr);
+  else
+    assert(0);
+
+  if (!(tf->sr & SR_PS))
+    restore_vector(tf);
   pop_tf(tf);
 }
 
@@ -195,8 +216,7 @@ void vm_boot(long test_addr, long seed)
   mtpcr(PCR_EVEC, (char*)&trap_entry + adjustment);
   asm volatile ("add sp, sp, %1; rdnpc %0; addi %0, %0, 12; add %0, %0, %1; jr %0" : "=&r"(tmp) : "r"(adjustment));
 
-  for (long i = 0; i < MAX_TEST_PAGES; i++)
-    l3pt[i] = 0;
+  memset(RELOC(&l3pt[0]), 0, MAX_TEST_PAGES*sizeof(pte_t));
   mtpcr(PCR_PTBR, l1pt);
 
   trapframe_t tf;
