@@ -8,6 +8,10 @@ class InstSeq extends HWRegAllocator
   val insts = new ArrayBuffer[Inst]
   var inst_ptr = 0
 
+  val extra_code = new ArrayBuffer[DataChunk]
+  val extra_hidden_data = new ArrayBuffer[DataChunk]
+  val extra_visible_data = new ArrayBuffer[DataChunk]
+  
   def is_done = insts.length == inst_ptr
 
   def next_inst() =

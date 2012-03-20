@@ -23,14 +23,6 @@ object ProgSeg
   }
 }
 
-object Prog
-{
-  // Need some way for any object in program to arbitrarily add to output data
-  // TODO: consider refactoring to not use global variables
-  val extra_hidden_data = new ArrayBuffer[DataChunk]
-  val extra_visible_data = new ArrayBuffer[DataChunk]
-}
-
 class Prog(memsize: Int)
 {
   // Setup scalar core memory
@@ -295,7 +287,7 @@ class Prog(memsize: Int)
 
   def code_footer(using_fpu: Boolean) =
   {
-    "reg_dump:\n" +
+    var s = "reg_dump:\n" +
     // fregs must be saved after xregs
     xregs.save_regs() +
     (if(using_fpu) fregs.save_regs() else "") +
@@ -309,6 +301,13 @@ class Prog(memsize: Int)
     "\n" +
     "\tTEST_CODEEND\n" +
     "\n"
+    for(seq <- seqs.filter(_.is_done))
+    {
+      val ns = seq.extra_code.mkString("\n")
+      if(ns.nonEmpty) s += "// extra code for " + seq + "\n" + ns + "\n"
+    }
+    s += "\n"
+    s
   }
 
   def data_header() =
@@ -322,16 +321,26 @@ class Prog(memsize: Int)
   {
     var s = "\t.align 8\n"
     s += MemDump(core_memory)
-    s += Prog.extra_visible_data.mkString("\n")
-    // TODO: Add vector mem seqences here
+    s += "\n"
+    for(seq <- seqs.filter(_.is_done))
+    {
+      val ns = seq.extra_visible_data.mkString("\n")
+      if(ns.nonEmpty) s += "// output data for " + seq + "\n" + ns + "\n"
+    }
     s
   }
 
   def data_input(using_fpu: Boolean) =
   {
-    Prog.extra_hidden_data.mkString("\n") + 
-    xregs.init_regs_data() +
-    (if(using_fpu) fregs.init_regs_data() else "")
+    var s = "hidden_data:\n"
+    for(seq <- seqs.filter(_.is_done))
+    {
+      val ns = seq.extra_hidden_data.mkString("\n")
+      if(ns.nonEmpty) s += "// hidden data for " + seq + "\n" + ns + "\n"
+    }
+    s += xregs.init_regs_data()
+    s += (if(using_fpu) fregs.init_regs_data() else "")
+    s
   }
 
   def data_output(using_fpu: Boolean) =

@@ -17,3 +17,13 @@ object MemDump
   def apply(mem: Mem) = new MemDump(mem)
 }
 
+class ProgSegDump(pseg: ProgSeg) extends DataChunk
+{
+  override def toString = pseg.toString
+}
+
+object ProgSegDump
+{
+  def apply(pseg: ProgSeg) = new ProgSegDump(pseg)
+}
+
