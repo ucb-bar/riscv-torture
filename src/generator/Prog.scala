@@ -23,6 +23,14 @@ object ProgSeg
   }
 }
 
+object Prog
+{
+  // Need some way for any object in program to arbitrarily add to output data
+  // TODO: consider refactoring to not use global variables
+  var extra_hidden_data = ""
+  var extra_visible_data = ""
+}
+
 class Prog(memsize: Int)
 {
   // Setup scalar core memory
@@ -31,6 +39,8 @@ class Prog(memsize: Int)
   // Setup register pools
   val num_vxregs = rand_range(5, 24)
   val num_vfregs = rand_range(8, Math.min(22, 32-num_vxregs))
+  val max_vl = (Math.floor(256/(num_vxregs-1 + num_vfregs))).toInt * 8
+  val used_vl = max_vl // TODO: Randomize this?
 
   val xregs = new XRegsPool()
   val fregs = new FRegsMaster()
@@ -38,6 +48,11 @@ class Prog(memsize: Int)
 
   val (fregs_s, fregs_d) = fregs.extract_pools()
   val (vxregs, vfregs_s, vfregs_d) = vregs.extract_pools()
+
+  println("#VX = " + num_vxregs + ", #VF = " + num_vfregs + ", MaxVL = " + max_vl)
+  println("vxregs   = " + vxregs.hwregs.toString)
+  println("vfregs_s = " + vfregs_s.hwregs.toString)
+  println("vfregs_d = " + vfregs_d.hwregs.toString)
   
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
@@ -191,7 +206,7 @@ class Prog(memsize: Int)
     resolved
   }
 
-  def names = List("xmem","xbranch","xalu","fgen","fax")
+  def names = List("xmem","xbranch","xalu","fgen","fax","vec")
 
   def code_body(nseqs: Int, mix: Map[String, Int]) =
   {
@@ -200,7 +215,8 @@ class Prog(memsize: Int)
       "xbranch" -> (() => new SeqBranch(xregs)),
       "xalu" -> (() => new SeqALU(xregs)),
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
-      "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)))
+      "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
+      "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d)))
 
     val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
 
@@ -248,11 +264,12 @@ class Prog(memsize: Int)
     "\tTEST_RISCV\n"
   }
 
-  def code_header(using_fpu: Boolean) =
+  def code_header(using_fpu: Boolean, using_vec: Boolean) =
   {
     "\n" +
     "\tTEST_CODEBEGIN\n" +
     (if(using_fpu) "\tTEST_FP_ENABLE\n" else "") +
+    (if(using_vec) init_vector() else "") + 
     "\n" +
     "\tj test_start\n" +
     "\n" +
@@ -265,6 +282,14 @@ class Prog(memsize: Int)
     (if(using_fpu) fregs.init_regs() else "")  +
     xregs.init_regs() +
     "\tj pseg_0\n" +
+    "\n"
+  }
+
+  def init_vector() = 
+  {
+    "\n" + 
+    "\tli x1, " + used_vl + "\n" +
+    "\tvvcfgivl x1, x1, " + num_vxregs + ", " + num_vfregs + "\n" +
     "\n"
   }
 
@@ -297,6 +322,7 @@ class Prog(memsize: Int)
   {
     var s = "\t.align 8\n"
     s += core_memory
+    s += Prog.extra_visible_data
     // TODO: Add vector mem seqences here
     s
   }
@@ -321,14 +347,17 @@ class Prog(memsize: Int)
 
   def generate(nseqs: Int, mix: Map[String, Int]) =
   {
-    // Check if generating any FP operations
+    // Check if generating any FP operations or Vec unit stuff
     val using_fpu = mix.filterKeys(List("fgen","fax") contains _).values.reduce(_+_) > 0
+    val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
+    // TODO: make a config object that is passed around?
 
     header(nseqs) +
-    code_header(using_fpu) +
+    code_header(using_fpu, using_vec) +
     code_body(nseqs, mix) +
     code_footer(using_fpu) +
     data_header() +
+    Prog.extra_hidden_data + 
     data_input(using_fpu) +
     data_output(using_fpu) +
     data_footer()

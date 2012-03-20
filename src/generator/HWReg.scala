@@ -10,7 +10,7 @@ object HWRegState extends Enumeration
 }
 
 import HWRegState._
-
+// TODO: This file is getting kind of large
 class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
 {
   var state = VIS
@@ -281,9 +281,9 @@ class VRegsMaster(num_xregs: Int, num_fregs: Int)
 
   val x_reg_num = (1 to (num_xregs-1)) // reg 0 will always be setup since special
   
-  val x_regpool = new FRegsPool(x_reg_num.toArray)
-  val fs_regpool = new FRegsPool(fs_reg_num.toArray)
-  val fd_regpool = new FRegsPool(fd_reg_num.toArray)
+  val x_regpool  = new VXRegsPool(x_reg_num.toArray)
+  val fs_regpool = new VFRegsPool(fs_reg_num.toArray)
+  val fd_regpool = new VFRegsPool(fd_reg_num.toArray)
   
   def extract_pools() =
   {
