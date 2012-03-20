@@ -287,10 +287,10 @@ class Prog(memsize: Int)
 
   def init_vector() = 
   {
-    "\n" + 
+    "\n" +
+    "\tTEST_VEC_ENABLE\n" +
     "\tli x1, " + used_vl + "\n" +
-    "\tvvcfgivl x1, x1, " + num_vxregs + ", " + num_vfregs + "\n" +
-    "\n"
+    "\tvvcfgivl x1, x1, " + num_vxregs + ", " + num_vfregs + "\n" 
   }
 
   def code_footer(using_fpu: Boolean) =
