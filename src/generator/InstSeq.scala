@@ -20,7 +20,7 @@ class InstSeq extends HWRegAllocator
 
 object InstSeq
 {
-  def apply(memsize: Int, prob_tbl: ArrayBuffer[(Int, () => InstSeq)]): InstSeq =
+  def apply(prob_tbl: ArrayBuffer[(Int, () => InstSeq)]): InstSeq =
   {
     var p = rand_range(0, 99)
     for ((prob, gen_seq) <- prob_tbl)

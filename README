@@ -186,3 +186,6 @@ Future TODO
    + define what a vector test should do
    + add vector sequences
    + extend register allocator to incorporate vector registers
+
+ - code refactoring
+   + consolidate RegPool logic

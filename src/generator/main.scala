@@ -39,9 +39,9 @@ object Generator extends Application
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
     assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fax") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
-    val prog = new Prog()
+    val prog = new Prog(memsize)
     ProgSeg.cnt = 0
-    val s = prog.generate(nseqs, memsize, mix)
+    val s = prog.generate(nseqs, mix)
 
     val oname = "output/" + outFileName + ".S"
     val fw = new FileWriter(oname)
