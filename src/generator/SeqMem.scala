@@ -12,7 +12,7 @@ class SeqMem(xregs: HWRegPool, mem: Mem) extends InstSeq
     val addr = addrfn(mem.size)
     val imm = rand_imm()
 
-    insts += LA(reg_addr, BaseImm(mem.tag, addr-imm))
+    insts += LA(reg_addr, BaseImm(mem.name, addr-imm))
     insts += op(reg_dest, RegImm(reg_addr, imm))
   }
 
@@ -23,7 +23,7 @@ class SeqMem(xregs: HWRegPool, mem: Mem) extends InstSeq
     val addr = addrfn(mem.size)
     val imm = rand_imm()
 
-    insts += LA(reg_addr, BaseImm(mem.tag, addr-imm))
+    insts += LA(reg_addr, BaseImm(mem.name, addr-imm))
     insts += op(reg_src, RegImm(reg_addr, imm))
   }
 
@@ -34,7 +34,7 @@ class SeqMem(xregs: HWRegPool, mem: Mem) extends InstSeq
     val reg_src = reg_read_visible(xregs)
     val addr = addrfn(mem.size)
 
-    insts += LA(reg_addr, BaseImm(mem.tag, addr))
+    insts += LA(reg_addr, BaseImm(mem.name, addr))
     insts += op(reg_dest, reg_src, RegImm(reg_addr, 0))
   }
 
