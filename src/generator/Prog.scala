@@ -40,7 +40,7 @@ class Prog(memsize: Int)
   val num_vxregs = rand_range(5, 24)
   val num_vfregs = rand_range(8, Math.min(22, 32-num_vxregs))
   val max_vl = (Math.floor(256/(num_vxregs-1 + num_vfregs))).toInt * 8
-  val used_vl = max_vl // TODO: Randomize this?
+  val used_vl = Math.min(max_vl, 4) // TODO: Randomize this?
 
   val xregs = new XRegsPool()
   val fregs = new FRegsMaster()
@@ -216,7 +216,7 @@ class Prog(memsize: Int)
       "xalu" -> (() => new SeqALU(xregs)),
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
       "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
-      "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d)))
+      "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d, used_vl, memsize)))
 
     val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
 

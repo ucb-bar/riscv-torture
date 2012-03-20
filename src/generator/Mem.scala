@@ -12,7 +12,7 @@ class Mem(newname: String, newsize: Int)
   override def toString = 
  {
     var s = name + ":\n"
-    for (i <- 0 to size/8/2)
+    for (i <- 0 to (size/8/2 - 1))
       s += "\t.dword 0x%016x, 0x%016x\n" format (rand_dword, rand_dword)
     s += "\n"
     s

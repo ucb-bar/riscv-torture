@@ -1,4 +1,4 @@
-torture.nseqs 1
+torture.nseqs 2
 torture.memsize 1024
 torture.mix.xmem 0
 torture.mix.xbranch 0
