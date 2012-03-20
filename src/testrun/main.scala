@@ -125,7 +125,8 @@ object TestRunner extends Application
   }
 
   def runSim(bin: String, args: Seq[String]): String = {
-    val contents = Process("riscv-readelf -Ws " + bin).lines
+    val readelf_dump = Process("riscv-readelf -Ws " + bin).!!
+    val contents = List.fromString(readelf_dump, '\n')
     var found_begin = false
     var found_end = false
     var sig_addr = 0
