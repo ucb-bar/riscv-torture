@@ -27,8 +27,8 @@ object Prog
 {
   // Need some way for any object in program to arbitrarily add to output data
   // TODO: consider refactoring to not use global variables
-  var extra_hidden_data = ""
-  var extra_visible_data = ""
+  val extra_hidden_data = new ArrayBuffer[DataChunk]
+  val extra_visible_data = new ArrayBuffer[DataChunk]
 }
 
 class Prog(memsize: Int)
@@ -321,14 +321,15 @@ class Prog(memsize: Int)
   def output_mem_data() =
   {
     var s = "\t.align 8\n"
-    s += core_memory
-    s += Prog.extra_visible_data
+    s += MemDump(core_memory)
+    s += Prog.extra_visible_data.mkString("\n")
     // TODO: Add vector mem seqences here
     s
   }
 
   def data_input(using_fpu: Boolean) =
   {
+    Prog.extra_hidden_data.mkString("\n") + 
     xregs.init_regs_data() +
     (if(using_fpu) fregs.init_regs_data() else "")
   }
@@ -357,7 +358,6 @@ class Prog(memsize: Int)
     code_body(nseqs, mix) +
     code_footer(using_fpu) +
     data_header() +
-    Prog.extra_hidden_data + 
     data_input(using_fpu) +
     data_output(using_fpu) +
     data_footer()

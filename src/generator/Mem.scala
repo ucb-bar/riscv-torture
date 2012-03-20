@@ -3,18 +3,20 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-// TODO: Make this class better-featured
-class Mem(newname: String, newsize: Int)
+class Mem(name: Array[Operand], newsize: Int) extends Operand
 {
-  val name = newname
+  def this(namelabel: String, newsize: Int) = this(Array[Operand](Label(namelabel)), newsize)
+
   val size = newsize
 
-  override def toString = 
- {
-    var s = name + ":\n"
+  override def toString = name.mkString("")
+
+  def dumpdata = 
+  {
+    var s = this.toString + ":\n"
     for (i <- 0 to (size/8/2 - 1))
       s += "\t.dword 0x%016x, 0x%016x\n" format (rand_dword, rand_dword)
-    s += "\n"
     s
   }
 }
+
