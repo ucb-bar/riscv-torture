@@ -55,13 +55,15 @@ class SeqFPU(fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
 
   val candidates = new ArrayBuffer[() => insts.type]
 
-  candidates += seq_src1_s(FSQRT_S)
-  candidates += seq_src1_d(FSQRT_D)
+//  temporarily removed since unimplemented
+//  candidates += seq_src1_s(FSQRT_S)
+//  candidates += seq_src1_d(FSQRT_D)
 
-  for (op <- List(FADD_S, FSUB_S, FMUL_S, FDIV_S, FMIN_S, FMAX_S))
+  // FDIV_S, FDIV_D temporarily removed since unimplemented
+  for (op <- List(FADD_S, FSUB_S, FMUL_S, FMIN_S, FMAX_S))
     candidates += seq_src2_s(op)
 
-  for (op <- List(FADD_D, FSUB_D, FMUL_D, FDIV_D, FMIN_D, FMAX_D))
+  for (op <- List(FADD_D, FSUB_D, FMUL_D, FMIN_D, FMAX_D))
     candidates += seq_src2_d(op)
 
   for (op <- List(FMADD_S, FNMADD_S, FMSUB_S, FNMSUB_S))
