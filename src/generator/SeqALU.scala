@@ -82,9 +82,9 @@ class SeqALU(xregs: HWRegPool) extends InstSeq
   for (op <- oplist)
   {
     candidates += seq_src1(op)
-  //  candidates += seq_src1_zero(op)
+    candidates += seq_src1_zero(op)
     candidates += seq_src2(op)
-  //  candidates += seq_src2_zero(op)
+    candidates += seq_src2_zero(op)
   }
 
   rand_pick(candidates)()
