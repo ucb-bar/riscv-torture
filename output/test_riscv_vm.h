@@ -85,9 +85,6 @@ _start:                                                                 \
 #define vxcpthold() ({ \
           asm volatile ("vxcpthold"); })
 
-#define vxcptwait() ({ \
-          asm volatile ("vxcptwait"); })
-
 #define venqcmd(bits, pf) ({ \
           asm volatile ("venqcmd %0,%1" : : "r"(bits), "r"(pf)); })
 

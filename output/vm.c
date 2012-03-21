@@ -92,7 +92,6 @@ void emulate_vxcptsave(trapframe_t* tf)
   long where = tf->gpr[(tf->insn >> 22) & 0x1F];
 
   asm volatile ("vxcptevac %0" : : "r"(where));
-  vxcptwait();
   fencevl();
 }
 
@@ -101,7 +100,6 @@ void emulate_vxcptrestore(trapframe_t* tf)
   long* where = (long*)tf->gpr[(tf->insn >> 22) & 0x1F];
 
   vxcptkill();
-  vxcptwait();
   vcfg(tf->veccfg);
   vxcpthold();
 
