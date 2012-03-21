@@ -30,9 +30,9 @@ class Prog(memsize: Int)
 
   // Setup register pools
   val num_vxregs = rand_range(5, 24)
-  val num_vfregs = rand_range(8, Math.min(22, 32-num_vxregs))
+  val num_vfregs = rand_range(8, 32-num_vxregs)
   val max_vl = (Math.floor(256/(num_vxregs-1 + num_vfregs))).toInt * 8
-  val used_vl = Math.min(max_vl, 4) // TODO: Randomize this?
+  val used_vl = Math.min(max_vl, rand_range(1, max_vl))
 
   val xregs = new XRegsPool()
   val fregs = new FRegsMaster()
