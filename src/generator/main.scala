@@ -40,6 +40,10 @@ object Generator extends Application
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
     assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fax","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
+    val vecmix = veccfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
+    assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
+    assert (vecmix.keys.forall(List("xmem","xalu","fgen","fax") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
+
     val prog = new Prog(memsize)
     ProgSeg.cnt = 0
     SeqVec.cnt = 0

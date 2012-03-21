@@ -90,7 +90,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(shadow_vxregs, shadow_vfregs_s, shadow_vfregs_d, vec_mem)
+    val vf_instseq = new SeqSeq(shadow_vxregs, shadow_vfregs_s, shadow_vfregs_d, vec_mem, seqnum, mixcfg)
 
     // Dump that SeqSeq into a VF Instruction block
     val vf_block = new ProgSeg(name+"_vf_"+i)
