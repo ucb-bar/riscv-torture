@@ -39,7 +39,8 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
 
 object HWReg
 {
-  def filter_read_zero = (hwreg: HWReg) => hwreg.name == "x0"
+  // These filters are for allocation purposes
+  def filter_read_zero = (hwreg: HWReg) => hwreg.name == "x0" || hwreg.name == "vx0"
   def filter_read_any = (hwreg: HWReg) => hwreg.readable
   def filter_read_any_other(other: Reg)(hwreg: HWReg) = (hwreg.readable && hwreg.name != other.hwreg.name)
   def filter_read_visible = (hwreg: HWReg) => hwreg.readable && hwreg.is_state(VIS,VIS2VIS)

@@ -36,6 +36,11 @@ class RegImm(base: Reg, imm: Int) extends Operand
   override def toString = imm.toString + "(" + base + ")"
 }
 
+class RegStrImm(base: Reg, imm: String) extends Operand
+{
+  override def toString = imm + "(" + base + ")"
+}
+
 class Label(val label: String) extends Operand
 {
   override def toString = label
@@ -54,6 +59,11 @@ object BaseImm
 object RegImm
 {
   def apply(base: Reg, imm: Int) = new RegImm(base, imm)
+}
+
+object RegStrImm
+{
+  def apply(base: Reg, imm: String) = new RegStrImm(base, imm)
 }
 
 object Label

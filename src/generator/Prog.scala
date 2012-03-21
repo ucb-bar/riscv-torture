@@ -358,8 +358,8 @@ class Prog(memsize: Int)
   def generate(nseqs: Int, mix: Map[String, Int]) =
   {
     // Check if generating any FP operations or Vec unit stuff
-    val using_fpu = mix.filterKeys(List("fgen","fax") contains _).values.reduce(_+_) > 0
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
+    val using_fpu = (mix.filterKeys(List("fgen","fax") contains _).values.reduce(_+_) > 0) || using_vec
     // TODO: make a config object that is passed around?
 
     header(nseqs) +
