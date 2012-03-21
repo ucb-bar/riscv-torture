@@ -10,8 +10,13 @@ object SeqVec
 }
 
 
-class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d: HWRegPool, vl: Int, memsize: Int) extends InstSeq
+class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d: HWRegPool, vl: Int, cfg: Map[String, Int]) extends InstSeq
 {
+  val memsize = cfg.getOrElse("memsize", 1024)
+  val vfnum   = cfg.getOrElse("vf", 10)
+  val seqnum  = cfg.getOrElse("seq", 100)
+  val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
+
   val name = "seqvec_" + SeqVec.cnt
   SeqVec.cnt += 1
   override def toString = name
@@ -82,20 +87,23 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
     insts += VFLD(vreg, xreg_helper)
   }
 
-  // Create SeqSeq to create some vector instructions
-  val vf_instseq = new SeqSeq(shadow_vxregs, shadow_vfregs_s, shadow_vfregs_d, vec_mem)
-
-  // Dump that SeqSeq into a VF Instruction block
-  val vf_block = new ProgSeg(name+"_vf")
-  while(!vf_instseq.is_done)
+  for(i <- 1 to vfnum)
   {
-    vf_block.insts += vf_instseq.next_inst()
-  }
-  vf_block.insts += STOP()
-  extra_code += ProgSegDump(vf_block)
+    // Create SeqSeq to create some vector instructions
+    val vf_instseq = new SeqSeq(shadow_vxregs, shadow_vfregs_s, shadow_vfregs_d, vec_mem)
 
-  insts += LUI(xreg_helper, Label("%hi("+vf_block.name+")"))
-  insts += VF(RegStrImm(xreg_helper, "%lo("+vf_block.name+")"))
+    // Dump that SeqSeq into a VF Instruction block
+    val vf_block = new ProgSeg(name+"_vf_"+i)
+    while(!vf_instseq.is_done)
+    {
+      vf_block.insts += vf_instseq.next_inst()
+    }
+    vf_block.insts += STOP()
+    extra_code += ProgSegDump(vf_block)
+
+    insts += LUI(xreg_helper, Label("%hi("+vf_block.name+")"))
+    insts += VF(RegStrImm(xreg_helper, "%lo("+vf_block.name+")"))
+  }
 
   // Handling dumping of vreg to output memories 
   for((shadow_reg, vreg) <- shadow_vxregs.pairings(_.is_visible))

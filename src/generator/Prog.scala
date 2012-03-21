@@ -200,7 +200,7 @@ class Prog(memsize: Int)
 
   def names = List("xmem","xbranch","xalu","fgen","fax","vec")
 
-  def code_body(nseqs: Int, mix: Map[String, Int]) =
+  def code_body(nseqs: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
   {
     val name_to_seq = Map(
       "xmem" -> (() => new SeqMem(xregs, core_memory)),
@@ -208,7 +208,7 @@ class Prog(memsize: Int)
       "xalu" -> (() => new SeqALU(xregs)),
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
       "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
-      "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d, used_vl, memsize)))
+      "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d, used_vl, veccfg)))
 
     val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
 
@@ -355,7 +355,7 @@ class Prog(memsize: Int)
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, mix: Map[String, Int]) =
+  def generate(nseqs: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -364,7 +364,7 @@ class Prog(memsize: Int)
 
     header(nseqs) +
     code_header(using_fpu, using_vec) +
-    code_body(nseqs, mix) +
+    code_body(nseqs, mix, veccfg) +
     code_footer(using_fpu) +
     data_header() +
     data_input(using_fpu) +

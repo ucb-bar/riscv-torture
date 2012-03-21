@@ -1,8 +1,17 @@
 torture.nseqs 1
 torture.memsize 64
+
 torture.mix.xmem 0
 torture.mix.xbranch 0
 torture.mix.xalu 0
 torture.mix.fgen 0
 torture.mix.fax 0
 torture.mix.vec 100
+
+torture.vec.vf 2
+torture.vec.seq 10
+torture.vec.memsize 64
+torture.vec.mix.xalu 100
+torture.vec.mix.xmem 0
+torture.vec.mix.fgen 0
+torture.vec.mix.fax 0
