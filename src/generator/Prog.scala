@@ -41,11 +41,6 @@ class Prog(memsize: Int)
   val (fregs_s, fregs_d) = fregs.extract_pools()
   val (vxregs, vfregs_s, vfregs_d) = vregs.extract_pools()
 
-  println("#VX = " + num_vxregs + ", #VF = " + num_vfregs + ", MaxVL = " + max_vl)
-  println("vxregs   = " + vxregs.hwregs.toString)
-  println("vfregs_s = " + vfregs_s.hwregs.toString)
-  println("vfregs_d = " + vfregs_d.hwregs.toString)
-  
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
   val progsegs = new ArrayBuffer[ProgSeg]
