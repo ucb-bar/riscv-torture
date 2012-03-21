@@ -10,7 +10,7 @@ object HWRegState extends Enumeration
 }
 
 import HWRegState._
-
+// TODO: This file is getting kind of large
 class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
 {
   var state = VIS
@@ -39,7 +39,8 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
 
 object HWReg
 {
-  def filter_read_zero = (hwreg: HWReg) => hwreg.name == "x0"
+  // These filters are for allocation purposes
+  def filter_read_zero = (hwreg: HWReg) => (hwreg.name == "x0" || hwreg.name == "vx0" || hwreg.name == "x0_shadow")
   def filter_read_any = (hwreg: HWReg) => hwreg.readable
   def filter_read_any_other(other: Reg)(hwreg: HWReg) = (hwreg.readable && hwreg.name != other.hwreg.name)
   def filter_read_visible = (hwreg: HWReg) => hwreg.readable && hwreg.is_state(VIS,VIS2VIS)
@@ -215,7 +216,7 @@ class FRegsMaster()
   {
     var s = "freg_output_data:\n"
     for (i <- 0 to 31)
-      s += ("reg_f" + i + "_output:\t.dword 0x%016x\n" format rand_dword) // TODO CHANGE RANDOMIZATION
+      s += ("reg_f" + i + "_output:\t.dword 0x%016x\n" format rand_dword)
     s += "\n"
     s
   }
@@ -249,6 +250,71 @@ class FRegsPool(reg_nums: Array[Int] = (0 to 31).toArray, name: String = "freg_d
     s += "\n"
     s
   }
+}
+
+class VRegsMaster(num_xregs: Int, num_fregs: Int)
+{
+  assert(num_xregs >= 5, "For VRegMaster, num_xregs >=5 enforced")
+  assert(num_fregs >= 8, "For VRegMaster, num_fregs >=8 enforced")
+
+  // Randomly segregate the fregs
+  val fs_reg_num = new ArrayBuffer[Int]
+  val fd_reg_num = new ArrayBuffer[Int]
+
+  for (n <- 0 to num_fregs)
+    if(rand_range(0, 1) == 0) fs_reg_num += n
+    else fd_reg_num += n
+
+  // Ensure each pool has at least 4 members
+  while(fs_reg_num.length < 4)
+  {
+    val mv_n = rand_pick(fd_reg_num)
+    fd_reg_num -= mv_n
+    fs_reg_num += mv_n
+  }
+  
+  while(fd_reg_num.length < 4)
+  {
+    val mv_n = rand_pick(fs_reg_num)
+    fs_reg_num -= mv_n
+    fd_reg_num += mv_n
+  }
+
+  val x_reg_num = (1 to (num_xregs-1)) // reg 0 will always be setup since special
+  
+  val x_regpool  = new VXRegsPool(x_reg_num.toArray)
+  val fs_regpool = new VFRegsPool(fs_reg_num.toArray)
+  val fd_regpool = new VFRegsPool(fd_reg_num.toArray)
+  
+  def extract_pools() =
+  {
+    (x_regpool, fs_regpool, fd_regpool)
+  }
+  def backup() = // Wrapper function
+  {
+    x_regpool.backup()
+    fs_regpool.backup()
+    fd_regpool.backup()
+  }
+  def restore() = // Wrapper function
+  {
+    x_regpool.restore()
+    fs_regpool.restore()
+    fd_regpool.restore()
+  }
+}
+
+class VXRegsPool(reg_nums: Array[Int] = (1 to 31).toArray) extends HWRegPool
+{
+  hwregs += new HWReg("vx0", true, false)
+  for (i <- reg_nums)
+    hwregs += new HWReg("vx" + i.toString(), true, true)
+}
+
+class VFRegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool
+{
+  for (i <- reg_nums)
+    hwregs += new HWReg("vf" + i.toString(), true, true)
 }
 
 import HWReg._

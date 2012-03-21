@@ -182,7 +182,9 @@ Future TODO
    + improve floating point init randomization
    + add rounding modes tests
 
- - add vector tests
-   + define what a vector test should do
-   + add vector sequences
-   + extend register allocator to incorporate vector registers
+ - complete vector tests
+   + better randomization
+
+ - code refactoring
+   + consolidate RegPool logic
+   + detect and suppress unallocatable sequences

@@ -32,16 +32,22 @@ object Generator extends Application
     val nseqs   = config.getProperty("torture.nseqs", "1000").toInt
     val memsize = config.getProperty("torture.memsize", "1024").toInt
     val mix     = config.filterKeys(_ contains "torture.mix").map { case (k,v) => (k.split('.')(2), v.toInt) }.asInstanceOf[Map[String,Int]]
-    generate(nseqs, memsize, mix, outFileName)
+    val vec     = config.filterKeys(_ contains "torture.vec").map { case (k,v) => (k.split('.').drop(2).reduce(_+"."+_), v.toInt) }.asInstanceOf[Map[String,Int]]
+    generate(nseqs, memsize, mix, vec, outFileName)
   }
 
-  def generate(nseqs: Int, memsize: Int, mix: Map[String,Int], outFileName: String): String = {
+  def generate(nseqs: Int, memsize: Int, mix: Map[String,Int], veccfg: Map[String,Int], outFileName: String): String = {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
-    assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fax") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
+    assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fax","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
-    val prog = new Prog()
+    val vecmix = veccfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
+    assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
+    assert (vecmix.keys.forall(List("xmem","xalu","fgen","fax") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
+
+    val prog = new Prog(memsize)
     ProgSeg.cnt = 0
-    val s = prog.generate(nseqs, memsize, mix)
+    SeqVec.cnt = 0
+    val s = prog.generate(nseqs, mix, veccfg)
 
     val oname = "output/" + outFileName + ".S"
     val fw = new FileWriter(oname)
