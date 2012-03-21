@@ -184,6 +184,7 @@ Future TODO
 
  - complete vector tests
    + better randomization
+   + add SeqVOnly: Tests special vf-only instructions
 
  - code refactoring
    + consolidate RegPool logic
