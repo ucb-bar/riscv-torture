@@ -7,10 +7,26 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
 {
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
+  var killed_seqs = 0
 
   def seqs_not_allocated = seqs.filter((x) => !x.allocated)
   def is_seqs_empty = seqs_not_allocated.length == 0
   def is_seqs_active_empty = seqs_active.length == 0
+
+  def are_pools_fully_unallocated = List(xregs, fregs_s, fregs_d).forall(_.is_fully_unallocated)
+
+  val name_to_seq = Map(
+    "xmem" -> (() => new SeqMem(xregs, mem)),
+    "xalu" -> (() => new SeqALU(xregs)),
+    "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
+    "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)))
+
+  val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
+  mixcfg foreach {case(name, prob) => (prob_tbl += ((prob, name_to_seq(name))))}
+
+  def gen_seq() = (seqs += InstSeq(prob_tbl))
+  
+  for(i <- 1 to nseqs) gen_seq()
 
   def seqs_find_active(): Unit =
   {
@@ -30,20 +46,20 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
         fregs_s.restore()
         fregs_d.restore()
 
+        if(are_pools_fully_unallocated)
+        {
+          seqs -= seq
+          killed_seqs += 1
+          
+          if(killed_seqs < (nseqs*5)) // TODO: Get a good metric
+            gen_seq()
+        }
+
         return
       }
     }
   }
-  val name_to_seq = Map(
-    "xmem" -> (() => new SeqMem(xregs, mem)),
-    "xalu" -> (() => new SeqALU(xregs)),
-    "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
-    "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)))
 
-  val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
-  mixcfg foreach {case(name, prob) => (prob_tbl += ((prob, name_to_seq(name))))}
-
-  for(i <- 1 to nseqs) seqs += InstSeq(prob_tbl)
   
   while(!is_seqs_empty)
   {
@@ -61,4 +77,7 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
       }
     }
   }
+
+  if(killed_seqs >= (nseqs*5))
+    println("warning: a SeqSeq killed an excessive number of sequences. (#X=%d, #Fs=%d, #Fd=%d)" format (xregs.size, fregs_s.size, fregs_d.size))
 }

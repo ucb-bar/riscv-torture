@@ -10,6 +10,9 @@ class HWRegPool
 
   def backup() = { hwregs.map((x) => x.backup()) }
   def restore() = { hwregs.map((x) => x.restore()) }
+
+  def is_fully_unallocated = hwregs.forall(_.is_unallocated)
+  def size = hwregs.length
 }
 
 class XRegsPool extends HWRegPool

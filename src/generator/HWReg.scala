@@ -21,6 +21,9 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
 
   def is_visible() = is_state(VIS, VIS2VIS)
 
+  def is_unallocated = is_state(VIS, HID)
+    //TODO: should this also check readers == 0?
+
   override def toString = name
 
   def backup() =
