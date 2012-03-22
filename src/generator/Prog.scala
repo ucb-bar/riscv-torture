@@ -227,6 +227,8 @@ class Prog(memsize: Int)
           seq.free_regs()
           seqs_active -= seq
         }
+
+        if(rand_range(0,99) < 10) seqs_find_active()
       }
     }
 
