@@ -315,7 +315,7 @@ class Prog(memsize: Int)
 
   def output_mem_data() =
   {
-    var s = "// Memory Blocks"
+    var s = "// Memory Blocks\n"
     s += MemDump(core_memory)
     s += "\n"
     for(seq <- seqs.filter(_.is_done))
