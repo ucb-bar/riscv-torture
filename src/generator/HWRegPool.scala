@@ -45,7 +45,8 @@ class XRegsPool extends HWRegPool
 
   def init_regs_data() =
   {
-    var s = "xreg_init_data:\n"
+    var s = "\t.align 8\n"
+    s += "xreg_init_data:\n"
     for (i <- 0 to 31)
       s += ("reg_x" + i + "_init:\t.dword " + "0x%016x\n" format rand_biased)
     s += "\n"
@@ -53,8 +54,9 @@ class XRegsPool extends HWRegPool
   }
 
   def output_regs_data() =
-  {
-    var s = "xreg_output_data:\n"
+  {  
+    var s = "\t.align 8\n"
+    s += "xreg_output_data:\n"
     for (i <- 0 to 31)
       s += "reg_x" + i + "_output:\t.dword 0x%016x\n" format rand_dword
     s += "\n"
@@ -126,7 +128,8 @@ class FRegsMaster()
   
   def init_regs_data() =
   {
-    var s = "freg_init_data:\n"
+    var s = "\t.align 8\n"
+    s += "freg_init_data:\n"
     for (i <- 0 to 31)
       s += ("reg_f" + i + "_init:\t.dword " + "0x%016x\n" format rand_biased) // TODO CHANGE RANDOMIZATION
     s += "\n"
@@ -135,7 +138,8 @@ class FRegsMaster()
 
   def output_regs_data() =
   {
-    var s = "freg_output_data:\n"
+    var s = "\t.align 8\n"
+    s += "freg_output_data:\n"
     for (i <- 0 to 31)
       s += ("reg_f" + i + "_output:\t.dword 0x%016x\n" format rand_dword)
     s += "\n"

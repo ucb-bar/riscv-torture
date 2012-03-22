@@ -26,9 +26,21 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   extra_visible_data += MemDump(vec_mem)
 
   // Determine how many per type of vector register need to checkout for writing
-  val num_vxreg   = Math.min(4, vxregs.hwregs.length-1) // excluding x0
-  val num_vfreg_s = Math.min(4, vfregs_s.hwregs.length)
-  val num_vfreg_d = Math.min(4, vfregs_d.hwregs.length)
+  def get_rand_reg_num(max: Int) =  // TODO: discuss this
+  {
+    val randtype = rand_range(0, 99)
+    val attempt =
+      if(randtype < 5)          //  5% use a lot of registers
+        rand_range(max/2, max)  
+      else if(randtype < 10)    //  5% use very little registers
+        rand_range(0, 3)
+      else                      // 90% use moderate number
+        rand_range(3, max/2)
+    Math.min(max, attempt)
+  }
+  val num_vxreg   = get_rand_reg_num(vxregs.size-1) // excluding x0
+  val num_vfreg_s = get_rand_reg_num(vfregs_s.size)
+  val num_vfreg_d = get_rand_reg_num(vfregs_d.size)
 
   // Create shadow register pools to mimic those registers
   val shadow_vxregs   = new ShadowRegPool
