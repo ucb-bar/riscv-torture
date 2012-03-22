@@ -227,6 +227,8 @@ class Prog(memsize: Int)
           seq.free_regs()
           seqs_active -= seq
         }
+
+        if(rand_range(0,99) < 10) seqs_find_active()
       }
     }
 
@@ -308,13 +310,12 @@ class Prog(memsize: Int)
   def data_header() =
   {
     "\t.data\n" +
-    "\t.align 8\n" +
     "\n"
   }
 
   def output_mem_data() =
   {
-    var s = "\t.align 8\n"
+    var s = "// Memory Blocks"
     s += MemDump(core_memory)
     s += "\n"
     for(seq <- seqs.filter(_.is_done))

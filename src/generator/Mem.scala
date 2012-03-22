@@ -13,7 +13,8 @@ class Mem(name: Array[Operand], val  size: Int) extends Operand
 
   def dumpdata = 
   {
-    var s = this.toString + ":\n"
+    var s = "\t.align 8\n"
+    s += this.toString + ":\n"
     if(size % 16 == 0)
     {
       for (i <- 0 to (size/8/2 - 1))
