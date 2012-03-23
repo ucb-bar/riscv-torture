@@ -131,7 +131,7 @@ class Prog(memsize: Int)
     var line = 0
 
     labels += ("crash_backward" -> line)
-    line += 35
+    line += 100 // TODO: Get this count more accurately
 
     for (progseg <- progsegs)
     {
@@ -140,7 +140,7 @@ class Prog(memsize: Int)
     }
 
     labels += ("reg_dump" -> line)
-    line += 35
+    line += 100
     labels += ("crash_forward" -> line)
 
     val progsegs_insert = new ArrayBuffer[(ProgSeg, ProgSeg)]
