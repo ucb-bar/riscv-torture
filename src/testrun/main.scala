@@ -55,7 +55,6 @@ object TestRunner extends Application
     configin.close()
 
     maxcycles = config.getProperty("torture.maxcycles", "10000000").toInt
-    println("maxcycles= " + maxcycles)
 
     // Figure out which binary file to test
     val finalBinName = testAsmName match {

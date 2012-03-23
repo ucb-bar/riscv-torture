@@ -19,7 +19,8 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
     "xmem" -> (() => new SeqMem(xregs, mem)),
     "xalu" -> (() => new SeqALU(xregs, false)), //false means no divider, TODO: make better 
     "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
-    "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)))
+    "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
+    "vonly" -> (() => new SeqVOnly(xregs, fregs_s, fregs_d)))
 
   val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
   mixcfg foreach {case(name, prob) => (prob_tbl += ((prob, name_to_seq(name))))}

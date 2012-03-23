@@ -15,7 +15,8 @@ torture.vec.vf 4
 torture.vec.seq 100
 torture.vec.memsize 1024
 
-torture.vec.mix.xalu 60
-torture.vec.mix.xmem 10
-torture.vec.mix.fgen 25
-torture.vec.mix.fax  5
+torture.vec.mix.xalu  55
+torture.vec.mix.xmem  10
+torture.vec.mix.fgen  25
+torture.vec.mix.fax   5
+torture.vec.mix.vonly 5
