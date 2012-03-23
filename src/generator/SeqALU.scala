@@ -75,7 +75,7 @@ class SeqALU(xregs: HWRegPool) extends InstSeq
   val oplist = new ArrayBuffer[Opcode]
 
   oplist += (ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND)
-  oplist += (MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU)
+  oplist += (MUL, MULH, MULHSU, MULHU)//, DIV, DIVU, REM, REMU)
   oplist += (ADDW, SUBW, SLLW, SRLW, SRAW)
   oplist += (MULW, DIVW, DIVUW, REMW, REMUW)
 
