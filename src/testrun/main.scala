@@ -14,6 +14,7 @@ case class Options(var testAsmName: Option[String] = None,
   var rtlSimPath: Option[String] = None,
   var seekOutFailure: Option[Boolean] = None,
   var dumpSigs: Option[Boolean] = None,
+  var virtualMode: Option[Boolean] = None,
   var confFileName: Option[String] = None)
 
 abstract sealed class Result
@@ -33,10 +34,11 @@ object TestRunner extends Application
       opt("r", "rtlsim", "<file>", "RTL simulator", {s: String => opts.rtlSimPath = Some(s)})
       booleanOpt("s", "seek", "<boolean>", "Seek for failing pseg", {b: Boolean => opts.seekOutFailure = Some(b)})
       booleanOpt("d", "dump", "<boolean>", "Dump mistmatched signatures", {b: Boolean => opts.dumpSigs = Some(b)})
+      booleanOpt("v", "virtual", "<boolean>", "Run in virtual mode", {b: Boolean => opts.virtualMode = Some(b)})
     }
     if (parser.parse(args)) {
       val confFileName = opts.confFileName.getOrElse("config") // TODO: This is removable?
-      testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.dumpSigs, opts.confFileName)
+      testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.dumpSigs, opts.virtualMode, opts.confFileName)
     }
   }
   var maxcycles = 10000000
@@ -46,6 +48,7 @@ object TestRunner extends Application
               rtlSimPath:   Option[String], 
               doSeek:       Option[Boolean], 
               dumpSigs:     Option[Boolean],
+              virtualMode:  Option[Boolean],
               confFileName: Option[String]): (Boolean, Option[Seq[String]]) = 
   {
 
@@ -58,11 +61,11 @@ object TestRunner extends Application
 
     // Figure out which binary file to test
     val finalBinName = testAsmName match {
-      case Some(asmName) => compileAsmToBin(asmName)
+      case Some(asmName) => compileAsmToBin(asmName, virtualMode.getOrElse(false))
       case None => {
         val gen = generator.Generator
         val newAsmName = gen.generate(confFileName.getOrElse("config"), "test")
-        compileAsmToBin(newAsmName)
+        compileAsmToBin(newAsmName, virtualMode.getOrElse(false))
       }
     }
 
@@ -93,7 +96,7 @@ object TestRunner extends Application
           mism_names.foreach(n => println("\t"+n))
           println("///////////////////////////////////////////////////////")
           if(doSeek.getOrElse(true)) {
-            val failName = seekOutFailure(binName, bad_sims, dumpSigs.getOrElse(false))
+            val failName = seekOutFailure(binName, bad_sims, dumpSigs.getOrElse(false), virtualMode.getOrElse(false))
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)
             println("///////////////////////////////////////////////////////")
@@ -117,10 +120,21 @@ object TestRunner extends Application
     }
   }
 
-  def compileAsmToBin(asmFileName: String): Option[String] = {  
+  def compileAsmToBin(asmFileName: String, virtualMode: Boolean): Option[String] = {  
     assert(asmFileName.endsWith(".S"), println("Filename does not end in .S"))
     val binFileName = asmFileName.dropRight(2)
-    val pb = Process("riscv-gcc " + asmFileName + " -std=gnu99 -O2 -nostdlib -nostartfiles -T output/test.ld output/entry.S output/vm.c -lc -o " + binFileName)
+    var process = ""
+    if (virtualMode)
+    {
+      println("Virtual mode")
+      process = "riscv-gcc " + asmFileName + " -std=gnu99 -O2 -D__USER_VIRTUAL_VECTOR -T./riscv-testvms/rv64uv/test.ld ./riscv-testvms/rv64uv/entry.S ./riscv-testvms/rv64uv/vm.c -I./riscv-testvms/rv64uv -lc -o " + binFileName
+    }
+    else
+    {
+      println("Physical mode")
+      process = "riscv-gcc " + asmFileName + " -D__USER_PHYSICAL_VECTOR -T./riscv-testvms/rv64up/test.ld -I./riscv-testvms/rv64up -o " + binFileName
+    }
+    val pb = Process(process)
     val exitCode = pb.!
     if (exitCode == 0) Some(binFileName) else None
   }
@@ -219,7 +233,7 @@ object TestRunner extends Application
     })
   }
 
-  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): String = {
+  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean, virtualMode: Boolean): String = {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
     val lines = source.mkString
@@ -238,7 +252,7 @@ object TestRunner extends Application
       fw.close()
 
       // Compile new asm and test on sims
-      val newBinName = compileAsmToBin(newAsmName)
+      val newBinName = compileAsmToBin(newAsmName, virtualMode)
       newBinName match {
         case Some(b) => {
           val res = runSimulators(b, simulators, dumpSigs)   
