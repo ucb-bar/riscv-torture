@@ -5,6 +5,8 @@ import scopt.OptionParser
 import scala.sys.process._
 import scala.collection.mutable.ArrayBuffer
 import java.io.FileWriter
+import java.util.Properties
+import java.io.FileInputStream
 
 case class Options(var testAsmName: Option[String] = None,
   var testBinName: Option[String] = None,
@@ -33,10 +35,11 @@ object TestRunner extends Application
       booleanOpt("d", "dump", "<boolean>", "Dump mistmatched signatures", {b: Boolean => opts.dumpSigs = Some(b)})
     }
     if (parser.parse(args)) {
-      val confFileName = opts.confFileName.getOrElse("config")
+      val confFileName = opts.confFileName.getOrElse("config") // TODO: This is removable?
       testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.dumpSigs, opts.confFileName)
     }
   }
+  var maxcycles = 10000000
 
   def testrun(testAsmName:  Option[String], 
               cSimPath:     Option[String], 
@@ -45,6 +48,15 @@ object TestRunner extends Application
               dumpSigs:     Option[Boolean],
               confFileName: Option[String]): (Boolean, Option[Seq[String]]) = 
   {
+
+    val config = new Properties()
+    val configin = new FileInputStream(confFileName.getOrElse("config"))
+    config.load(configin)
+    configin.close()
+
+    maxcycles = config.getProperty("torture.maxcycles", "10000000").toInt
+    println("maxcycles= " + maxcycles)
+
     // Figure out which binary file to test
     val finalBinName = testAsmName match {
       case Some(asmName) => compileAsmToBin(asmName)
@@ -170,12 +182,12 @@ object TestRunner extends Application
 
   def runCSim(sim: String)(bin: String): (String, String) = {
     val hexfile = generateHexFromBin(bin) 
-    ("C_Simulator", runSim(bin, Seq("-c"+sim,"-m10000000","+loadmem="+hexfile),"none"))
+    ("C_Simulator", runSim(bin, Seq("-c"+sim,"-m"+maxcycles,"+loadmem="+hexfile),"none"))
   }
 
   def runRtlSim(sim: String)(bin: String): (String, String) = {
     val hexfile = generateHexFromBin(bin) 
-    ("RTL_Simulator", runSim(bin, Seq("-quiet","-c"+sim, "+silent=1", "+max-cycles=10000000","+loadmem="+hexfile),"none"))
+    ("RTL_Simulator", runSim(bin, Seq("-quiet","-c"+sim, "+silent=1", "+max-cycles="+maxcycles,"+loadmem="+hexfile),"none"))
   }
 
   def runIsaSim(bin: String): (String, String) = {
