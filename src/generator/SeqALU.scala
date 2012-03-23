@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqALU(xregs: HWRegPool) extends InstSeq
+class SeqALU(xregs: HWRegPool, use_divider: Boolean) extends InstSeq //TODO: better configuration
 {
   def seq_immfn(op: Opcode, immfn: () => Int) = () =>
   {
@@ -75,9 +75,11 @@ class SeqALU(xregs: HWRegPool) extends InstSeq
   val oplist = new ArrayBuffer[Opcode]
 
   oplist += (ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND)
-  oplist += (MUL, MULH, MULHSU, MULHU)//, DIV, DIVU, REM, REMU)
+  oplist += (MUL, MULH, MULHSU, MULHU)
   oplist += (ADDW, SUBW, SLLW, SRLW, SRAW)
-  oplist += (MULW)//, DIVW, DIVUW, REMW, REMUW)
+  oplist += (MULW)
+  if(use_divider)
+    oplist += (DIV, DIVU, REM, REMU, DIVW, DIVUW, REMW, REMUW)
 
   for (op <- oplist)
   {

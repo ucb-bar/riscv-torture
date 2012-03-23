@@ -17,7 +17,7 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
 
   val name_to_seq = Map(
     "xmem" -> (() => new SeqMem(xregs, mem)),
-    "xalu" -> (() => new SeqALU(xregs)),
+    "xalu" -> (() => new SeqALU(xregs, false)), //false means no divider, TODO: make better 
     "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
     "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)))
 

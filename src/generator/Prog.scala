@@ -200,7 +200,7 @@ class Prog(memsize: Int)
     val name_to_seq = Map(
       "xmem" -> (() => new SeqMem(xregs, core_memory)),
       "xbranch" -> (() => new SeqBranch(xregs)),
-      "xalu" -> (() => new SeqALU(xregs)),
+      "xalu" -> (() => new SeqALU(xregs, true)), //true means use_divider, TODO: make better
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
       "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
       "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d, used_vl, veccfg)))
