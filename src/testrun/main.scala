@@ -135,8 +135,14 @@ object TestRunner extends Application
     Some(dumpFileName)
   }
   def generateHexFromBin(binFileName: String) = {
+    import java.io.File
+    // Determine binary size
+    val binfile = new File(binFileName)
+    
+    val hexlines = 2 << (Math.log(binfile.length >>> 4)/Math.log(2)+1).toInt
+
     val hexFileName = binFileName + ".hex"
-    val pd = Process("elf2hex 16 16384 " + binFileName)
+    val pd = Process("elf2hex 16 "+hexlines+" " + binFileName)
     val hexdump = pd.!!
 
     val fw = new FileWriter(hexFileName)
