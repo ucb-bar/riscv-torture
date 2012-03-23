@@ -35,6 +35,7 @@ RISCV_SIM = fesvr -testrun
 asm_tests_bin  = $(patsubst %.S, %, $(asm_tests))
 asm_tests_dump = $(addsuffix .dump, $(asm_tests_bin))
 asm_tests_out  = $(addsuffix .out,  $(asm_tests_bin))
+asm_tests_hex  = $(addsuffix .hex,  $(asm_tests_bin))
 
 $(asm_tests_dump): %.dump: %
 	$(RISCV_OBJDUMP) $< > $@
@@ -42,15 +43,18 @@ $(asm_tests_dump): %.dump: %
 $(asm_tests_bin): %: %.S $(extra_files)
 	$(RISCV_GCC) $< $(RISCV_GCC_OPTS) -o $@
 
+$(asm_tests_hex): %.hex: % $(extra_files)
+	elf2hex 16 16384 $< > $@
+
 $(asm_tests_out): %.out: %
 	$(RISCV_SIM) $< > $@
 
-riscv-: $(asm_tests_dump)
+riscv-: $(asm_tests_dump) $(asm_tests_hex)
 run: $(asm_tests_out)
 	echo; perl -ne 'print "  [$$1] $$ARGV \t$$2\n" if /\*{3}(.{8})\*{3}(.*)/' \
 	       $(asm_tests_out); echo;
 
-junk += $(asm_tests_bin) $(asm_tests_dump) $(asm_tests_out)
+junk += $(asm_tests_bin) $(asm_tests_dump) $(asm_tests_out) $(asm_tests_hex)
 
 #------------------------------------------------------------
 # Default
@@ -62,3 +66,6 @@ all: riscv-
 
 clean:
 	rm -rf $(junk)
+
+clean-all: clean
+	rm -f test*.S test*.hex test*.out test*.dump test test_1* test_pseg_*

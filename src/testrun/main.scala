@@ -5,6 +5,8 @@ import scopt.OptionParser
 import scala.sys.process._
 import scala.collection.mutable.ArrayBuffer
 import java.io.FileWriter
+import java.util.Properties
+import java.io.FileInputStream
 
 case class Options(var testAsmName: Option[String] = None,
   var testBinName: Option[String] = None,
@@ -33,10 +35,11 @@ object TestRunner extends Application
       booleanOpt("d", "dump", "<boolean>", "Dump mistmatched signatures", {b: Boolean => opts.dumpSigs = Some(b)})
     }
     if (parser.parse(args)) {
-      val confFileName = opts.confFileName.getOrElse("config")
+      val confFileName = opts.confFileName.getOrElse("config") // TODO: This is removable?
       testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.dumpSigs, opts.confFileName)
     }
   }
+  var maxcycles = 10000000
 
   def testrun(testAsmName:  Option[String], 
               cSimPath:     Option[String], 
@@ -45,6 +48,14 @@ object TestRunner extends Application
               dumpSigs:     Option[Boolean],
               confFileName: Option[String]): (Boolean, Option[Seq[String]]) = 
   {
+
+    val config = new Properties()
+    val configin = new FileInputStream(confFileName.getOrElse("config"))
+    config.load(configin)
+    configin.close()
+
+    maxcycles = config.getProperty("torture.maxcycles", "10000000").toInt
+
     // Figure out which binary file to test
     val finalBinName = testAsmName match {
       case Some(asmName) => compileAsmToBin(asmName)
@@ -123,8 +134,19 @@ object TestRunner extends Application
     fw.close()
     Some(dumpFileName)
   }
+  def generateHexFromBin(binFileName: String) = {
+    val hexFileName = binFileName + ".hex"
+    val pd = Process("elf2hex 16 16384 " + binFileName)
+    val hexdump = pd.!!
 
-  def runSim(bin: String, args: Seq[String]): String = {
+    val fw = new FileWriter(hexFileName)
+    fw.write(hexdump)
+    fw.close()
+
+    hexFileName
+  }
+
+  def runSim(bin: String, args: Seq[String], invokebin: String): String = {
     val readelf_dump = Process("riscv-readelf -Ws " + bin).!!
     val contents = List.fromString(readelf_dump, '\n')
     var found_begin = false
@@ -146,7 +168,8 @@ object TestRunner extends Application
       throw new RuntimeException()
     }
     
-    val cmd = Seq("fesvr") ++ args ++ Seq("-testsig", sig_addr.toString, (sig_len-sig_addr).toString, bin)
+
+    val cmd = Seq("fesvr") ++ args ++ Seq("-testsig", sig_addr.toString, (sig_len-sig_addr).toString, invokebin) 
     println(cmd)
     val out = try {
       cmd.!!
@@ -157,15 +180,17 @@ object TestRunner extends Application
   }
 
   def runCSim(sim: String)(bin: String): (String, String) = {
-    ("C_Simulator", runSim(bin, Seq("-c"+sim)))
+    val hexfile = generateHexFromBin(bin) 
+    ("C_Simulator", runSim(bin, Seq("-c"+sim,"-m"+maxcycles,"+loadmem="+hexfile),"none"))
   }
 
   def runRtlSim(sim: String)(bin: String): (String, String) = {
-    ("RTL_Simulator", runSim(bin, Seq("-quiet","-c"+sim, "+silent=1", "+max-cycles=10000000")))
+    val hexfile = generateHexFromBin(bin) 
+    ("RTL_Simulator", runSim(bin, Seq("-quiet","-c"+sim, "+silent=1", "+max-cycles="+maxcycles,"+loadmem="+hexfile),"none"))
   }
 
   def runIsaSim(bin: String): (String, String) = {
-    ("ISA_Simulator", runSim(bin, Seq("-testrun")))
+    ("ISA_Simulator", runSim(bin, Seq("-testrun"), bin))
   }
 
   def runSimulators(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): Seq[(String, (String) => (String, String), Result)] = { 
