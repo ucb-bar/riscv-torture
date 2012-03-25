@@ -186,7 +186,7 @@ class VRegsMaster(num_xregs: Int, num_fregs: Int)
   val fs_reg_num = new ArrayBuffer[Int]
   val fd_reg_num = new ArrayBuffer[Int]
 
-  for (n <- 0 to num_fregs)
+  for (n <- 0 to num_fregs-1)
     if(rand_range(0, 1) == 0) fs_reg_num += n
     else fd_reg_num += n
 
