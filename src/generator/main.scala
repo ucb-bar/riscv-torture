@@ -42,7 +42,7 @@ object Generator extends Application
 
     val vecmix = veccfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
     assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
-    assert (vecmix.keys.forall(List("xmem","xalu","fgen","fax","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
+    assert (vecmix.keys.forall(List("vmem","xalu","fgen","fax","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
 
     val prog = new Prog(memsize)
     ProgSeg.cnt = 0

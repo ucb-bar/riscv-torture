@@ -12,7 +12,7 @@ object SeqVec
 
 class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d: HWRegPool, vl: Int, cfg: Map[String, Int]) extends InstSeq
 {
-  val memsize = cfg.getOrElse("memsize", 1024)
+  val memsize = cfg.getOrElse("memsize", 32)
   val vfnum   = cfg.getOrElse("vf", 10)
   val seqnum  = cfg.getOrElse("seq", 100)
   val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
@@ -22,7 +22,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   override def toString = name
 
   val xreg_helper = reg_write_hidden(xregs)
-  val vec_mem = new Mem(name+"_mem", memsize)
+  val vec_mem = new VMem(name+"_mem", memsize, vl)
   extra_visible_data += MemDump(vec_mem)
 
   // Determine how many per type of vector register need to checkout for writing

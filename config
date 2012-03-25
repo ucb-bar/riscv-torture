@@ -4,19 +4,18 @@ torture.nseqs 1000
 torture.memsize 1024
 
 torture.mix.xmem    10
-torture.mix.xbranch 40
+torture.mix.xbranch 30
 torture.mix.xalu    40
-torture.mix.fgen    6
-torture.mix.fax     3
+torture.mix.fgen    15
+torture.mix.fax     4
 torture.mix.vec     1
 
-
 torture.vec.vf 4
-torture.vec.seq 100
-torture.vec.memsize 1024
+torture.vec.seq 20
+torture.vec.memsize 32
 
-torture.vec.mix.xalu  55
-torture.vec.mix.xmem  10
-torture.vec.mix.fgen  25
+torture.vec.mix.xalu  60
+torture.vec.mix.vmem  10
+torture.vec.mix.fgen  20
 torture.vec.mix.fax   5
 torture.vec.mix.vonly 5
