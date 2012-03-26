@@ -46,7 +46,7 @@ object Overnight extends Application
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
         val newAsmName = generator.Generator.generate(confFileName, baseName)
-        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), opts.cSimPath, opts.rtlSimPath, Some(true), Some(true), Some(confFileName)) 
+        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), opts.cSimPath, opts.rtlSimPath, Some(true), Some(true), Some(false), Some(confFileName)) 
         if(failed) {
           errCount += 1
           test foreach { t =>
