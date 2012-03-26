@@ -15,10 +15,7 @@ ctest:
 	sbt 'testrun/run -c ../riscv-rocket/emulator/emulator'
 
 rtest:
-	sbt 'testrun/run -v false -r ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv'
-
-rtestv:
-	sbt 'testrun/run -v true -r ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv'
+	sbt 'testrun/run -r ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv'
 
 iretest:
 	sbt 'testrun/run -a output/test.S'

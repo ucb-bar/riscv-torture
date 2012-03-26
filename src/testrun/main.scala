@@ -14,7 +14,6 @@ case class Options(var testAsmName: Option[String] = None,
   var rtlSimPath: Option[String] = None,
   var seekOutFailure: Option[Boolean] = None,
   var dumpSigs: Option[Boolean] = None,
-  var virtualMode: Option[Boolean] = None,
   var confFileName: Option[String] = None)
 
 abstract sealed class Result
@@ -34,13 +33,14 @@ object TestRunner extends Application
       opt("r", "rtlsim", "<file>", "RTL simulator", {s: String => opts.rtlSimPath = Some(s)})
       booleanOpt("s", "seek", "<boolean>", "Seek for failing pseg", {b: Boolean => opts.seekOutFailure = Some(b)})
       booleanOpt("d", "dump", "<boolean>", "Dump mistmatched signatures", {b: Boolean => opts.dumpSigs = Some(b)})
-      booleanOpt("v", "virtual", "<boolean>", "Run in virtual mode", {b: Boolean => opts.virtualMode = Some(b)})
     }
     if (parser.parse(args)) {
       val confFileName = opts.confFileName.getOrElse("config") // TODO: This is removable?
-      testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.dumpSigs, opts.virtualMode, opts.confFileName)
+      testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.dumpSigs, opts.confFileName)
     }
   }
+
+  var virtualMode = false
   var maxcycles = 10000000
 
   def testrun(testAsmName:  Option[String], 
@@ -48,7 +48,6 @@ object TestRunner extends Application
               rtlSimPath:   Option[String], 
               doSeek:       Option[Boolean], 
               dumpSigs:     Option[Boolean],
-              virtualMode:  Option[Boolean],
               confFileName: Option[String]): (Boolean, Option[Seq[String]]) = 
   {
 
@@ -58,14 +57,15 @@ object TestRunner extends Application
     configin.close()
 
     maxcycles = config.getProperty("torture.maxcycles", "10000000").toInt
+    virtualMode = (config.getProperty("torture.virtual", "false").toLowerCase == "true")
 
     // Figure out which binary file to test
     val finalBinName = testAsmName match {
-      case Some(asmName) => compileAsmToBin(asmName, virtualMode.getOrElse(false))
+      case Some(asmName) => compileAsmToBin(asmName)
       case None => {
         val gen = generator.Generator
         val newAsmName = gen.generate(confFileName.getOrElse("config"), "test")
-        compileAsmToBin(newAsmName, virtualMode.getOrElse(false))
+        compileAsmToBin(newAsmName)
       }
     }
 
@@ -96,7 +96,7 @@ object TestRunner extends Application
           mism_names.foreach(n => println("\t"+n))
           println("///////////////////////////////////////////////////////")
           if(doSeek.getOrElse(true)) {
-            val failName = seekOutFailure(binName, bad_sims, dumpSigs.getOrElse(false), virtualMode.getOrElse(false))
+            val failName = seekOutFailure(binName, bad_sims, dumpSigs.getOrElse(false))
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)
             println("///////////////////////////////////////////////////////")
@@ -120,7 +120,7 @@ object TestRunner extends Application
     }
   }
 
-  def compileAsmToBin(asmFileName: String, virtualMode: Boolean): Option[String] = {  
+  def compileAsmToBin(asmFileName: String): Option[String] = {  
     assert(asmFileName.endsWith(".S"), println("Filename does not end in .S"))
     val binFileName = asmFileName.dropRight(2)
     var process = ""
@@ -233,7 +233,7 @@ object TestRunner extends Application
     })
   }
 
-  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean, virtualMode: Boolean): String = {
+  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): String = {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
     val lines = source.mkString
@@ -252,7 +252,7 @@ object TestRunner extends Application
       fw.close()
 
       // Compile new asm and test on sims
-      val newBinName = compileAsmToBin(newAsmName, virtualMode)
+      val newBinName = compileAsmToBin(newAsmName)
       newBinName match {
         case Some(b) => {
           val res = runSimulators(b, simulators, dumpSigs)   
