@@ -127,12 +127,12 @@ object TestRunner extends Application
     if (virtualMode)
     {
       println("Virtual mode")
-      process = "riscv-gcc " + asmFileName + " -DENABLE_STATS -O2 -nostdlib -nostartfiles -std=gnu99 -O2 -D__USER_VIRTUAL_VECTOR -T./riscv-testvms/rv64uv/test.ld ./riscv-testvms/rv64uv/entry.S ./riscv-testvms/rv64uv/vm.c -I./riscv-testvms/rv64uv -lc -o " + binFileName
+      process = "riscv-gcc -DENABLE_STATS -O2 -nostdlib -nostartfiles -std=gnu99 -O2 -D__USER_VIRTUAL_VECTOR -T./riscv-testvms/rv64uv/test.ld ./riscv-testvms/rv64uv/entry.S ./riscv-testvms/rv64uv/vm.c " + asmFileName + " -I./riscv-testvms/rv64uv -lc -o " + binFileName
     }
     else
     {
       println("Physical mode")
-      process = "riscv-gcc " + asmFileName + " -DENABLE_STATS -O2 -nostdlib -nostartfiles -D__USER_PHYSICAL_VECTOR -T./riscv-testvms/rv64up/test.ld -I./riscv-testvms/rv64up -o " + binFileName
+      process = "riscv-gcc -DENABLE_STATS -O2 -nostdlib -nostartfiles -D__USER_PHYSICAL_VECTOR -T./riscv-testvms/rv64up/test.ld " + asmFileName + " -I./riscv-testvms/rv64up -o " + binFileName
     }
     val pb = Process(process)
     val exitCode = pb.!
