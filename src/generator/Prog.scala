@@ -257,7 +257,7 @@ class Prog(memsize: Int)
   {
     "\n" +
     "\tTEST_CODEBEGIN\n" +
-    (if(using_fpu) "\tTEST_FP_ENABLE\n" else "") +
+//    (if(using_fpu) "\tTEST_FP_ENABLE\n" else "") + //line breaks VM
     (if(using_vec) init_vector() else "") + 
     "\n" +
     "\tj test_start\n" +
@@ -277,7 +277,7 @@ class Prog(memsize: Int)
   def init_vector() = 
   {
     "\n" +
-    "\tTEST_VEC_ENABLE\n" +
+//    "\tTEST_VEC_ENABLE\n" + //line breaks VM
     "\tli x1, " + used_vl + "\n" +
     "\tvvcfgivl x1, x1, " + num_vxregs + ", " + num_vfregs + "\n" 
   }
