@@ -34,7 +34,7 @@ cretest:
 	sbt 'testrun/run -c $(C_SIM) -a output/test.S'
 
 cretestd:
-	sbt 'testrun/run -c $(C_SIM) -a output/test.S'
+	sbt 'testrun/run -d true -c $(C_SIM) -a output/test.S'
 
 rretest:
 	sbt 'testrun/run -r $(R_SIM) -a output/test.S'
