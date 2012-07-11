@@ -96,7 +96,7 @@ object TestRunner extends Application
           mism_names.foreach(n => println("\t"+n))
           println("///////////////////////////////////////////////////////")
           if(doSeek.getOrElse(true)) {
-            val failName = seekOutFailure(binName, bad_sims, dumpSigs.getOrElse(false))
+            val failName = seekOutFailureBinary(binName, bad_sims, dumpSigs.getOrElse(false))
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)
             println("///////////////////////////////////////////////////////")
@@ -231,6 +231,52 @@ object TestRunner extends Application
       }
       (name, sim, res)
     })
+  }
+
+  def seekOutFailureBinary(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): String =
+  {
+    // Find failing asm file
+    val source = scala.io.Source.fromFile(bin+".S")
+    val lines = source.mkString
+    source.close()
+
+    // For all psegs
+    val psegFinder = """pseg_\d+""".r
+    val psegNums: List[Int] = psegFinder.findAllIn(lines).map(_.drop(5).toInt).toList
+    var (low, high) = (psegNums.min, psegNums.max)
+    var lastfound = ""
+    while (low <= high)
+    {
+      val p = (high + low)/2
+      // Replace jump to pseg with jump to reg_dump
+      val psegReplacer = ("pseg_" + p + ":\\n").r
+      val newAsmSource = psegReplacer.replaceAllIn(lines, "pseg_" + p + ":\n\tj reg_dump\n")
+      val newAsmName = bin + "_pseg_" + p + ".S"
+      val fw = new FileWriter(newAsmName)
+      fw.write(newAsmSource)
+      fw.close()
+
+      // Compile new asm and test on sims
+      val newBinName = compileAsmToBin(newAsmName)
+      newBinName match {
+        case Some(b) => {
+          val res = runSimulators(b, simulators, dumpSigs)   
+          if (!res.forall(_._3 == Matched)) {
+            lastfound = b
+            high = p-1
+          } else {
+            low = p+1
+          }
+        }
+        case None => println("Warning: Subset test could not compile.")    
+      }
+    }
+    if (lastfound == "") {
+      println("Warning: No subset tests could compile.")
+      bin
+    } else {
+      lastfound 
+    }
   }
 
   def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): String = {
