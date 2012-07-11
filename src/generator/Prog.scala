@@ -47,9 +47,15 @@ class Prog(memsize: Int)
   val seqs_active = new ArrayBuffer[InstSeq]
   val progsegs = new ArrayBuffer[ProgSeg]
 
+  var killed_seqs = 0
+  var nseqs = 0
+  var prob_tbl = new ArrayBuffer[(Int, ()=>InstSeq)]
+
   def seqs_not_allocated = seqs.filter((x) => !x.allocated)
   def is_seqs_empty = seqs_not_allocated.length == 0
   def is_seqs_active_empty = seqs_active.length == 0
+
+  def are_pools_fully_unallocated = List(xregs, fregs_s, fregs_d, vxregs, vfregs_s, vfregs_d).forall(_.is_fully_unallocated)
 
   def seqs_find_active(): Unit =
   {
@@ -65,6 +71,13 @@ class Prog(memsize: Int)
       }
       else
       {
+        if (are_pools_fully_unallocated)
+        {
+          seqs -= seq
+          killed_seqs += 1
+          if (killed_seqs < (nseqs*5))
+            gen_seq()
+        }
         xregs.restore()
         fregs.restore()
         vregs.restore()
@@ -75,6 +88,31 @@ class Prog(memsize: Int)
   }
 
   var jalr_labels = new ArrayBuffer[Label]
+
+  def gen_seq(): Unit =
+  {
+    val nxtseq = InstSeq(prob_tbl)
+    seqs += nxtseq
+/*  xregs.backup()    //Killing of sequences at generation is buggy.
+    fregs_s.backup()
+    fregs_d.backup()
+    vxregs.backup()
+    vfregs_s.backup()
+    vfregs_d.backup()
+    if (!nxtseq.allocate_regs())
+    {
+      seqs -= nxtseq
+      killed_seqs += 1
+      if (killed_seqs < (nseqs*5)) //TODO: Get a good metric
+        gen_seq()
+    }
+    xregs.restore()
+    fregs_s.restore()
+    fregs_d.restore()
+    vxregs.restore()
+    vfregs_s.restore()
+    vfregs_d.restore() */
+  }
 
   def add_inst(inst: Inst) =
   {
@@ -197,7 +235,7 @@ class Prog(memsize: Int)
 
   def names = List("xmem","xbranch","xalu","fgen","fax","vec")
 
-  def code_body(nseqs: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
+  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
   {
     val name_to_seq = Map(
       "xmem" -> (() => new SeqMem(xregs, core_memory)),
@@ -207,13 +245,13 @@ class Prog(memsize: Int)
       "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
       "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d, used_vl, veccfg)))
 
-    val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
+    prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
+    nseqs = seqnum
 
     for ((name, prob) <- mix)
       prob_tbl += ((prob, name_to_seq(name)))
 
-    for (i <- 0 to nseqs-1)
-      seqs += InstSeq(prob_tbl)
+    for (i <- 0 to nseqs-1) gen_seq()
 
     while (!is_seqs_empty)
     {
@@ -238,6 +276,11 @@ class Prog(memsize: Int)
 
     resolve_jalr_las
     rand_permute(progsegs)
+ 
+    if (killed_seqs >= (nseqs*5))
+    {
+      println("Warning: Prog killed an excessive number of sequences. (#X=%d, #Fs=%d, #Fd=%d, #VX=%d, #VFs=%d, #VFd=%d)" format (xregs.size, fregs_s.size, fregs_d.size, vxregs.size, vfregs_s.size, vfregs_d.size))
+    }
 
     while (resolve_far_branches) {}
 

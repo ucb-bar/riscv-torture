@@ -26,8 +26,25 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
   val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
   mixcfg foreach {case(name, prob) => (prob_tbl += ((prob, name_to_seq(name))))}
 
-  def gen_seq() = (seqs += InstSeq(prob_tbl))
-  
+  def gen_seq(): Unit =
+  {
+    val nxtseq = InstSeq(prob_tbl)
+    seqs += nxtseq
+    xregs.backup()
+    fregs_s.backup()
+    fregs_d.backup()
+    if (!nxtseq.allocate_regs())
+    {
+      seqs -= nxtseq
+      killed_seqs += 1
+      if (killed_seqs < (nseqs*5)) //TODO: get a good metric
+        gen_seq()
+    }
+    xregs.restore()
+    fregs_s.restore()
+    fregs_d.restore()
+  }
+ 
   for(i <- 1 to nseqs) gen_seq()
 
   def seqs_find_active(): Unit =
@@ -47,15 +64,6 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
         xregs.restore()
         fregs_s.restore()
         fregs_d.restore()
-
-        if(are_pools_fully_unallocated)
-        {
-          seqs -= seq
-          killed_seqs += 1
-          
-          if(killed_seqs < (nseqs*5)) // TODO: Get a good metric
-            gen_seq()
-        }
 
         return
       }
