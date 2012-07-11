@@ -4,6 +4,7 @@ import scala.collection.mutable.ArrayBuffer
 import Rand._
 
 import HWRegState._
+
 class HWRegPool
 {
   val hwregs = new ArrayBuffer[HWReg]
@@ -15,57 +16,92 @@ class HWRegPool
   def size = hwregs.length
 }
 
-class XRegsPool extends HWRegPool
+trait ScalarRegPool extends HWRegPool
 {
-  hwregs += new HWReg("x0", true, false)
-  for (i <- 1 to 31)
-    hwregs += new HWReg("x" + i.toString(), true, true)
-
+  val name: String
+  val regname: String
+  val ldinst: String
+  val stinst: String
+  
   def init_regs() =
   {
-    var s = "xreg_init:\n"
-    s += "\tla x31, xreg_init_data\n"
-    for (i <- 0 to 31)
-      s += "\tld " + hwregs(i) + ", " + 8*i + "(x31)\n"
+    var s = name + "_init:\n"
+    s += "\tla x31, " + name + "_init_data\n"
+    for (i <- 0 to hwregs.length-1)
+      s += "\t" + ldinst + " " + hwregs(i) + ", " + 8*i + "(x31)\n"
     s += "\n"
     s
   }
-
+  
   def save_regs() =
   {
-    val r = rand_range(1, 31)
-    var s = "\tla x" + r + ", xreg_output_data\n"
-    hwregs(r).state = HID
-    for (i <- 0 to 31)
+    var s = "\tla x1, " + name + "_output_data\n"
+    for (i <- 0 to hwregs.length-1)
       if (hwregs(i).is_visible)
-        s += "\tsd " + hwregs(i) + ", " + 8*i + "(" + hwregs(r) + ")\n"
+        s += "\t" + stinst + " " + hwregs(i) + ", " + 8*i + "(x1)\n"
     s += "\n"
     s
   }
-
-  def init_regs_data() =
+  
+  def init_regs_data() = 
   {
     var s = "\t.align 8\n"
-    s += "xreg_init_data:\n"
-    for (i <- 0 to 31)
-      s += ("reg_x" + i + "_init:\t.dword " + "0x%016x\n" format rand_biased)
+    s += name + "_init_data:\n"
+    for (i <- 0 to hwregs.length-1)
+      s += (regname + i + "_init:\t.dword " + "0x%016x\n" format rand_biased) //Change randomization for FRegs
     s += "\n"
     s
   }
-
+  
   def output_regs_data() =
-  {  
+  {
     var s = "\t.align 8\n"
-    s += "xreg_output_data:\n"
-    for (i <- 0 to 31)
-      s += "reg_x" + i + "_output:\t.dword 0x%016x\n" format rand_dword
+    s += name + "_output_data:\n"
+    for (i <- 0 to hwregs.length-1)
+      s += (regname + i + "_output:\t.dword 0x%016x\n" format rand_dword)
     s += "\n"
     s
   }
 }
 
-class FRegsMaster()
+trait PoolsMaster extends HWRegPool
 {
+  val regpools: ArrayBuffer[HWRegPool]
+  override val hwregs = new ArrayBuffer[HWReg] //Override this in subclasses
+  override def is_fully_unallocated = regpools.forall(_.is_fully_unallocated)
+  override def size = regpools.map(_.size).sum
+  def extract_pools() =
+  {
+    regpools
+  }
+  override def backup() =
+  {
+    regpools.map(_.backup()).flatten
+  }
+  override def restore() =
+  {
+    regpools.map(_.restore()).flatten
+  }
+}
+
+class XRegsPool extends ScalarRegPool
+{
+  val (name, regname, ldinst, stinst) = ("xreg", "reg_x", "ld", "sd")
+  
+  hwregs += new HWReg("x0", true, false)
+  for (i <- 1 to 31)
+    hwregs += new HWReg("x" + i.toString(), true, true)
+    
+  override def save_regs() =
+  {
+    hwregs(1).state = HID
+    super.save_regs()
+  }
+}
+
+class FRegsMaster extends ScalarRegPool with PoolsMaster
+{
+  val (name,regname,ldinst,stinst) = ("freg","reg_f","fld","fsd") // and flw and fsw
   val s_reg_num = new ArrayBuffer[Int]
   val d_reg_num = new ArrayBuffer[Int]
 
@@ -88,96 +124,45 @@ class FRegsMaster()
     d_reg_num += mv_n
   }
   
-  val s_regpool = new FRegsPool(s_reg_num.toArray, "freg_s", "flw", "fsw")
-  val d_regpool = new FRegsPool(d_reg_num.toArray, "freg_d", "fld", "fsd")
+  val s_regpool = new FRegsPool(s_reg_num.toArray)
+  val d_regpool = new FRegsPool(d_reg_num.toArray)
+  val regpools = ArrayBuffer(s_regpool.asInstanceOf[HWRegPool],
+                 d_regpool.asInstanceOf[HWRegPool])
+  override val hwregs = regpools.map(_.hwregs).flatten
   
-  def extract_pools() =
+  override def init_regs() = //Wrapper function
   {
-    (s_regpool,d_regpool)
-  }
-  def backup() = // Wrapper function
-  {
-    s_regpool.backup()
-    d_regpool.backup()
-  }
-  def restore() = // Wrapper function
-  {
-    s_regpool.restore()
-    d_regpool.restore()
-  }
-
-  // NOTE: This must be called BEFORE scalar core init since x1 needed for memory addressing
-  def init_regs() = // Wrapper function
-  {
-    var s = "freg_init:\n"
-    s += s_regpool.init_regs()
-    s += d_regpool.init_regs()
-    s += "\n"
+    var s = "freg_init:\n"+"freg_s_init:\n"+"\tla x1, freg_init_data\n"
+    for ((i, curreg) <- s_reg_num.zip(s_regpool.hwregs))
+      s += "\tflw" + " " + curreg + ", " + 8*i + "(x1)\n"
+    s += "\n"+"freg_d_init:\n"+"\tla x1, freg_init_data\n"
+    for ((i, curreg) <- d_reg_num.zip(d_regpool.hwregs))
+      s += "\tfld" + " " + curreg + ", " + 8*i + "(x1)\n"
+    s += "\n\n"
     s
-  }
-  
-  // NOTE: This must be called AFTER scalar core init since x1 needed for memory addressing
-  def save_regs() = // Wrapper function
+  } 
+  override def save_regs() = //Wrapper function
   {
-    var s = "freg_save:\n"
-    s += s_regpool.save_regs()
-    s += d_regpool.save_regs()
-    s += "\n"
-    s
-  }
-  
-  def init_regs_data() =
-  {
-    var s = "\t.align 8\n"
-    s += "freg_init_data:\n"
-    for (i <- 0 to 31)
-      s += ("reg_f" + i + "_init:\t.dword " + "0x%016x\n" format rand_biased) // TODO CHANGE RANDOMIZATION
-    s += "\n"
-    s
-  }
-
-  def output_regs_data() =
-  {
-    var s = "\t.align 8\n"
-    s += "freg_output_data:\n"
-    for (i <- 0 to 31)
-      s += ("reg_f" + i + "_output:\t.dword 0x%016x\n" format rand_dword)
-    s += "\n"
+    var s = "freg_save:\n"+"\tla x1, freg_output_data\n"
+    for ((i, curreg) <- s_reg_num.zip(s_regpool.hwregs))
+      if (curreg.is_visible)
+        s += "\tfsw" + " " + curreg + ", " + 8*i + "(x1)\n"
+    s += "\n"+"\tla x1, freg_output_data\n"
+    for ((i, curreg) <- d_reg_num.zip(d_regpool.hwregs))
+      if (curreg.is_visible)
+        s += "\tfsd" + " " + curreg + ", " + 8*i + "(x1)\n"
+    s += "\n\n"
     s
   }
 }
 
-class FRegsPool(reg_nums: Array[Int] = (0 to 31).toArray, name: String = "freg_d", inst_ld: String = "fld", inst_sd: String = "fsd") extends HWRegPool
+class FRegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool
 {
   for (i <- reg_nums)
     hwregs += new HWReg("f" + i.toString(), true, true)
-  
-  // NOTE: This must be called BEFORE scalar core init since x1 needed for memory addressing
-  def init_regs() =
-  {
-    var s = name + "_init:\n"
-    s += "\tla x1, freg_init_data\n"
-    for ((i, curreg) <- reg_nums.zip(hwregs))
-      s += "\t" + inst_ld + " " + curreg + ", " + 8*i + "(x1)\n"
-    s += "\n"
-    s
-  }
-
-  // NOTE: This must be called AFTER scalar core init since x1 needed for memory addressing
-  def save_regs() =
-  {
-    var s = "\tla x1, freg_output_data\n"
-    // NOTE: x31 in XRegsPool 'should' be declared hidden here; however, it is assumed XRegs has already saved.
-    //        Thus, the issue is moot.
-    for ((i, curreg) <- reg_nums.zip(hwregs))
-      if (curreg.is_visible)
-        s += "\t" + inst_sd + " " + curreg + ", " + 8*i + "(x1)\n"
-    s += "\n"
-    s
-  }
 }
 
-class VRegsMaster(num_xregs: Int, num_fregs: Int)
+class VRegsMaster(num_xregs: Int, num_fregs: Int) extends PoolsMaster
 {
   assert(num_xregs >= 5, "For VRegMaster, num_xregs >=5 enforced")
   assert(num_fregs >= 8, "For VRegMaster, num_fregs >=8 enforced")
@@ -210,23 +195,9 @@ class VRegsMaster(num_xregs: Int, num_fregs: Int)
   val x_regpool  = new VXRegsPool(x_reg_num.toArray)
   val fs_regpool = new VFRegsPool(fs_reg_num.toArray)
   val fd_regpool = new VFRegsPool(fd_reg_num.toArray)
-  
-  def extract_pools() =
-  {
-    (x_regpool, fs_regpool, fd_regpool)
-  }
-  def backup() = // Wrapper function
-  {
-    x_regpool.backup()
-    fs_regpool.backup()
-    fd_regpool.backup()
-  }
-  def restore() = // Wrapper function
-  {
-    x_regpool.restore()
-    fs_regpool.restore()
-    fd_regpool.restore()
-  }
+  val regpools = ArrayBuffer(x_regpool.asInstanceOf[HWRegPool], 
+      fs_regpool.asInstanceOf[HWRegPool], fd_regpool.asInstanceOf[HWRegPool])  
+  override val hwregs = regpools.map(_.hwregs).flatten
 }
 
 class VXRegsPool(reg_nums: Array[Int] = (1 to 31).toArray) extends HWRegPool

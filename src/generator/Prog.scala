@@ -38,8 +38,10 @@ class Prog(memsize: Int)
   val fregs = new FRegsMaster()
   val vregs = new VRegsMaster(num_vxregs, num_vfregs)
 
-  val (fregs_s, fregs_d) = fregs.extract_pools()
-  val (vxregs, vfregs_s, vfregs_d) = vregs.extract_pools()
+  val fregpools = fregs.extract_pools()
+  val vregpools = vregs.extract_pools()
+  val (fregs_s, fregs_d) = (fregpools(0), fregpools(1))
+  val (vxregs, vfregs_s, vfregs_d) = (vregpools(0), vregpools(1), vregpools(2))
 
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
