@@ -5,6 +5,7 @@ import Rand._
 
 class SeqFaX(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
 {
+  override val seqname = "fax"
   def seq_src1(op: Opcode, dst_pool: HWRegPool, src_pool: HWRegPool) = () =>
   {
     val src1 = reg_read_any(src_pool)

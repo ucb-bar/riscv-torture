@@ -7,6 +7,7 @@ class InstSeq extends HWRegAllocator
 {
   val insts = new ArrayBuffer[Inst]
   var inst_ptr = 0
+  val seqname = "Unnamed"
 
   val extra_code = new ArrayBuffer[DataChunk]
   val extra_hidden_data = new ArrayBuffer[DataChunk]

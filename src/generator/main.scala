@@ -40,6 +40,9 @@ object Generator extends Application
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
     assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fax","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
+    val vmemsize = veccfg.getOrElse("memsize", 32)
+    val vnseq = veccfg.getOrElse("seq", 100)
+    val vfnum = veccfg.getOrElse("vf", 10)
     val vecmix = veccfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
     assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
     assert (vecmix.keys.forall(List("vmem","xalu","fgen","fax","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
@@ -53,6 +56,11 @@ object Generator extends Application
     val fw = new FileWriter(oname)
     fw.write(s)
     fw.close()
+    val stats = prog.statistics(nseqs,mix,vnseq,vmemsize,vfnum,vecmix)
+    val sname = "output/" + outFileName + ".stats"
+    val fw2 = new FileWriter(sname)
+    fw2.write(stats)
+    fw2.close()
     oname
   }
 }

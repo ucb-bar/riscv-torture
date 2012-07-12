@@ -5,6 +5,7 @@ import Rand._
 
 class SeqVOnly(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
 {
+  override val seqname = "vonly"
   def seq_xdest(op: Opcode) = () =>
   {
     val dest = reg_write_visible(xregs) // Verifiy visible is appropriate for this

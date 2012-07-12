@@ -5,6 +5,7 @@ import Rand._
 
 class SeqMem(xregs: HWRegPool, mem: Mem) extends InstSeq
 {
+  override val seqname = "xmem"
   def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
   {
     val reg_addr = reg_write_hidden(xregs)

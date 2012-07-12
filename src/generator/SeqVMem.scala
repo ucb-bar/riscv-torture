@@ -5,6 +5,7 @@ import Rand._
 
 class SeqVMem(xregs: HWRegPool, mem: VMem) extends InstSeq
 {
+  override val seqname = "vmem"
   def helper_setup_address(reg_addr: Reg, reg_helper: Reg, baseaddr: Int) =
   {
     insts += UTIDX(reg_helper)

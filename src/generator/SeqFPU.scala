@@ -5,6 +5,7 @@ import Rand._
 
 class SeqFPU(fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
 {
+  override val seqname = "fgen"
   def seq_src1_s(op: Opcode) = () =>
   {
     val src1 = reg_read_any(fregs_s)

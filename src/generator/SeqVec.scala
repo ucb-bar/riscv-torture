@@ -1,6 +1,7 @@
 package torture
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashMap
 import Rand._
 
 object SeqVec
@@ -12,10 +13,12 @@ object SeqVec
 
 class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d: HWRegPool, vl: Int, cfg: Map[String, Int]) extends InstSeq
 {
+  override val seqname = "vec"
   val memsize = cfg.getOrElse("memsize", 32)
   val vfnum   = cfg.getOrElse("vf", 10)
   val seqnum  = cfg.getOrElse("seq", 100)
   val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
+  val vseqstats = new HashMap[String,Int].withDefaultValue(0)
 
   val name = "seqvec_" + SeqVec.cnt
   SeqVec.cnt += 1
@@ -103,6 +106,10 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   {
     // Create SeqSeq to create some vector instructions
     val vf_instseq = new SeqSeq(shadow_vxregs, shadow_vfregs_s, shadow_vfregs_d, vec_mem, seqnum, mixcfg)
+    for ((seqname, seqcnt) <- vf_instseq.seqstats)
+    {
+      vseqstats(seqname) += seqcnt
+    }
 
     // Dump that SeqSeq into a VF Instruction block
     val vf_block = new ProgSeg(name+"_vf_"+i)

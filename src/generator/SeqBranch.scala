@@ -5,6 +5,7 @@ import Rand._
 
 class SeqBranch(xregs: HWRegPool) extends InstSeq
 {
+  override val seqname = "xbranch"
   val taken = Label("__needs_branch_patch")
   val nottakens = ArrayBuffer[Label](Label("crash_backward"), Label("crash_forward"))
   val nottaken = rand_pick(nottakens)

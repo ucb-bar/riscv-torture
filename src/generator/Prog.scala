@@ -3,6 +3,8 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import Rand._
+import java.util.Date
+import java.text.DateFormat
 
 class ProgSeg(val name: String)
 {
@@ -51,6 +53,21 @@ class Prog(memsize: Int)
   var nseqs = 0
   var prob_tbl = new ArrayBuffer[(Int, ()=>InstSeq)]
 
+  val opstats = new HashMap[String, scala.collection.mutable.Map[String,Int]]
+  val catstats = new HashMap[String,Int]
+  val seqstats = new HashMap[String,Int].withDefaultValue(0)
+  val vseqstats = new HashMap[String,Int].withDefaultValue(0)
+  val regstats = new HashMap[String,Int].withDefaultValue(0)
+  for (cat <- List(("alu"),("cmp"),("branch"),("jalr"),
+    ("jmp"),("la"),("mem"),("amo"),("misc"),("fpalu"),("fpcmp"),
+    ("fpfma"),("fpmem"),("fpcvt"),("fpmisc"),("vmem"),
+    ("vmisc"),("unknown")))
+    {
+      catstats(cat)=0
+      opstats(cat) = new HashMap[String,Int].withDefaultValue(0)
+    }
+  var instcnt = 0
+
   def seqs_not_allocated = seqs.filter((x) => !x.allocated)
   def is_seqs_empty = seqs_not_allocated.length == 0
   def is_seqs_active_empty = seqs_active.length == 0
@@ -75,6 +92,14 @@ class Prog(memsize: Int)
         {
           seqs -= seq
           killed_seqs += 1
+          seqstats(seq.seqname) -= 1
+          if (seq.seqname == "vec")
+          {
+            for ((seqname, seqcnt) <- seq.asInstanceOf[SeqVec].vseqstats)
+            {
+              vseqstats(seqname) = seqcnt
+            }
+          }
           if (killed_seqs < (nseqs*5))
             gen_seq()
         }
@@ -89,10 +114,146 @@ class Prog(memsize: Int)
 
   var jalr_labels = new ArrayBuffer[Label]
 
+  def update_stats(inst: Inst) =
+  {
+    catstats(inst.optype) += 1
+    opstats(inst.optype)(inst.opcode) += 1
+    for (operand <- inst.operands)
+    {
+      if (operand.isInstanceOf[Reg])
+      {
+        regstats(operand.toString) += 1
+      }
+    }
+    instcnt += 1
+  }
+
+  def register_stats(): String =
+  {
+    def register_lt(reg1: (String, Int), reg2: (String, Int)): Boolean =
+    {
+      val reghash = HashMap('x'->1,'f'->2,'v'->3)
+      val regname1 = reg1._1
+      val regname2 = reg2._1
+      if (reghash(regname1(0)) == reghash(regname2(0)))
+      {
+        if (regname1(0) == 'v')
+        {
+          if (regname1(1) == regname2(1))
+          {
+            return (regname1.substring(2).toInt < regname2.substring(2).toInt)
+          } else {
+            return (reghash(regname1(1)) < reghash(regname2(1)))
+          }
+        } else {
+          return (regname1.substring(1).toInt < regname2.substring(1).toInt)
+        }
+      } else {
+        return (reghash(regname1(0)) < reghash(regname2(0)))
+      }
+    }
+  
+    val sortedRegs = regstats.toSeq.sortWith(register_lt) //TODO: Better way to sort?
+    var s = "---------- Register Accesses ----------\n"
+    for ((regname, cnt) <- sortedRegs)
+    {
+      s += "---------- " + regname + ": " + cnt + " ----------\n"
+    }
+    s
+  }
+
+  def sequence_stats(mix: Map[String, Int], vecmix: Map[String, Int], nseqs: Int, vnseq: Int, vfnum: Int): String = 
+  {  
+    def seq_lt(seq1: (String, Int), seq2: (String, Int)): Boolean =
+    {
+      val seqhash = HashMap("xmem"->1,"xbranch"->2,"xalu"->3,"vmem"->4, 
+      "fgen"->5,"fax"->6, "vec"->7,"vonly"->8,"Generic"->9).withDefaultValue(100)
+      if (seqhash(seq1._1) == 100 && seqhash(seq2._1) == 100) return (seq1._1 < seq2._1)
+      return seqhash(seq1._1) < seqhash(seq2._1)
+    }
+   
+    val sortedMix = mix.toSeq.sortWith(seq_lt)
+    val sortedVecmix = vecmix.toSeq.sortWith(seq_lt)
+    var s = "---------- Configured Sequence Mix ----------\n"
+    for ((seqtype, percent) <- sortedMix)
+    {
+      s += "---------- " + seqtype + ": " + percent + "% ----------\n"
+    }
+    s += "--------------------------------------------------------------------------\n"
+    s += "---------- Configured Vector Sequence Mix ----------\n"
+    for ((seqtype, percent) <- sortedVecmix)
+    {
+      s+= "---------- " + seqtype + ": " + percent + "% ----------\n"
+    }
+    s += "--------------------------------------------------------------------------\n"
+    s += "---------- Generated Sequence Mix ----------\n"
+    s += "---------- nseqs = " + nseqs + " -------------\n"
+    val sortedSeqs = seqstats.toSeq.sortWith(seq_lt)
+    for ((seq, seqcnt) <- sortedSeqs)
+    {
+      s += "---------- " + seq + ": " + seqcnt + " :: %3.3f".format((seqcnt.toDouble/nseqs)*100)
+      s += "% ----------\n"
+    }
+    s += "--------------------------------------------------------------------------\n"
+    s += "---------- Generated Vector Sequence Mix ----------\n"
+    s += "---------- nvseqs = " + vnseq*vfnum*seqstats("vec") + " -------------\n"
+    val sortedVSeqs = vseqstats.toSeq.sortWith(seq_lt)
+    for ((vseq, vseqcnt) <- sortedVSeqs)
+    {
+      s += "---------- " + vseq + ": " + vseqcnt
+      s += " :: %3.3f".format((vseqcnt.toDouble/(vnseq*vfnum*seqstats("vec")))*100)
+      s += "% ----------\n"
+    }
+    s
+  }
+  
+  def instruction_stats(): String = 
+  {
+    def cat_lt(cat1: (String, Int), cat2: (String, Int)): Boolean =
+    {
+      val cathash = HashMap("alu"->1,"cmp"->2,"branch"->3,"jmp"->4,"jalr"->5,
+        "la"->6,"mem"->7,"amo"->8,"misc"->9,"fpalu"->10,"fpcmp"->11,"fpfma"->12,
+        "fpmem"->13,"fpcvt"->14,"fpmisc"->15,"vmem"->16,"vmisc"->17,"unknown"->18)
+      return cathash(cat1._1) < cathash(cat2._1)
+    }
+
+    var s = "---------- Opcode Usage ----------\n"
+    s += "---------- instcnt = " + instcnt + " -------------\n"
+    val sortedCats = catstats.toSeq.sortWith(cat_lt) // TODO: Better way to sort?
+    for ((cat, catcnt) <- sortedCats)
+    {
+      val sortedOps = opstats(cat).toSeq.sortWith(_._1 < _._1)  //TODO: Better way to sort?
+      s += "--------------------------------------------------------------------------\n"
+      s += "---------- " + cat.toUpperCase() + " Opcodes: " + catcnt + " :: %3.3f".format((catcnt.toDouble/instcnt)*100)
+      s +=  "% ----------\n"
+      for ((op, opcnt) <- sortedOps)
+      {
+        s += "-------------------- " + op + ": " + opcnt + " :: %3.3f".format((opcnt.toDouble/instcnt)*100)
+        s += "% ----------\n"
+      }
+    }
+    s
+  }
+
+  def get_time(): String =
+  {
+    val date = new Date()
+    val datestr = DateFormat.getDateTimeInstance(DateFormat.FULL, DateFormat.FULL).format(date)
+    "----- Test generated on " + datestr + " -----\n"
+  }
+
   def gen_seq(): Unit =
   {
     val nxtseq = InstSeq(prob_tbl)
     seqs += nxtseq
+    seqstats(nxtseq.seqname) += 1
+    if (nxtseq.seqname == "vec")
+    {
+      for ((seqname, seqcnt) <- nxtseq.asInstanceOf[SeqVec].vseqstats)
+      {
+        vseqstats(seqname) += seqcnt
+      }
+    }
 /*  xregs.backup()    //Killing of sequences at generation is buggy.
     fregs_s.backup()
     fregs_d.backup()
@@ -103,6 +264,12 @@ class Prog(memsize: Int)
     {
       seqs -= nxtseq
       killed_seqs += 1
+      seqstats(nxtseq.seqname) == 1
+      if (nxtseq.seqname == "vec")
+      {
+        for ((seqname, seqcnt) <- seq.asInstanceOf[SeqVec])
+          vseqstats(seqname) -= seqcnt
+      }
       if (killed_seqs < (nseqs*5)) //TODO: Get a good metric
         gen_seq()
     }
@@ -141,6 +308,7 @@ class Prog(memsize: Int)
       jalr_labels += Label(progsegs.last.name)
       inst.operands(jalr_patch) = Imm(0)
     }
+    update_stats(inst)
   }
 
   def resolve_jalr_las =
@@ -411,5 +579,29 @@ class Prog(memsize: Int)
     data_input(using_fpu) +
     data_output(using_fpu) +
     data_footer()
+  }
+
+  def statistics(nseqs: Int, mix: Map[String, Int], vnseq: Int, vmemsize: Int, vfnum: Int, vecmix: Map[String, Int]) =
+  {
+    "--------------------------------------------------------------------------\n" + 
+    "-- Statistics for assembly code created by RISCV torture test generator --\n" +
+    get_time() +
+    "--------------------------------------------------------------------------\n" +
+    "---------- instcnt = " + instcnt + " -------------\n" +
+    "---------- nseqs = " + nseqs + " -------------\n" +
+    "---------- memsize = " + memsize + " ----------\n" +
+    "---------- vnseq = " + vnseq + " ----------\n" +
+    "---------- vfnum = " + vfnum + " ----------\n" +
+    "---------- vmemsize = " + vmemsize + " ----------\n" +
+    "--------------------------------------------------------------------------\n\n" +
+    "--------------------------------------------------------------------------\n" +
+    sequence_stats(mix, vecmix, nseqs, vnseq, vfnum) +
+    "--------------------------------------------------------------------------\n\n" +
+    "--------------------------------------------------------------------------\n" +
+    instruction_stats() +
+    "--------------------------------------------------------------------------\n\n" +
+    "--------------------------------------------------------------------------\n" +
+    register_stats() +
+    "--------------------------------------------------------------------------\n"
   }
 }

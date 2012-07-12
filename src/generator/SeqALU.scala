@@ -5,6 +5,7 @@ import Rand._
 
 class SeqALU(xregs: HWRegPool, use_divider: Boolean) extends InstSeq //TODO: better configuration
 {
+  override val seqname = "xalu"
   def seq_immfn(op: Opcode, immfn: () => Int) = () =>
   {
     val dest = reg_write_visible(xregs)

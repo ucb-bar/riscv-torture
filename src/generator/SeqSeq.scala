@@ -1,6 +1,7 @@
 package torture
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashMap
 import Rand._
 
 class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int]) extends InstSeq
@@ -8,6 +9,7 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
   var killed_seqs = 0
+  val seqstats = new HashMap[String,Int].withDefaultValue(0)
 
   def seqs_not_allocated = seqs.filter((x) => !x.allocated)
   def is_seqs_empty = seqs_not_allocated.length == 0
@@ -40,13 +42,15 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
       if (killed_seqs < (nseqs*5)) //TODO: get a good metric
         gen_seq()
     }
+    else
+    {
+      seqstats(nxtseq.seqname) += 1
+    }
     xregs.restore()
     fregs_s.restore()
     fregs_d.restore()
   }
  
-  for(i <- 1 to nseqs) gen_seq()
-
   def seqs_find_active(): Unit =
   {
     for (seq <- seqs_not_allocated)
@@ -70,6 +74,7 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
     }
   }
 
+  for(i <- 1 to nseqs) gen_seq()
   
   while(!is_seqs_empty)
   {

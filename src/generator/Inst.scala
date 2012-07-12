@@ -2,11 +2,77 @@ package torture
 
 class Inst(opcode: String, val operands: Array[Operand])
 {
+  def optype(): String = { 
+	if (is_alu) return "alu"
+	if (is_cmp) return "cmp"
+    if (is_branch) return "branch"
+	if (is_jalr) return "jalr"
+	if (is_jmp) return "jmp"
+	if (is_la) return "la"
+	if (is_mem) return "mem"
+	if (is_amo) return "amo"
+	if (is_misc) return "misc"
+	if (is_fpalu) return "fpalu"
+	if (is_fpcmp) return "fpcmp"
+	if (is_fpfma) return "fpfma"
+	if (is_fpmem) return "fpmem"
+	if (is_fpcvt) return "fpcvt"
+	if (is_fpmisc) return "fpmisc"
+	if (is_vmem) return "vmem"
+	if (is_vmisc) return "vmisc"
+	return "unknown" //Shouldn't return this.
+  }
+
+  def opcode(): String = { return opcode }
+
   def is_branch = List("beq", "bne", "blt", "bge", "bltu", "bgeu").contains(opcode)
 
   def is_jalr = List("jalr", "jalr.c", "jalr.j", "jalr.r").contains(opcode)
 
+  def is_jmp = List("j", "jal").contains(opcode)
+
   def is_la = opcode == "la"
+
+  def is_mem = List("lb", "lh", "lw", "ld", "lbu", "lhu", "lwu", "sb", "sh", "sw", "sd").contains(opcode)
+  
+  def is_amo = List("amoadd.w", "amoswap.w", "amoand.w", "amoor.w", "amomin.w", "amominu.w",
+    "amomax.w", "amomaxu.w", "amoadd.d", "amoswap.d", "amoand.d", "amoor.d", "amomin.d",
+	"amominu.d", "amomax.d", "amomaxu.d").contains(opcode)
+	
+  def is_cmp = List("slti", "sltiu", "slt", "sltu").contains(opcode)
+	
+  def is_alu = List("addi", "slli", "xori", "srli", "srai", "ori", "andi",
+    "add", "sub", "sll", "xor", "srl", "sra", "or", "and", "mul", "mulh",
+	"mulhsu", "mulhu", "div", "divu", "rem", "remu", "lui", "addiw", "slliw", "srliw",
+	"sraiw", "addw", "subw", "sllw", "srlw", "sraw", "mulw", "divw", "divuw", "remw", 
+	"remuw").contains(opcode)
+	
+  def is_fpmem = List("flw", "fld", "fsw", "fsd").contains(opcode)
+  
+  def is_fpalu = List("fadd.s", "fsub.s", "fmul.s", "fdiv.s", "fsqrt.s", "fmin.s", "fmax.s",
+    "fadd.d", "fsub.d", "fmul.d", "fdiv.d", "fsqrt.d", "fmin.d", "fmax.d",
+	"fsgnj.s", "fsgnjn.s", "fsgnjx.s", "fsgnj.d", "fsgnjn.d", "fsgnjx.d").contains(opcode)
+	
+  def is_fpfma = List("fmadd.s", "fmsub.s", "fnmsub.s", "fnmadd.s", 
+    "fmadd.d", "fmsub.d", "fnmsub.d", "fnmadd.d").contains(opcode)
+	
+  def is_fpcvt = List("fcvt.s.d", "fcvt.d.s", "fcvt.s.l", "fcvt.s.lu", "fcvt.s.w", 
+    "fcvt.s.wu", "fcvt.d.l", "fcvt.d.lu", "fcvt.d.w", "fcvt.d.wu", "fcvt.l.s",
+	"fcvt.lu.s", "fcvt.w.s", "fcvt.wu.s", "fcvt.l.d", "fcvt.lu.d", 
+	"fcvt.w.d", "fcvt.wu.d").contains(opcode)
+  
+  def is_fpmisc = List("fmovz", "fmovn", "mffsr", "mtfsr", "mxtf.s", "mxtf.d",
+    "mtfx.s", "mtfx.d", "mftx.s", "mftx.d").contains(opcode)
+  
+  def is_fpcmp = List("feq.s", "flt.s", "fle.s", "feq.d", "flt.d", "fle.d").contains(opcode)
+  
+  def is_misc = List("syscall", "break", "rdcycle", "rdtime", "rdinstret",
+    "nop", "li", "mfpcr", "mtpcr", "rdnpc", "movz", "movn", "fence.i", "fence").contains(opcode)
+	
+  def is_vmem = List("vld", "vsd", "vlw", "vsw", "vflw", "vfsw", "vfld", "vfsd").contains(opcode)
+
+  def is_vmisc = List("vvcfgivl", "stop", "vsetvl", "utidx", "vf",
+    "vmsv", "vmvv", "vfmvv", "fence.v.g", "fence.v.l").contains(opcode)
 
   override def toString = opcode + operands.mkString(" ", ", ", "")
 }
@@ -28,7 +94,6 @@ object JALR extends Opcode("jalr")
 object JALR_C extends Opcode("jalr.c")
 object JALR_R extends Opcode("jalr.r")
 object JALR_J extends Opcode("jalr.j")
-object RDNPC extends Opcode("rdnpc")
 
 object LA extends Opcode("la")
 object LB extends Opcode("lb")
@@ -56,6 +121,7 @@ object AMOSWAP_D extends Opcode("amoswap.d")
 object AMOAND_D extends Opcode("amoand.d")
 object AMOOR_D extends Opcode("amoor.d")
 object AMOMIN_D extends Opcode("amomin.d")
+object AMOMINU_D extends Opcode("amominu.d")
 object AMOMAX_D extends Opcode("amomax.d")
 object AMOMAXU_D extends Opcode("amomaxu.d")
 
@@ -122,6 +188,13 @@ object FDIV_D extends Opcode("fdiv.d")
 object FSQRT_D extends Opcode("fsqrt.d")
 object FMIN_D extends Opcode("fmin.d")
 object FMAX_D extends Opcode("fmax.d")
+object FSGNJ_S extends Opcode("fsgnj.s")
+object FSGNJN_S extends Opcode("fsgnjn.s")
+object FSGNJX_S extends Opcode("fsgnjx.s")
+object FSGNJ_D extends Opcode("fsgnj.d")
+object FSGNJN_D extends Opcode("fsgnjn.d")
+object FSGNJX_D extends Opcode("fsgnjx.d")
+
 object FMADD_S extends Opcode("fmadd.s")
 object FMSUB_S extends Opcode("fmsub.s")
 object FNMSUB_S extends Opcode("fnmsub.s")
@@ -130,12 +203,7 @@ object FMADD_D extends Opcode("fmadd.d")
 object FMSUB_D extends Opcode("fmsub.d")
 object FNMSUB_D extends Opcode("fnmsub.d")
 object FNMADD_D extends Opcode("fnmadd.d")
-object FSGNJ_S extends Opcode("fsgnj.s")
-object FSGNJN_S extends Opcode("fsgnjn.s")
-object FSGNJX_S extends Opcode("fsgnjx.s")
-object FSGNJ_D extends Opcode("fsgnj.d")
-object FSGNJN_D extends Opcode("fsgnjn.d")
-object FSGNJX_D extends Opcode("fsgnjx.d")
+
 object FCVT_S_D extends Opcode("fcvt.s.d")
 object FCVT_D_S extends Opcode("fcvt.d.s")
 object FCVT_S_L extends Opcode("fcvt.s.l")
@@ -146,9 +214,6 @@ object FCVT_D_L extends Opcode("fcvt.d.l")
 object FCVT_D_LU extends Opcode("fcvt.d.lu")
 object FCVT_D_W extends Opcode("fcvt.d.w")
 object FCVT_D_WU extends Opcode("fcvt.d.wu")
-object MXTF_S extends Opcode("mxtf.s")
-object MXTF_D extends Opcode("mxtf.d")
-object MTFSR extends Opcode("mtfsr")
 object FCVT_L_S extends Opcode("fcvt.l.s")
 object FCVT_LU_S extends Opcode("fcvt.lu.s")
 object FCVT_W_S extends Opcode("fcvt.w.s")
@@ -157,48 +222,59 @@ object FCVT_L_D extends Opcode("fcvt.l.d")
 object FCVT_LU_D extends Opcode("fcvt.lu.d")
 object FCVT_W_D extends Opcode("fcvt.w.d")
 object FCVT_WU_D extends Opcode("fcvt.wu.d")
+
+object MXTF_S extends Opcode("mxtf.s")
+object MXTF_D extends Opcode("mxtf.d")
 object MFTX_S extends Opcode("mftx.s")
 object MFTX_D extends Opcode("mftx.d")
+
 object MFFSR extends Opcode("mffsr")
+object MTFSR extends Opcode("mtfsr")
+
 object FEQ_S extends Opcode("feq.s")
 object FLT_S extends Opcode("flt.s")
 object FLE_S extends Opcode("fle.s")
 object FEQ_D extends Opcode("feq.d")
 object FLT_D extends Opcode("flt.d")
 object FLE_D extends Opcode("fle.d")
+
 object FENCE_I extends Opcode("fence.i")
 object FENCE extends Opcode("fence")
+
 object SYSCALL extends Opcode("syscall")
 object BREAK extends Opcode("break")
 object RDCYCLE extends Opcode("rdcycle")
 object RDTIME extends Opcode("rdtime")
 object RDINSTRET extends Opcode("rdinstret")
-
 object NOP extends Opcode("nop")
 object LI extends Opcode("li")
 object MFPCR extends Opcode("mfpcr")
 object MTPCR extends Opcode("mtpcr")
+object RDNPC extends Opcode("rdnpc")
+
 object VVCFGIVL extends Opcode("vvcfgivl")
-object VLD extends Opcode("vld")
-object VF extends Opcode("vf")
-object VFSD extends Opcode("vfsd")
 object STOP extends Opcode("stop")
-object VMSV extends Opcode("vmsv")
 object VSETVL extends Opcode("vsetvl")
-object VFSW extends Opcode("vfsw")
 object UTIDX extends Opcode("utidx")
-object VSD extends Opcode("vsd")
-object VSW extends Opcode("vsw")
-object VLW extends Opcode("vlw")
-object VFLD extends Opcode("vfld")
+object VF extends Opcode("vf")
+object VMSV extends Opcode("vmsv")
 object VMVV extends Opcode("vmvv")
-object VFLW extends Opcode("vflw")
 object VFMVV extends Opcode("vfmvv")
+
+object VLD extends Opcode("vld")
+object VSD extends Opcode("vsd")
+object VLW extends Opcode("vlw")
+object VSW extends Opcode("vsw")
+object VFLW extends Opcode("vflw")
+object VFSW extends Opcode("vfsw")
+object VFLD extends Opcode("vfld")
+object VFSD extends Opcode("vfsd")
+
 object MOVZ extends Opcode("movz")
 object MOVN extends Opcode("movn")
 object FMOVZ extends Opcode("fmovz")
 object FMOVN extends Opcode("fmovn")
-object AMOMINU_D extends Opcode("amominu.d")
+
 object FENCE_V_G extends Opcode("fence.v.g")
 object FENCE_V_L extends Opcode("fence.v.l")
 
