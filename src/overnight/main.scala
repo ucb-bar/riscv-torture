@@ -37,7 +37,7 @@ object Overnight extends Application
     }
     if (parser.parse(args)) {
       val confFileName = opts.confFileName.getOrElse("config")
-      val permDir      = opts.permDir.getOrElse("output")
+      val permDir      = opts.permDir.getOrElse("output/failedtests")
       val thresh       = opts.errorThreshold.getOrElse(5)
       val minutes      = opts.timeToRun.getOrElse(1)
       val startTime = System.currentTimeMillis
