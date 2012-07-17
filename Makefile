@@ -2,12 +2,13 @@
 
 C_SIM = ../riscv-rocket/emulator/emulator
 R_SIM = ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv
-DIR =  ./output
+DIR =  output/failedtests
 ERRORS = 5
 MINUTES = 1
+EMAIL = 
 
 .phony: gen ctest ctestd rtest rtestd itest iretest cretest cretestd rretest \
-rretestd cnight rnight crnight
+rretestd cnight rnight crnight cnighte rnighte crnighte
 
 gen:
 	sbt 'generator/run'
@@ -45,8 +46,17 @@ rretestd:
 cnight:
 	sbt 'overnight/run -p $(DIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES)'
 
+cnighte:
+	sbt 'overnight/run -p $(DIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -e $(EMAIL)'
+
 rnight:
 	sbt 'overnight/run -p $(DIR) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES)'
 
+rnighte:
+	sbt 'overnight/run -p $(DIR) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -e $(EMAIL)'
+
 crnight:
 	sbt 'overnight/run -p $(DIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES)'
+
+crnighte:
+	sbt 'overnight/run -p $(DIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -e $(EMAIL)'

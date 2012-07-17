@@ -68,6 +68,7 @@ object Overnight extends Application
           endTime = 0
         }
       }
+      val permPath: Path = permDir
       opts.emailAddress foreach { addr =>
         val properties = System.getProperties
         properties.put("mail.smtp.host", "localhost")
@@ -76,7 +77,7 @@ object Overnight extends Application
         val message = new MimeMessage(session)
         message.setFrom(new InternetAddress("torture@"+hostname+".millennium.berkeley.edu"))
         message.setRecipients(Message.RecipientType.TO, addr)
-        message.setText( "Run complete with " + errCount + " errors. Failing tests put in " +  permDir )
+        message.setText( "Run complete with " + errCount + " errors. Failing tests put in " +  permPath.toAbsolute.path )
         message.setSubject("Run complete on " + hostname)
         println("////////////////////////////////////////////////////////////////")
         println("//  Sending " + message + " to " + addr)
@@ -85,7 +86,7 @@ object Overnight extends Application
       }
       println("////////////////////////////////////////////////////////////////")
       println("//  Testing complete with " + errCount + " errors.")
-      println("//  Failing tests put in " + permDir)
+      println("//  Failing tests put in " +  permPath.toAbsolute.path)
       println("////////////////////////////////////////////////////////////////")
     }
   }

@@ -47,28 +47,14 @@ object Schadenfreude extends Application
       val instcnt      = opts.instanceCnt.getOrElse(1)
       runInstances(confFileName, permDir, tmpDir,  cPath, rPath, email, thresh, minutes, instcnt)
     }
-    
   }
+
   def runInstances(conf: String, permdir: String, tmpDir: String, cPath: String, rPath: String, email: String, thresh: Int, minutes: Int, instcnt: Int)
   {
-    val torturePath = Path(".") 
-    val tmpPath: Path = Path(tmpDir)
-    println(tmpPath.toString())
-    for (i <- 0 until instcnt)
-    {
-      val instancePath = tmpPath / Path("schad"+i)
-      if (instancePath.isDirectory)
-      {
-        println(instancePath.toString() + " already exists. Copying only config file")
-        (torturePath / Path("config")).copyTo((instancePath / Path("config")), replaceExisting=true)
-        println("Copied config to " + instancePath / Path("config"))
-      } else {
-        torturePath.copyTo(instancePath)
-        println("Copied torture to " + instancePath.toString())
-      }
-    }
+    copyTortureDir(Path("."), Path(tmpDir), instcnt)
     val processRA = new Array[Process](instcnt)
-    println("Running %d instances" format(instcnt))
+    println("\nRunning %d instances" format(instcnt))
+    val logtime = System.currentTimeMillis
     for (i <- 0 until instcnt)
     {
       var cmdstring = ""
@@ -83,20 +69,42 @@ object Schadenfreude extends Application
         System.err.println("No simulators were specified")
         System.exit(1)
       }
+      if (email != "") cmdstring += "e EMAIL=" + email
       cmdstring += " ERRORS=" + thresh + " MINUTES=" + minutes
-      if (email != "") cmdstring += " EMAIL=" + email
-      val cmd = Process(cmdstring)
-      val logname = permdir + "/schadlog" + i
-      val  logfile = new File(logname)
-      if (logfile.exists()) logfile.delete()
+      cmdstring += " DIR=" + permdir
+      
+      val logname = "output/schad" + i + "_" + logtime + ".log"
+      val logfile = new File(logname)
       val plog = ProcessLogger(line => writeln(line, logname), line => writeln(line, logname))
-      println("Log file is " + logname)
-      println("Running instance %d" format(i))
+      val workDir = new File(tmpDir + "/schad" + i)
+      val cmd = Process(cmdstring, workDir)
+      println(("Starting instance %d".format(i)) + " in directory " + workDir.getCanonicalPath())
+      println("Instance log output will be placed in " + (new File(logname)).getCanonicalPath())
       println(cmdstring)
       processRA(i) = cmd.run(plog)
-      println("Started running")
+      println("Started running instance %d\n" format(i))
     }
   }
+
+  def copyTortureDir(torturePath: Path, tmpPath: Path, instcnt: Int)
+  {
+    def canonicalPath(p: Path): String = (new File(p.toAbsolute.path)).getCanonicalPath()
+    println("Copying torture directory to: " + canonicalPath(tmpPath))
+    for (i <- 0 until instcnt)
+    {
+      val instancePath = tmpPath / Path("schad"+i)
+      if (instancePath.isDirectory)
+      {
+        println(canonicalPath(instancePath) + " already exists. Copying only config file")
+        (torturePath / Path("config")).copyTo((instancePath / Path("config")), replaceExisting=true)
+        println("Copied config to " + canonicalPath(instancePath / Path("config")))
+      } else {
+        torturePath.copyTo(instancePath)
+        println("Copied torture to " + canonicalPath(instancePath))
+      }
+    }
+  }
+
   private def writeln(line: String, logfile: String)
   {
     val writer = new FileWriter(logfile, true)
