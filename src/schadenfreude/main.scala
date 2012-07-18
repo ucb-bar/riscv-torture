@@ -32,7 +32,7 @@ object Schadenfreude extends Application
       opt("e", "email", "<address>", "email to report to", {s: String => opts.emailAddress = Some(s)})
       opt("t", "threshold", "<count>", "number of failures to trigger email", {i: String => opts.errorThreshold = Some(i.toInt)})
       opt("m", "minutes", "<int>", "number of minutes to run tests", {i: String => opts.timeToRun = Some(i.toInt)})
-      opt("n", "numinstances", "<int>", "number of instances to run", {i: String => opts.instanceCnt = Some(i.toInt)})
+      opt("n", "instcnt", "<int>", "number of instances to run", {i: String => opts.instanceCnt = Some(i.toInt)})
     }
     if (parser.parse(args))
     {
@@ -78,6 +78,7 @@ object Schadenfreude extends Application
       val plog = ProcessLogger(line => writeln(line, logname), line => writeln(line, logname))
       val workDir = new File(tmpDir + "/schad" + i)
       val cmd = Process(cmdstring, workDir)
+
       println(("Starting instance %d".format(i)) + " in directory " + workDir.getCanonicalPath())
       println("Instance log output will be placed in " + (new File(logname)).getCanonicalPath())
       println(cmdstring)
