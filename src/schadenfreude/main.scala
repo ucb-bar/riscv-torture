@@ -41,95 +41,16 @@ object Schadenfreude extends Application
       val tmpDir       = opts.tempDir.getOrElse("..")
       val cPath        = opts.cSimPath.getOrElse("")
       val rPath        = opts.rtlSimPath.getOrElse("")
-      val email        = opts.emailAddress.getOrElse("")
+      val email        = opts.emailAddress.getOrElse("your@email.address")
       val thresh       = opts.errorThreshold.getOrElse(5)
       val minutes      = opts.timeToRun.getOrElse(1)
       val instcnt      = opts.instanceCnt.getOrElse(1)
-      runInstances(confFileList, permDir, tmpDir,  cPath, rPath, email, thresh, minutes, instcnt)
+
+      val instmgr = new InstanceManager(confFileList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt)
+      val insttype = "local" //Make this an argument.
+      instmgr.createInstances(insttype)
+      instmgr.runInstances()
     }
   }
 
-  def runInstances(cfgs: List[String], permdir: String, tmpDir: String, cPath: String, rPath: String, email: String, thresh: Int, minutes: Int, instcnt: Int)
-  {
-    copyTortureDir(Path("."), Path(tmpDir), instcnt, cfgs)
-    val processRA = new Array[Process](instcnt)
-    println("\nRunning %d instances" format(instcnt))
-    val logtime = System.currentTimeMillis
-    for (i <- 0 until instcnt)
-    {
-      var cmdstring = ""
-      if (cPath != "" && rPath != "")
-        cmdstring += "make crnight"
-      if (cPath != "" && rPath == "")
-        cmdstring += "make cnight"
-      if (cPath == "" && rPath != "")
-        cmdstring += "make rnight"
-
-      assert(cmdstring != "", println("No simulators were specified"))
-
-      if (email != "") cmdstring += "e EMAIL=" + email
-      cmdstring += " ERRORS=" + thresh + " MINUTES=" + minutes
-      cmdstring += " DIR=" + permdir
-      
-      val logname = "output/schad" + i + "_" + logtime + ".log"
-      val logfile = new File(logname)
-      val plog = ProcessLogger(line => writeln(line, logname), line => writeln(line, logname))
-      val workDir = new File(tmpDir + "/schad" + i)
-      val cmd = Process(cmdstring, workDir)
-
-      println(("Starting instance %d".format(i)) + " in directory " + workDir.getCanonicalPath())
-      println("Instance log output will be placed in " + (new File(logname)).getCanonicalPath())
-      println(cmdstring)
-      processRA(i) = cmd.run(plog)
-      println("Started running instance %d\n" format(i))
-    }
-  }
-
-  def copyTortureDir(torturePath: Path, tmpPath: Path, instcnt: Int, cfgs: List[String])
-  {
-    def canonicalPath(p: Path): String = (new File(p.toAbsolute.path)).getCanonicalPath()
-    val cfgpairs = mapConfigFiles(instcnt, cfgs)
-    println("Copying torture directory to: " + canonicalPath(tmpPath))
-    for (i <- 0 until instcnt)
-    {
-      val instancePath = tmpPath / Path("schad"+i)
-      if (instancePath.isDirectory)
-      {
-        println(canonicalPath(instancePath) + " already exists. Not copying directory.")
-      } else {
-        torturePath.copyTo(instancePath)
-        println("Copied torture to " + canonicalPath(instancePath))
-      }
-      if (cfgs.length > 1)
-      {
-        val cfgPath: Path = cfgpairs(i)
-        (torturePath / cfgPath).copyTo((instancePath / Path("config")), replaceExisting=true)
-        println("Using config file: " + cfgPath.name + " for instance " + i)
-      }
-    }
-  }
-
-  def mapConfigFiles(instcnt: Int, cfgs: List[String]): List[String] =
-  {
-    val cfgcnt = cfgs.length
-    if (cfgcnt == 0) return List("config")
-    assert (cfgcnt <= instcnt, println("Number of config files was greater than the number of instances specified"))
-    var map: List[String] = List()
-    for (i <- 0 until instcnt)
-    {
-      val cfgindx = i % cfgcnt
-      map ++= List(cfgs(cfgindx))
-    }
-    map
-  }
-
-  private def writeln(line: String, logfile: String)
-  {
-    val writer = new FileWriter(logfile, true)
-    try {
-      writer.write(line + "\n")
-    } finally {
-      writer.close()
-    }
-  }
 }

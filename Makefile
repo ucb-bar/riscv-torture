@@ -70,10 +70,10 @@ crnighte:
 	sbt 'overnight/run -p $(DIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -e $(EMAIL)'
 
 cschaden:
-	sbt 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT)'
+	sbt 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
 
 rschaden:
-	sbt 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT)'
+	sbt 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
 
 crschaden:
-	sbt 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT)' 
+	sbt 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)' 
