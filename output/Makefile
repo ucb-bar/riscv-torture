@@ -63,4 +63,4 @@ clean:
 	rm -rf $(junk)
 
 clean-all: clean
-	rm -f test*.S test*.hex test*.out test*.dump test test_1* test_pseg_*
+	rm -f test*.S test*.hex test*.out test*.dump test test_1* test_pseg_* schad* failedtests/*

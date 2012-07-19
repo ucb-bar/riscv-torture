@@ -1,14 +1,18 @@
 # Convenience Makefile
 
-C_SIM = ../riscv-rocket/emulator/emulator
-R_SIM = ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv
-DIR =  output/failedtests
-ERRORS = 5
-MINUTES = 1
-EMAIL = your@email.address
-CFG = config
-INSTCNT = 1
-INSTDIR = ..
+C_SIM := ../riscv-rocket/emulator/emulator
+R_SIM := ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv
+DIR :=  output/failedtests
+ERRORS := 5
+MINUTES := 1
+EMAIL := your@email.address
+CONFIG := config
+INSTCNT := 1
+INSTDIR := ..
+empty :=
+space := $(empty) $(empty)
+cfgopt := $(space)-C$(space)
+CFG := $(subst $(space),$(cfgopt),$(CONFIG))
 
 .phony: gen ctest ctestd rtest rtestd itest iretest cretest cretestd rretest \
 rretestd cnight rnight crnight cnighte rnighte crnighte cschaden rschaden    \
