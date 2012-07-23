@@ -3,7 +3,7 @@ package schadenfreude
 
 import scala.sys.process._
 
-class InstanceManager(cfgs: List[String], permDir: String, tmpDir: String, cPath: String, rPath: String, email: String, thresh: Int, minutes: Int, instcnt: Int)
+class InstanceManager(val cfgs: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int)
 {
   val instRunners: Array[InstanceRunner] = new Array(instcnt)
   val processRA: Array[Process] = new Array(instcnt)
@@ -13,13 +13,17 @@ class InstanceManager(cfgs: List[String], permDir: String, tmpDir: String, cPath
   def mapConfigFiles(): List[String] =
   {
     val cfgcnt = cfgs.length
-    if (cfgcnt == 0) return List("config")
     assert (cfgcnt <= instcnt, println("Number of config files was greater than the number of instances specified"))
     var map: List[String] = List()
-    for (i <- 0 until instcnt)
+    if (cfgcnt == 0)
     {
-      val cfgindx = i % cfgcnt
-      map ++= List(cfgs(cfgindx))
+      for (i <- 0 until instcnt) map ++= List("config")
+    } else {
+      for (i <- 0 until instcnt)
+      {
+        val cfgindx = i % cfgcnt
+        map ++= List(cfgs(cfgindx))
+      }
     }
     map
   }
@@ -37,6 +41,8 @@ class InstanceManager(cfgs: List[String], permDir: String, tmpDir: String, cPath
     assert(cmdstring != "", println("No simulators were specified"))
 
     if (email != "your@email.address") cmdstring += "e EMAIL=" + email
+    if (cPath != "../riscv-rocket/emulator/emulator" && cPath != "") cmdstring += " C_SIM=" + cPath
+    if (rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv" && rPath != "") cmdstring += " R_SIM=" + rPath
     cmdstring += " ERRORS=" + thresh + " MINUTES=" + minutes
     cmdstring += " DIR=" + permDir
     cmdstring
@@ -44,7 +50,7 @@ class InstanceManager(cfgs: List[String], permDir: String, tmpDir: String, cPath
 
   def createInstances(insttype: String): Unit = 
   {
-    for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype,i)
+    for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype,i,this)
   }
 
   def runInstances(): Unit = 
@@ -58,7 +64,8 @@ class InstanceManager(cfgs: List[String], permDir: String, tmpDir: String, cPath
     val logtime = System.currentTimeMillis
     for (i <- 0 until instcnt)
     {
-      println("Starting instance %d".format(i))
+      println("Starting instance %d".format(i) + "\n")
+      println("instRunners has length " + instRunners.length)
       val instance = instRunners(i)
       val instDir = tmpDir + "/schad" + i
       val tortureDir = "."
