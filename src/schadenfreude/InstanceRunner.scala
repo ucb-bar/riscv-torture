@@ -163,7 +163,6 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     val plog = ProcessLogger(line => writeln(line, logname), line => writeln(line, logname))
     fileLogger = plog
     locallogtime = logtime
-    println("Instance output log of ssh session will be placed in " + (new File(logname)).getCanonicalPath())
   }
 
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit =
@@ -171,24 +170,26 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
     //Complete the psi.sh script
-    (torturePath / Path("partialpsi.sh")).copyTo(torturePath / Path("psi.sh"), replaceExisting=true)
-    val writer = new FileWriter("psi.sh", true)
+    (torturePath / Path("partialpsi.qsub")).copyTo(torturePath / Path("psi.qsub"), replaceExisting=true)
+    val writer = new FileWriter("psi.qsub", true)
     try {
       writer.write(mgr.cmdstr)
     } finally {
       writer.close()
     }
     scp(torturePath, instPath, "psi")
-    scp(torturePath / Path("psi.sh"), instPath / Path("psi.sh"), "psi")
+    scp(torturePath / Path("psi.qsub"), instPath / Path("psi.qsub"), "psi")
     scp(torturePath / Path(config), instPath / Path("config"), "psi")
   }
   
   def run(cmdstr: String, workDir: String): Process =
   {
-    val sshcmd = "ssh psi \"cd " + workDir + " ; " + qsub(workDir) + "\""
+    println("Instance output log will be placed in remote PSI file " + workDir + "schad" + instancenum + "_" + locallogtime + ".out")
+    println("Instance error log will be placed in remote PSI file " + workDir + "schad" + instancenum + "_" + locallogtime + ".err")
+    val sshcmd = "ssh psi cd " + workDir + " ; " + qsub(workDir)
     println(("Starting instance %d".format(instancenum)) + " remotely in PSI directory " + workDir)
     println(sshcmd)
-    val proc = "ls".run(fileLogger) //Placeholder command
+    val proc = sshcmd.run(fileLogger)
     println("Started running instance %d\n" format(instancenum))
     proc
   }
@@ -202,7 +203,7 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     
     var qsubstr = "qsub -N schad" + instancenum + " -r n -e localhost:" + instDir + "/" + logfile + ".err"
     qsubstr += " -o localhost:" + instDir + "/" + logfile + ".out -q psi -l nodes=1:ppn=1 -l mem=1024m"
-    qsubstr += " -l walltime=" + walltime + " -l cput=" + cput + " psi.sh"
+    qsubstr += " -l walltime=" + walltime + " -l cput=" + cput + " psi.qsub"
     qsubstr
   }
 }

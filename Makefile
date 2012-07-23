@@ -9,6 +9,7 @@ EMAIL := your@email.address
 CONFIG := config
 INSTCNT := 1
 INSTDIR := ..
+INSTTYPE := local
 empty :=
 space := $(empty) $(empty)
 cfgopt := $(space)-C$(space)
@@ -70,10 +71,10 @@ crnighte:
 	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -e $(EMAIL)'
 
 cschaden:
-	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
+	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
 
 rschaden:
-	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
+	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
 
 crschaden:
-	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)' 
+	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)' 

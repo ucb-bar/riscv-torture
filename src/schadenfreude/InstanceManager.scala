@@ -65,13 +65,12 @@ class InstanceManager(val cfgs: List[String], val permDir: String, val tmpDir: S
     for (i <- 0 until instcnt)
     {
       println("Starting instance %d".format(i) + "\n")
-      println("instRunners has length " + instRunners.length)
       val instance = instRunners(i)
       val instDir = tmpDir + "/schad" + i
       val tortureDir = "."
       val config = cfgmap(i)
-      instance.copyTortureDir(tortureDir, instDir, config)
       instance.createLogger(logtime)
+      instance.copyTortureDir(tortureDir, instDir, config)
       processRA(i) = instance.run(cmdstr, instDir)
     }
     println("\nAll instances have been launched.")
