@@ -244,6 +244,11 @@ object TestRunner extends Application
     val psegFinder = """pseg_\d+""".r
     val psegNums: List[Int] = psegFinder.findAllIn(lines).map(_.drop(5).toInt).toList
     var (low, high) = (psegNums.min, psegNums.max)
+    if (low == high) 
+    {
+      println("Only one pseg was detected.")
+      return bin
+    }
     var lastfound = ""
     while (low <= high)
     {
@@ -288,6 +293,11 @@ object TestRunner extends Application
     // For all psegs
     val psegFinder = """pseg_\d+""".r
     val psegNums: List[Int] = psegFinder.findAllIn(lines).map(_.drop(5).toInt).toList
+    if (psegNums.min == psegNums.max) 
+    {
+      println("Only one pseg was detected.")
+      return bin
+    }
     for( p <- psegNums.min to psegNums.max) {
       // Replace jump to pseg with jump to reg_dump
       val psegReplacer = ("pseg_" + p + ":\\n").r
