@@ -14,6 +14,7 @@ CONFIG := config
 INSTCNT := 1
 INSTDIR := ..
 INSTTYPE := local
+COMMIT := HEAD
 empty :=
 space := $(empty) $(empty)
 cfgopt := $(space)-C$(space)
@@ -71,17 +72,26 @@ rretestd:
 cnight:
 	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES)'
 
+cnightg:
+	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -g $(COMMIT)'
+
 cnighte:
 	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -e $(EMAIL)'
 
 rnight:
 	$(SBT) 'overnight/run -p $(DIR) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES)'
 
+rnightg:
+	$(SBT) 'overnight/run -p $(DIR) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -g $(COMMIT)'
+
 rnighte:
 	$(SBT) 'overnight/run -p $(DIR) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -e $(EMAIL)'
 
 crnight:
 	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES)'
+
+crnightg:
+	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -g $(COMMIT)'
 
 crnighte:
 	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -e $(EMAIL)'

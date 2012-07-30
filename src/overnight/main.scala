@@ -12,6 +12,7 @@ import Path._
 import scalax.file.PathSet
 import scalax.file.FileSystem
 import scopt.OptionParser
+import java.io.File
 
 case class Options(var timeToRun: Option[Int] = None,
   var emailAddress: Option[String] = None,
@@ -19,6 +20,7 @@ case class Options(var timeToRun: Option[Int] = None,
   var cSimPath: Option[String] = None,
   var rtlSimPath: Option[String] = None,
   var permDir: Option[String] = None,
+  var gitCommit: Option[String] = None,
   var confFileName: Option[String] = None)
 
 object Overnight extends Application
@@ -32,6 +34,7 @@ object Overnight extends Application
       opt("c", "csim", "<file>", "C simulator", {s: String => opts.cSimPath = Some(s)})
       opt("r", "rtlsim", "<file>", "RTL simulator", {s: String => opts.rtlSimPath = Some(s)})
       opt("e", "email", "<address>", "email to report to", {s: String => opts.emailAddress = Some(s)})
+      opt("g", "gitcommit", "<git commit>", "Git commit to check out", {s: String => opts.gitCommit = Some(s)})
       opt("t", "threshold", "<count>", "number of failures to trigger email", {i: String => opts.errorThreshold = Some(i.toInt)})
       opt("m", "minutes", "<int>", "number of minutes to run tests", {i: String => opts.timeToRun = Some(i.toInt)})
     }
@@ -43,10 +46,12 @@ object Overnight extends Application
       val startTime = System.currentTimeMillis
       var endTime = startTime + minutes*60*1000
       var errCount = 0
+
+      val (cSim, rtlSim) = gitCheckout(opts.cSimPath.getOrElse(""), opts.rtlSimPath.getOrElse(""), opts.gitCommit.getOrElse(""))
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
         val newAsmName = generator.Generator.generate(confFileName, baseName)
-        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), opts.cSimPath, opts.rtlSimPath, Some(true), Some(true), Some(confFileName)) 
+        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, Some(true), Some(true), Some(confFileName)) 
         if(failed) {
           errCount += 1
           test foreach { t =>
@@ -88,6 +93,76 @@ object Overnight extends Application
       println("//  Testing complete with " + errCount + " errors.")
       println("//  Failing tests put in " +  permPath.toAbsolute.path)
       println("////////////////////////////////////////////////////////////////")
+    }
+  }
+
+  def gitCheckout(cDir: String, rtlDir: String, commit: String): (Option[String], Option[String]) =
+  {
+    val rBool = (rtlDir != "")
+    val cBool = (cDir != "")
+    var rocketDir = ""
+
+    if (cBool)
+    {
+      rocketDir = cDir.substring(0,cDir.length-18) // String ends with /emulator/emulator
+    }
+    if (rBool)
+    {
+      rocketDir = rtlDir.substring(0,rtlDir.length-36) //String ends with /vlsi-generic/build/vcs-sim-rtl/simv
+    }
+
+    var cSim: Option[String] = None
+    var rSim: Option[String] = None
+
+    if (commit == "")
+    {
+      if (cBool) cSim = Some(cDir)
+      if (rBool) rSim = Some(rtlDir)
+      return (cSim, rSim)
+    }
+    if (rocketDir != "")
+    {
+      val tmpRocketDir = "../rocket_"+commit
+      val tmpRocketPath: Path = tmpRocketDir
+      val copycmd = "cp -r " + rocketDir + " " + tmpRocketDir
+      if (!tmpRocketPath.exists)
+      {
+        println("Copying rocket directory to " + tmpRocketDir)
+        println(copycmd)
+        val copyexit = copycmd.!
+        println("Rocket copied with copy process exit code: " + copyexit)
+
+        val cmd = "git checkout " + commit
+        val workDir = new File(tmpRocketDir)
+        println(cmd + " run in " + tmpRocketDir)
+        val proc = Process(cmd, workDir)
+        val output = proc.!!
+        println(output)
+
+        if (cBool)
+        {
+          val cWorkDir = new File(tmpRocketDir+"/emulator")
+          println(Process("make clean", cWorkDir).!!)
+          Process("make -j", cWorkDir).!
+          cSim = Some(tmpRocketDir+"/emulator/emulator")
+        }
+        if (rBool)
+        {
+          val rWorkDir = new File(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl")
+          println(Process("make clean", rWorkDir).!!)
+          Process("make -j", rWorkDir).!
+          rSim = Some(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl/simv")
+        }
+        (cSim, rSim)
+
+      } else {
+        println("Directory " + tmpRocketDir + " already exists.")
+        if (rBool) rSim = Some(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl/simv")
+        if (cBool) cSim = Some(tmpRocketDir+"/emulator/emulator")
+        (cSim, rSim)
+      }
+    } else {
+      (cSim, rSim)
     }
   }
 }
