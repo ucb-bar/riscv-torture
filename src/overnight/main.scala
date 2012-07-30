@@ -98,6 +98,36 @@ object Overnight extends Application
 
   def gitCheckout(cDir: String, rtlDir: String, commit: String): (Option[String], Option[String]) =
   {
+    def compileSim(simname: String, simDir: String, bool: Boolean): Option[String] =
+    {
+      if(simname=="c")
+      {
+        if (bool)
+        {
+          val cSimPath = simDir+"/emulator"
+          val cWorkDir = new File(simDir)
+          val cPath: Path = cSimPath
+          Process("make -j", cWorkDir).!
+          if(!cPath.exists) Process("make -j", cWorkDir).!
+          return Some(cSimPath)
+        } else {
+          return None
+        }
+      } else if (simname=="r") {
+        if (bool)
+        {
+          val rSimPath = simDir + "/simv"
+          val rWorkDir = new File(simDir)
+          val rPath: Path = rSimPath
+          Process("make -j", rWorkDir).!
+          if(!rPath.exists) Process("make -j", rWorkDir).!
+          return Some(rSimPath)
+        } else {
+          return None
+        }
+      } else return None
+    }
+        
     val rBool = (rtlDir != "")
     val cBool = (cDir != "")
     var rocketDir = ""
@@ -127,10 +157,8 @@ object Overnight extends Application
       val copycmd = "cp -r " + rocketDir + " " + tmpRocketDir
       if (!tmpRocketPath.exists)
       {
-        println("Copying rocket directory to " + tmpRocketDir)
         println(copycmd)
         val copyexit = copycmd.!
-        println("Rocket copied with copy process exit code: " + copyexit)
 
         val cmd = "git checkout " + commit
         val workDir = new File(tmpRocketDir)
@@ -139,26 +167,21 @@ object Overnight extends Application
         val output = proc.!!
         println(output)
 
-        if (cBool)
-        {
-          val cWorkDir = new File(tmpRocketDir+"/emulator")
-          println(Process("make clean", cWorkDir).!!)
-          Process("make -j", cWorkDir).!
-          cSim = Some(tmpRocketDir+"/emulator/emulator")
-        }
-        if (rBool)
-        {
-          val rWorkDir = new File(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl")
-          println(Process("make clean", rWorkDir).!!)
-          Process("make -j", rWorkDir).!
-          rSim = Some(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl/simv")
-        }
-        (cSim, rSim)
+        val cSimDir = tmpRocketDir+"/emulator"
+        val cWorkDir = new File(cSimDir)
+        println(Process("make clean", cWorkDir).!!)
+        val rSimDir = tmpRocketDir + "/vlsi-generic/build/vcs-sim-rtl"
+        val rWorkDir = new File(rSimDir)
+        println(Process("make clean", rWorkDir).!!)
 
+        cSim = compileSim("c", cSimDir, cBool)
+        rSim = compileSim("r", rSimDir, rBool)
+        (cSim, rSim)
       } else {
-        println("Directory " + tmpRocketDir + " already exists.")
-        if (rBool) rSim = Some(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl/simv")
-        if (cBool) cSim = Some(tmpRocketDir+"/emulator/emulator")
+        val csimpath: Path = tmpRocketDir+"/emulator/emulator"
+        val rsimpath: Path = tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl/simv"
+        cSim = compileSim("c", tmpRocketDir+"/emulator", cBool)
+        rSim = compileSim("r", tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl", rBool)
         (cSim, rSim)
       }
     } else {
