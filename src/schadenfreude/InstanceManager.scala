@@ -10,7 +10,6 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
   val cfgmap = mapOptions(cfgs,"config")
   val commitmap = mapOptions(gitcmts,"none")
   val cmdstrRA: Array[String] = getCommandStrings()
-  System.exit(0)
 
   def mapOptions(optList: List[String],default: String): List[String] =
   {
@@ -54,8 +53,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
     {
       var tmpCmd = cmdstring
       if (commitmap(i) != "none") tmpCmd += "g" + cmdstring2
-      if (commitmap(i) != "none") tmpCmd += " -g " + commitmap(i)
-      println(i + ": " + tmpCmd)
+      if (commitmap(i) != "none") tmpCmd += " COMMIT=" + commitmap(i)
       cmdRA(i) = tmpCmd
     }
     cmdRA

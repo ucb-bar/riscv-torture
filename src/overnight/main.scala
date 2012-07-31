@@ -100,31 +100,17 @@ object Overnight extends Application
   {
     def compileSim(simname: String, simDir: String, bool: Boolean): Option[String] =
     {
-      if(simname=="c")
+      var simFile = ""
+      if (simname=="c") simFile = simDir+"/emulator"
+      if (simname=="r") simFile = simDir+"/simv" 
+      if (simFile=="") return None
+      val workDir = new File(simDir)
+      val simPath: Path = simFile
+      if (bool)
       {
-        if (bool)
-        {
-          val cSimPath = simDir+"/emulator"
-          val cWorkDir = new File(simDir)
-          val cPath: Path = cSimPath
-          Process("make -j", cWorkDir).!
-          if(!cPath.exists) Process("make -j", cWorkDir).!
-          return Some(cSimPath)
-        } else {
-          return None
-        }
-      } else if (simname=="r") {
-        if (bool)
-        {
-          val rSimPath = simDir + "/simv"
-          val rWorkDir = new File(simDir)
-          val rPath: Path = rSimPath
-          Process("make -j", rWorkDir).!
-          if(!rPath.exists) Process("make -j", rWorkDir).!
-          return Some(rSimPath)
-        } else {
-          return None
-        }
+        Process("make -j", workDir).!
+        if (!simPath.exists) Process("make -j", workDir).!
+        return Some(simFile)
       } else return None
     }
         

@@ -184,8 +184,8 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   
   def run(cmdstr: String, workDir: String): Process =
   {
-    println("Instance output log will be placed in remote PSI file " + workDir + "schad" + instancenum + "_" + locallogtime + ".out")
-    println("Instance error log will be placed in remote PSI file " + workDir + "schad" + instancenum + "_" + locallogtime + ".err")
+    println("Instance output log will be placed in remote PSI file " + workDir + "/schad" + instancenum + "_" + locallogtime + ".out")
+    println("Instance error log will be placed in remote PSI file " + workDir + "/schad" + instancenum + "_" + locallogtime + ".err")
     val sshcmd = "ssh psi cd " + workDir + " ; " + qsub(workDir)
     println(("Starting instance %d".format(instancenum)) + " remotely in PSI directory " + workDir)
     println(sshcmd)
