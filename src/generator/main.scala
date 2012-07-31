@@ -29,10 +29,10 @@ object Generator extends Application
     val in = new FileInputStream(confFile)
     config.load(in)
     in.close()
-    val nseqs   = config.getProperty("torture.nseqs", "1000").toInt
-    val memsize = config.getProperty("torture.memsize", "1024").toInt
-    val mix     = config.filterKeys(_ contains "torture.mix").map { case (k,v) => (k.split('.')(2), v.toInt) }.asInstanceOf[Map[String,Int]]
-    val vec     = config.filterKeys(_ contains "torture.vec").map { case (k,v) => (k.split('.').drop(2).reduce(_+"."+_), v.toInt) }.asInstanceOf[Map[String,Int]]
+    val nseqs   = config.getProperty("torture.generator.nseqs", "1000").toInt
+    val memsize = config.getProperty("torture.generator.memsize", "1024").toInt
+    val mix     = config.filterKeys(_ contains "torture.generator.mix").map { case (k,v) => (k.split('.')(3), v.toInt) }.asInstanceOf[Map[String,Int]]
+    val vec     = config.filterKeys(_ contains "torture.generator.vec").map { case (k,v) => (k.split('.').drop(3).reduce(_+"."+_), v.toInt) }.asInstanceOf[Map[String,Int]]
     generate(nseqs, memsize, mix, vec, outFileName)
   }
 
