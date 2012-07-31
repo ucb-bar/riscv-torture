@@ -16,6 +16,7 @@ case class Options(var timeToRun: Option[Int] = None,
   var permDir: Option[String] = None,
   var tempDir: Option[String] = None,
   var confFileList: Option[List[String]] = Some(List()),
+  var gitCommitList: Option[List[String]] = Some(List()),
   var instanceType: Option[String] = None,
   var instanceCnt: Option[Int] = None)
 
@@ -26,6 +27,7 @@ object Schadenfreude extends Application
   {
     val parser = new OptionParser("schadenfreude/run") {
       opt("C", "config", "<file>", "config file", {s: String => opts.confFileList = Some(opts.confFileList.get ++ List(s))})
+      opt("g", "gitcommit", "<git commit>", "git commit to check out", {s: String => opts.gitCommitList = Some(opts.gitCommitList.get ++ List(s))})
       opt("p", "permdir", "<dir>", "dir to store failing tests", {s: String => opts.permDir = Some(s)})
       opt("d", "tmpdir", "<dir>", "dir to create temporary instance dirs in", {s: String => opts.tempDir = Some(s)})
       opt("c", "csim", "<file>", "C simulator", {s: String => opts.cSimPath = Some(s)})
@@ -39,6 +41,7 @@ object Schadenfreude extends Application
     if (parser.parse(args))
     {
       val confFileList = opts.confFileList.get
+      val gitCommitList = opts.gitCommitList.get
       val permDir      = opts.permDir.getOrElse("output/failedtests")
       val tmpDir       = opts.tempDir.getOrElse("..")
       val cPath        = opts.cSimPath.getOrElse("")
@@ -49,7 +52,7 @@ object Schadenfreude extends Application
       val minutes      = opts.timeToRun.getOrElse(1)
       val instcnt      = opts.instanceCnt.getOrElse(1)
 
-      val instmgr = new InstanceManager(confFileList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt)
+      val instmgr = new InstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt)
       instmgr.createInstances(insttype)
       instmgr.runInstances()
     }

@@ -173,7 +173,7 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     (torturePath / Path("partialpsi.qsub")).copyTo(torturePath / Path("psi.qsub"), replaceExisting=true)
     val writer = new FileWriter("psi.qsub", true)
     try {
-      writer.write(mgr.cmdstr)
+      writer.write(mgr.cmdstrRA(instancenum))
     } finally {
       writer.close()
     }

@@ -3,34 +3,38 @@ package schadenfreude
 
 import scala.sys.process._
 
-class InstanceManager(val cfgs: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int)
+class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int)
 {
   val instRunners: Array[InstanceRunner] = new Array(instcnt)
   val processRA: Array[Process] = new Array(instcnt)
-  val cfgmap = mapConfigFiles()
-  val cmdstr = getCommandString()
+  val cfgmap = mapOptions(cfgs,"config")
+  val commitmap = mapOptions(gitcmts,"none")
+  val cmdstrRA: Array[String] = getCommandStrings()
+  System.exit(0)
 
-  def mapConfigFiles(): List[String] =
+  def mapOptions(optList: List[String],default: String): List[String] =
   {
-    val cfgcnt = cfgs.length
-    assert (cfgcnt <= instcnt, println("Number of config files was greater than the number of instances specified"))
+    val cnt = optList.length
+    assert (cnt <= instcnt, println("Number of options was greater than the number of instances specified"))
     var map: List[String] = List()
-    if (cfgcnt == 0)
+    if (cnt == 0)
     {
-      for (i <- 0 until instcnt) map ++= List("config")
+      for (i <- 0 until instcnt) map ++= List(default)
     } else {
       for (i <- 0 until instcnt)
       {
-        val cfgindx = i % cfgcnt
-        map ++= List(cfgs(cfgindx))
+        val indx = i % cnt
+        map ++= List(optList(indx))
       }
     }
     map
   }
 
-  def getCommandString(): String = 
+  def getCommandStrings(): Array[String] = 
   {
+    val cmdRA: Array[String] = new Array(instcnt)
     var cmdstring = ""
+    var cmdstring2 = ""
     if (cPath != "" && rPath != "")
       cmdstring += "make crnight"
     if (cPath != "" && rPath == "")
@@ -40,12 +44,21 @@ class InstanceManager(val cfgs: List[String], val permDir: String, val tmpDir: S
 
     assert(cmdstring != "", println("No simulators were specified"))
 
-    if (email != "your@email.address") cmdstring += "e EMAIL=" + email
-    if (cPath != "../riscv-rocket/emulator/emulator" && cPath != "") cmdstring += " C_SIM=" + cPath
-    if (rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv" && rPath != "") cmdstring += " R_SIM=" + rPath
-    cmdstring += " ERRORS=" + thresh + " MINUTES=" + minutes
-    cmdstring += " DIR=" + permDir
-    cmdstring
+    if (email != "your@email.address") cmdstring2 += "e EMAIL=" + email
+    if (cPath != "../riscv-rocket/emulator/emulator" && cPath != "") cmdstring2 += " C_SIM=" + cPath
+    if (rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv" && rPath != "") cmdstring2 += " R_SIM=" + rPath
+    cmdstring2 += " ERRORS=" + thresh + " MINUTES=" + minutes
+    cmdstring2 += " DIR=" + permDir
+
+    for (i <- 0 until instcnt)
+    {
+      var tmpCmd = cmdstring
+      if (commitmap(i) != "none") tmpCmd += "g" + cmdstring2
+      if (commitmap(i) != "none") tmpCmd += " -g " + commitmap(i)
+      println(i + ": " + tmpCmd)
+      cmdRA(i) = tmpCmd
+    }
+    cmdRA
   }
 
   def createInstances(insttype: String): Unit = 
@@ -71,7 +84,7 @@ class InstanceManager(val cfgs: List[String], val permDir: String, val tmpDir: S
       val config = cfgmap(i)
       instance.createLogger(logtime)
       instance.copyTortureDir(tortureDir, instDir, config)
-      processRA(i) = instance.run(cmdstr, instDir)
+      processRA(i) = instance.run(cmdstrRA(i), instDir)
     }
     println("\nAll instances have been launched.")
   }
