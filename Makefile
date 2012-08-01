@@ -22,7 +22,7 @@ gitopt := $(space)-g$(space)
 CFG := $(subst $(space),$(cfgopt),$(CONFIG))
 GITCMT := $(subst $(space),$(gitopt),$(COMMIT))
 
-.phony: gen ctest rtest itest iretest cretest rretest \
+.phony: gen ctest rtest itest igentest cgentest rgentest \
 cnight rnight crnight cnighte rnighte crnighte cschaden rschaden    \
 crschaden csuite rsuite cnightg rnightg crnightg cschadeng rschadeng crschadeng \
 
@@ -31,33 +31,45 @@ gen:
 
 csuite:
 	for i in `ls $(SUITE) | grep .S` ; do echo $$i ; \
-	result=`make cretest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
+	result=`make ctest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
 	echo $$result ; done
 	rm $(SUITE)/tes*[!.S]
 
 rsuite:
 	for i in `ls $(SUITE) | grep .S` ; do echo $$i ; \
-	result=`make rretest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
+	result=`make rtest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
 	echo $$result ; done
 	rm $(SUITE)/tes*[!.S]
 
-itest:
+crsuite:
+	for i in `ls $(SUITE) | grep .S` ; do echo $$i ; \
+	result=`make crtest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
+	echo $$result ; done
+	rm $(SUITE)/tes*[!.S]
+
+igentest:
 	$(SBT) 'testrun/run'
 
-ctest:
+cgentest:
 	$(SBT) 'testrun/run -c $(C_SIM) $(OPTIONS)'
 
-rtest:
+rgentest:
 	$(SBT) 'testrun/run -r $(R_SIM) $(OPTIONS)'
 
-iretest:
+crgentest:
+	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) $(OPTIONS)'
+
+itest:
 	$(SBT) 'testrun/run -a $(TEST) $(OPTIONS)'
 
-cretest:
+ctest:
 	$(SBT) 'testrun/run -c $(C_SIM) -a $(TEST) $(OPTIONS)'
 
-rretest:
+rtest:
 	$(SBT) 'testrun/run -r $(R_SIM) -a $(TEST) $(OPTIONS)'
+
+crtest:
+	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) -a $(TEST) $(OPTIONS)'
 
 cnight:
 	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES)'
