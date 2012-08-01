@@ -22,3 +22,8 @@ torture.testrun.maxcycles 10000000
 torture.testrun.virtual   false
 torture.testrun.seek      true
 torture.testrun.dump      false
+
+torture.overnight.errors  1
+torture.overnight.minutes 1
+torture.overnight.outdir  output/failedtests
+torture.overnight.email   your@email.address

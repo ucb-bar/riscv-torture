@@ -13,6 +13,8 @@ import scalax.file.PathSet
 import scalax.file.FileSystem
 import scopt.OptionParser
 import java.io.File
+import java.util.Properties
+import java.io.FileInputStream
 
 case class Options(var timeToRun: Option[Int] = None,
   var emailAddress: Option[String] = None,
@@ -40,14 +42,25 @@ object Overnight extends Application
     }
     if (parser.parse(args)) {
       val confFileName = opts.confFileName.getOrElse("config")
-      val permDir      = opts.permDir.getOrElse("output/failedtests")
-      val thresh       = opts.errorThreshold.getOrElse(5)
-      val minutes      = opts.timeToRun.getOrElse(1)
+      val config = new Properties()
+      val configin = new FileInputStream(confFileName)
+      config.load(configin)
+      configin.close()
+
+      val errors  = config.getProperty("torture.overnight.errors","1").toInt
+      val runtime = config.getProperty("torture.overnight.minutes","1").toInt
+      val outdir  = config.getProperty("torture.overnight.outdir","output/failedtests")
+      val email   = config.getProperty("torture.overnight.email","your@email.address")
+
+      val permDir      = opts.permDir.getOrElse(outdir)
+      val thresh       = opts.errorThreshold.getOrElse(errors)
+      val minutes      = opts.timeToRun.getOrElse(runtime)
+      val address = opts.emailAddress.getOrElse(email)
       val startTime = System.currentTimeMillis
       var endTime = startTime + minutes*60*1000
       var errCount = 0
 
-      val (cSim, rtlSim) = gitCheckout(opts.cSimPath.getOrElse(""), opts.rtlSimPath.getOrElse(""), opts.gitCommit.getOrElse(""))
+      val (cSim, rtlSim) = gitCheckout(opts.cSimPath.getOrElse(""), opts.rtlSimPath.getOrElse(""), opts.gitCommit.getOrElse("none"))
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
         val newAsmName = generator.Generator.generate(confFileName, baseName)
@@ -74,29 +87,32 @@ object Overnight extends Application
         }
       }
       val permPath: Path = permDir
-      opts.emailAddress foreach { addr =>
-        val properties = System.getProperties
-        properties.put("mail.smtp.host", "localhost")
-        val hostname = InetAddress.getLocalHost().getHostName()
-        val session = Session.getDefaultInstance(properties)
-        val message = new MimeMessage(session)
-        message.setFrom(new InternetAddress("torture@"+hostname+".millennium.berkeley.edu"))
-        message.setRecipients(Message.RecipientType.TO, addr)
-        message.setText( "Run complete with " + errCount + " errors. Failing tests put in " +  permPath.toAbsolute.path )
-        message.setSubject("Run complete on " + hostname)
+      if (address != "your@email.address")
+      {
+        Some(address) foreach { addr =>
+          val properties = System.getProperties
+          properties.put("mail.smtp.host", "localhost")
+          val hostname = InetAddress.getLocalHost().getHostName()
+          val session = Session.getDefaultInstance(properties)
+          val message = new MimeMessage(session)
+          message.setFrom(new InternetAddress("torture@"+hostname+".millennium.berkeley.edu"))
+          message.setRecipients(Message.RecipientType.TO, addr)
+          message.setText( "Run complete with " + errCount + " errors. Failing tests put in " +  permPath.toAbsolute.path )
+          message.setSubject("Run complete on " + hostname)
+          println("////////////////////////////////////////////////////////////////")
+          println("//  Sending " + message + " to " + addr)
+          println("////////////////////////////////////////////////////////////////")
+          Transport.send(message)
+        }
         println("////////////////////////////////////////////////////////////////")
-        println("//  Sending " + message + " to " + addr)
+        println("//  Testing complete with " + errCount + " errors.")
+        println("//  Failing tests put in " +  permPath.toAbsolute.path)
         println("////////////////////////////////////////////////////////////////")
-        Transport.send(message)
       }
-      println("////////////////////////////////////////////////////////////////")
-      println("//  Testing complete with " + errCount + " errors.")
-      println("//  Failing tests put in " +  permPath.toAbsolute.path)
-      println("////////////////////////////////////////////////////////////////")
     }
   }
 
-  def gitCheckout(cDir: String, rtlDir: String, commit: String): (Option[String], Option[String]) =
+  def gitCheckout(cPath: String, rtlPath: String, commit: String): (Option[String], Option[String]) =
   {
     def compileSim(simname: String, simDir: String, bool: Boolean): Option[String] =
     {
@@ -114,26 +130,26 @@ object Overnight extends Application
       } else return None
     }
         
-    val rBool = (rtlDir != "")
-    val cBool = (cDir != "")
+    val rBool = (rtlPath != "")
+    val cBool = (cPath != "")
     var rocketDir = ""
 
     if (cBool)
     {
-      rocketDir = cDir.substring(0,cDir.length-18) // String ends with /emulator/emulator
+      rocketDir = cPath.substring(0,cPath.length-18) // String ends with /emulator/emulator
     }
     if (rBool)
     {
-      rocketDir = rtlDir.substring(0,rtlDir.length-36) //String ends with /vlsi-generic/build/vcs-sim-rtl/simv
+      rocketDir = rtlPath.substring(0,rtlPath.length-36) //String ends with /vlsi-generic/build/vcs-sim-rtl/simv
     }
 
     var cSim: Option[String] = None
     var rSim: Option[String] = None
 
-    if (commit == "")
+    if (commit == "none")
     {
-      if (cBool) cSim = Some(cDir)
-      if (rBool) rSim = Some(rtlDir)
+      if (cBool) cSim = Some(cPath)
+      if (rBool) rSim = Some(rtlPath)
       return (cSim, rSim)
     }
     if (rocketDir != "")
@@ -164,8 +180,6 @@ object Overnight extends Application
         rSim = compileSim("r", rSimDir, rBool)
         (cSim, rSim)
       } else {
-        val csimpath: Path = tmpRocketDir+"/emulator/emulator"
-        val rsimpath: Path = tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl/simv"
         cSim = compileSim("c", tmpRocketDir+"/emulator", cBool)
         rSim = compileSim("r", tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl", rBool)
         (cSim, rSim)
