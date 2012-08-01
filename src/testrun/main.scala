@@ -42,6 +42,8 @@ object TestRunner extends Application
 
   var virtualMode = false
   var maxcycles = 10000000
+  var dump = true
+  var seek = true
 
   def testrun(testAsmName:  Option[String], 
               cSimPath:     Option[String], 
@@ -58,6 +60,8 @@ object TestRunner extends Application
 
     maxcycles = config.getProperty("torture.testrun.maxcycles", "10000000").toInt
     virtualMode = (config.getProperty("torture.testrun.virtual", "false").toLowerCase == "true")
+    dump = (config.getProperty("torture.testrun.dump", "false").toLowerCase == "true")
+    seek = (config.getProperty("torture.testrun.seek", "true").toLowerCase == "true")
 
     // Figure out which binary file to test
     val finalBinName = testAsmName match {
@@ -84,7 +88,7 @@ object TestRunner extends Application
     // Test the simulators on the complete binary
     finalBinName match {
       case Some(binName) => {
-        val res = runSimulators(binName, simulators, dumpSigs.getOrElse(false) && !doSeek.getOrElse(true) )   
+        val res = runSimulators(binName, simulators, dumpSigs.getOrElse(dump) && !doSeek.getOrElse(seek) )   
         val fail_names = res.filter(_._3 == Failed).map(_._1.toString)
         val mism_names = res.filter(_._3 == Mismatched).map(_._1.toString)
         val bad_sims  = res.filter(_._3 != Matched).map(_._2)
@@ -95,7 +99,7 @@ object TestRunner extends Application
           println("//  Mismatched sigs for " + binName + ":")
           mism_names.foreach(n => println("\t"+n))
           println("///////////////////////////////////////////////////////")
-          if(doSeek.getOrElse(true)) {
+          if(doSeek.getOrElse(seek)) {
             val failName = seekOutFailureBinary(binName, bad_sims, dumpSigs.getOrElse(false))
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)

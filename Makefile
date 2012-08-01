@@ -3,9 +3,9 @@
 SBT := ./sbt
 C_SIM := ../riscv-rocket/emulator/emulator
 R_SIM := ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv
-SEEK=true
-TEST = output/test.S
-TESTDIR = output
+TEST := output/test.S
+OPTIONS := $(empty)
+SUITE := output
 DIR :=  output/failedtests
 ERRORS := 5
 MINUTES := 1
@@ -22,54 +22,42 @@ gitopt := $(space)-g$(space)
 CFG := $(subst $(space),$(cfgopt),$(CONFIG))
 GITCMT := $(subst $(space),$(gitopt),$(COMMIT))
 
-.phony: gen ctest ctestd rtest rtestd itest iretest cretest cretestd rretest \
-rretestd cnight rnight crnight cnighte rnighte crnighte cschaden rschaden    \
+.phony: gen ctest rtest itest iretest cretest rretest \
+cnight rnight crnight cnighte rnighte crnighte cschaden rschaden    \
 crschaden csuite rsuite cnightg rnightg crnightg cschadeng rschadeng crschadeng \
 
 gen:
-	$(SBT) 'generator/run'
+	$(SBT) 'generator/run $(OPTIONS)'
 
 csuite:
-	for i in `ls $(TESTDIR) | grep .S` ; do echo $$i ; \
-	result=`make cretest TEST=$(TESTDIR)/$$i SEEK=false | grep 'Simulation failed\|signatures match'` ; \
+	for i in `ls $(SUITE) | grep .S` ; do echo $$i ; \
+	result=`make cretest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
 	echo $$result ; done
-	rm $(TESTDIR)/tes*[!.S]
+	rm $(SUITE)/tes*[!.S]
 
 rsuite:
-	for i in `ls $(TESTDIR) | grep .S` ; do echo $$i ; \
-	result=`make rretest TEST=$(TESTDIR)/$$i SEEK=false | grep 'Simulation failed\|signatures match'` ; \
+	for i in `ls $(SUITE) | grep .S` ; do echo $$i ; \
+	result=`make rretest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
 	echo $$result ; done
-	rm $(TESTDIR)/tes*[!.S]
+	rm $(SUITE)/tes*[!.S]
 
 itest:
 	$(SBT) 'testrun/run'
 
 ctest:
-	$(SBT) 'testrun/run -c $(C_SIM) -s $(SEEK)'
-
-ctestd:
-	$(SBT) 'testrun/run -d true -c $(C_SIM) -s $(SEEK)'
+	$(SBT) 'testrun/run -c $(C_SIM) $(OPTIONS)'
 
 rtest:
-	$(SBT) 'testrun/run -r $(R_SIM) -s $(SEEK)'
-
-rtestd:
-	$(SBT) 'testrun/run -d true -r $(R_SIM) -s $(SEEK)'
+	$(SBT) 'testrun/run -r $(R_SIM) $(OPTIONS)'
 
 iretest:
-	$(SBT) 'testrun/run -a $(TEST)'
+	$(SBT) 'testrun/run -a $(TEST) $(OPTIONS)'
 
 cretest:
-	$(SBT) 'testrun/run -c $(C_SIM) -a $(TEST) -s $(SEEK)'
-
-cretestd:
-	$(SBT) 'testrun/run -d true -c $(C_SIM) -a $(TEST) -s $(SEEK)'
+	$(SBT) 'testrun/run -c $(C_SIM) -a $(TEST) $(OPTIONS)'
 
 rretest:
-	$(SBT) 'testrun/run -r $(R_SIM) -a $(TEST) -s $(SEEK)'
-
-rretestd:
-	$(SBT) 'testrun/run -d true -r $(R_SIM) -a $(TEST) -s $(SEEK)'
+	$(SBT) 'testrun/run -r $(R_SIM) -a $(TEST) $(OPTIONS)'
 
 cnight:
 	$(SBT) 'overnight/run -p $(DIR) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES)'

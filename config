@@ -20,3 +20,5 @@ torture.generator.vec.mix.vonly 5
 
 torture.testrun.maxcycles 10000000
 torture.testrun.virtual   false
+torture.testrun.seek      true
+torture.testrun.dump      false
