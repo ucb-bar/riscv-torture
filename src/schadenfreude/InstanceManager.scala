@@ -67,7 +67,8 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
         if (!commitList.contains(tmpcommit))
         {
           commitList = commitList ++ List(tmpcommit)
-          checkoutRocket(tmpcommit, cPath, rPath, usingC, usingR)
+          if (insttype=="local") checkoutRocket(tmpcommit, cPath, rPath, usingC, usingR)
+          if (insttype=="psi") checkoutRocketPSI(tmpcommit, cPath, rPath, usingC, usingR)
         }
         if (usingR) tmpCmd += " R_SIM=../rocket_"+tmpcommit
         if (usingC) tmpCmd += " C_SIM=../rocket_"+tmpcommit
@@ -76,6 +77,17 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
       cmdRA(i) = tmpCmd
     }
     cmdRA
+  }
+
+  private def checkoutRocketPSI(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
+  {
+    def remoteCompileSim(simDir: String, bool: Boolean): Unit =
+    {
+      val workDir = new File(simDir)
+      //Empty for now
+    }
+    var rocketDir = ""
+    //Empty for now
   }
 
   private def checkoutRocket(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =

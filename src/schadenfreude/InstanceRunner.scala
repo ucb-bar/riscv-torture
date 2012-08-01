@@ -25,11 +25,11 @@ abstract class InstanceRunner
   val instancenum: Int
   var fileLogger: ProcessLogger
   val mgr: InstanceManager
+  val fileop = overnight.FileOperations
 
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit
   def createLogger(logtime: Long): Unit //Maybe move ProcessLogger creation to be done at object instantiation
   def run(cmdstr: String, workDir: String): Process
-  def canonicalPath(p: Path): String = (new File(p.toAbsolute.path)).getCanonicalPath()
   def writeln(line: String, logfile: String): Unit =
   {
     val writer = new FileWriter(logfile, true)
@@ -37,73 +37,6 @@ abstract class InstanceRunner
       writer.write(line + "\n")
     } finally {
       writer.close()
-    }
-  }
-  def scp(localPath: Path, remotePath: Path, host: String): Unit = 
-  {
-    def scpFile(localPath: Path, remotePath: Path): Unit = 
-    {
-      val localStr = localPath.path
-      val remoteStr = remotePath.path
-      println("Copying file " + localPath.name + " to " + host + " remote directory " + remoteStr)
-      val cmd = "scp " + localStr + " "+host+":"+remoteStr
-      println(cmd)
-      val exitCode = cmd.!
-      assert(exitCode == 0, println("SCP failed to successfully copy file " + localPath.name))
-      println("Successfully copied file to remote "+host+" directory.\n")
-    }
-    def compressDir(dir: String, tgz: String): Unit = 
-    {
-      println("Compressing directory to " + tgz)
-      val tarcmd = "tar -czf " + tgz + " " + dir
-      println(tarcmd)
-      val out = tarcmd.!
-      assert (out == 0, println("Failed to properly compress directory."))
-      println("Successfully compressed directory to " + tgz + "\n")
-    }
-    def extractDir(remoteTgz: String, remoteDir: String): Unit = 
-    {
-      println("Extracting "+remoteTgz+" to "+host+" remote directory " + remoteDir)
-      val extractcmd = "ssh "+host+" tar -xzf " + remoteTgz +" -C " + remoteDir
-      println (extractcmd)
-      val out = extractcmd.!
-      assert (out == 0, println("Failed to extract remote file " + remoteTgz + " to directory " + remoteDir))
-      println("Successfully extracted to remote directory " + remoteDir + "\n")
-    }
-
-    assert(localPath.exists, println("Local object to be copied does not exist."))
-    if (localPath.isDirectory)
-    {
-      //Zip it up, scp it, then unzip
-      val canonPath: Path = canonicalPath(localPath)
-      val remoteParentPath = remotePath.parent.get
-      val tgzName = canonPath.name + ".tgz"
-      val tgzPath: Path = "../" + tgzName
-      val remoteTgzPath: Path = (remoteParentPath / Path(tgzName))
-
-      val cmd = ("ssh "+host+" ls " + remoteParentPath.path)
-      val output = (cmd.!!).split("\n")
-      val remoteExists = output.contains(remotePath.name)
-      val remoteTgzExists = output.contains(tgzName)
-
-      if (remoteExists) {
-        println("Remote directory already exists. Skipping copy process.")
-      } else {
-        if (remoteTgzExists) {
-          println(tgzName + " already exists on the remote "+host+" directory. Skipping transfer process.")
-        } else {
-          if(!tgzPath.exists) {
-            compressDir(".", "../"+tgzName)
-          } else {
-            println(tgzName+" already exists. Skipping compression process.")
-          }  
-          scpFile(tgzPath, remoteTgzPath)
-        }
-        val out2 = ("ssh "+host+" mkdir " + remotePath.path).!!
-        extractDir(remoteTgzPath.path, remotePath.path)
-      }
-    } else {
-      scpFile(localPath, remotePath)
     }
   }
 }
@@ -125,17 +58,17 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
     val cfgPath: Path = config
-    println("Copying torture directory to: " + canonicalPath(instPath))
+    println("Copying torture directory to: " + instPath.normalize.path)
     if (instPath.isDirectory)
     {
-      println(canonicalPath(instPath) + " already exists. Not copying torture.")
+      println(instPath.normalize.path + " already exists. Not copying torture.")
     } else {
-      torturePath.copyTo(instPath)
-      println("Copied torture to " + canonicalPath(instPath))
+      fileop.copy(torturePath, instPath)
+      println("Copied torture to " + instPath.normalize.path)
     }
-    cfgPath.copyTo((instPath / Path("config")), replaceExisting=true)
+    fileop.copy(cfgPath, instPath / Path("config"))
     println("Using config file: " + cfgPath.path)
-    println(" Cleaning up " + canonicalPath(instPath / Path("output")) + " before running.")
+    println(" Cleaning up " + (instPath / Path("output")).normalize.path + " before running.")
     Process("make clean-all", new File(instDir + "/output")).!
   }
 
@@ -170,16 +103,16 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
     //Complete the psi.sh script
-    (torturePath / Path("partialpsi.qsub")).copyTo(torturePath / Path("psi.qsub"), replaceExisting=true)
+    fileop.copy(torturePath / Path("partialpsi.qsub"),torturePath / Path("psi.qsub"))
     val writer = new FileWriter("psi.qsub", true)
     try {
       writer.write(mgr.cmdstrRA(instancenum))
     } finally {
       writer.close()
     }
-    scp(torturePath, instPath, "psi")
-    scp(torturePath / Path("psi.qsub"), instPath / Path("psi.qsub"), "psi")
-    scp(torturePath / Path(config), instPath / Path("config"), "psi")
+    fileop.scp(torturePath, instPath, "psi")
+    fileop.scp(torturePath / Path("psi.qsub"), instPath / Path("psi.qsub"), "psi")
+    fileop.scp(torturePath / Path(config), instPath / Path("config"), "psi")
   }
   
   def run(cmdstr: String, workDir: String): Process =
