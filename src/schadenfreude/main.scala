@@ -7,8 +7,11 @@ import scalax.file.Path
 import scalax.file.FileSystem
 import java.io.File
 import java.io.FileWriter
+import java.util.Properties
+import java.io.FileInputStream
 
 case class Options(var timeToRun: Option[Int] = None,
+  var cfgFile: Option[String] = None,
   var emailAddress: Option[String] = None,
   var errorThreshold: Option[Int] = None,
   var cSimPath: Option[String] = None,
@@ -26,10 +29,11 @@ object Schadenfreude extends Application
   override def main(args: Array[String]) =
   {
     val parser = new OptionParser("schadenfreude/run") {
-      opt("C", "config", "<file>", "config file", {s: String => opts.confFileList = Some(opts.confFileList.get ++ List(s))})
-      opt("g", "gitcommit", "<git commit>", "git commit to check out", {s: String => opts.gitCommitList = Some(opts.gitCommitList.get ++ List(s))})
+      opt("C", "config", "<file>", "config file", {s: String => opts.cfgFile=Some(s)})
+      opt("f", "configfiles", "<config files>", "Config files for instances",{s:String =>opts.confFileList = Some(opts.confFileList.get ++ List(s))})
+      opt("g", "gitcommit", "<git commit>", "git commits to check out", {s: String => opts.gitCommitList = Some(opts.gitCommitList.get ++ List(s))})
       opt("p", "permdir", "<dir>", "dir to store failing tests", {s: String => opts.permDir = Some(s)})
-      opt("d", "tmpdir", "<dir>", "dir to create temporary instance dirs in", {s: String => opts.tempDir = Some(s)})
+      opt("d", "instdir", "<dir>", "dir to create instance dirs in", {s: String => opts.tempDir = Some(s)})
       opt("c", "csim", "<file>", "C simulator", {s: String => opts.cSimPath = Some(s)})
       opt("r", "rtlsim", "<file>", "RTL simulator", {s: String => opts.rtlSimPath = Some(s)})
       opt("e", "email", "<address>", "email to report to", {s: String => opts.emailAddress = Some(s)})
@@ -40,20 +44,31 @@ object Schadenfreude extends Application
     }
     if (parser.parse(args))
     {
+      val cfgFile = opts.cfgFile.getOrElse("config")
       val confFileList = opts.confFileList.get
       val gitCommitList = opts.gitCommitList.get
-      val permDir      = opts.permDir.getOrElse("output/failedtests")
-      val tmpDir       = opts.tempDir.getOrElse("..")
+      val config = new Properties()
+      val configin = new FileInputStream(cfgFile)
+      config.load(configin)
+      configin.close()
+
+      val typeinst = config.getProperty("torture.schadenfreude.insttype","local")
+      val numinst  = config.getProperty("torture.schadenfreude.instcnt","1").toInt
+      val tmpdir   = config.getProperty("torture.schadenfreude.instdir","..")
+
+      val instdir       = opts.tempDir.getOrElse(tmpdir)
+      val insttype     = opts.instanceType.getOrElse(typeinst)
+      val instcnt      = opts.instanceCnt.getOrElse(numinst)
+
+      val permDir      = opts.permDir.getOrElse("")
       val cPath        = opts.cSimPath.getOrElse("")
       val rPath        = opts.rtlSimPath.getOrElse("")
-      val email        = opts.emailAddress.getOrElse("your@email.address")
-      val insttype     = opts.instanceType.getOrElse("local")
-      val thresh       = opts.errorThreshold.getOrElse(5)
-      val minutes      = opts.timeToRun.getOrElse(1)
-      val instcnt      = opts.instanceCnt.getOrElse(1)
+      val email        = opts.emailAddress.getOrElse("")
+      val thresh       = opts.errorThreshold.getOrElse(-1)
+      val minutes      = opts.timeToRun.getOrElse(-1)
 
-      val instmgr = new InstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt)
-      instmgr.createInstances(insttype)
+      val instmgr = new InstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
+      instmgr.createInstances()
       instmgr.runInstances()
     }
   }

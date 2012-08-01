@@ -7,20 +7,17 @@ TEST := output/test.S
 OPTIONS := $(empty)
 SUITE := output
 CONFIG := config
-INSTCNT := 1
-INSTDIR := ..
-INSTTYPE := local
 COMMIT := none
 empty :=
 space := $(empty) $(empty)
-cfgopt := $(space)-C$(space)
+cfgopt := $(space)-f$(space)
 gitopt := $(space)-g$(space)
 CFG := $(subst $(space),$(cfgopt),$(CONFIG))
 GITCMT := $(subst $(space),$(gitopt),$(COMMIT))
 
 .phony: gen ctest rtest itest igentest cgentest rgentest \
 cnight rnight crnight cschaden rschaden \
-crschaden csuite rsuite cschadeng rschadeng crschadeng \
+crschaden csuite rsuite \
 
 gen:
 	$(SBT) 'generator/run $(OPTIONS)'
@@ -77,19 +74,10 @@ crnight:
 	$(SBT) 'overnight/run -c $(C_SIM) -r $(R_SIM) -g $(COMMIT) $(OPTIONS)'
 
 cschaden:
-	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
-
-cschadeng:
-	$(SBT) 'schadenfreude/run -C $(CFG) -g $(GITCMT) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -c $(C_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
+	$(SBT) 'schadenfreude/run -f $(CFG) -c $(C_SIM) -g $(GITCMT) $(OPTIONS)'
 
 rschaden:
-	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
-
-rschadeng:
-	$(SBT) 'schadenfreude/run -C $(CFG) -g $(GITCMT) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)'
+	$(SBT) 'schadenfreude/run -f $(CFG) -r $(R_SIM) -g $(GITCMT) $(OPTIONS)'
 
 crschaden:
-	$(SBT) 'schadenfreude/run -C $(CFG) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)' 
-
-crschadeng:
-	$(SBT) 'schadenfreude/run -C $(CFG) -g $(GITCMT) -p $(DIR) -d $(INSTDIR) -i $(INSTTYPE) -c $(C_SIM) -r $(R_SIM) -t $(ERRORS) -m $(MINUTES) -n $(INSTCNT) -e $(EMAIL)' 
+	$(SBT) 'schadenfreude/run -f $(CFG) -c $(C_SIM) -r $(R_SIM) -g $(GITCMT) $(OPTIONS)'

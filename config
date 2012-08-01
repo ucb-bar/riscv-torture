@@ -27,3 +27,7 @@ torture.overnight.errors  1
 torture.overnight.minutes 1
 torture.overnight.outdir  output/failedtests
 torture.overnight.email   your@email.address
+
+torture.schadenfreude.instcnt   1
+torture.schadenfreude.insttype  local
+torture.schadenfreude.instdir   ..

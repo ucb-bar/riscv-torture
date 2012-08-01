@@ -2,8 +2,10 @@ package torture
 package schadenfreude
 
 import scala.sys.process._
+import scalax.file.Path
+import java.io.File
 
-class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int)
+class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String)
 {
   val instRunners: Array[InstanceRunner] = new Array(instcnt)
   val processRA: Array[Process] = new Array(instcnt)
@@ -33,7 +35,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
   {
     val cmdRA: Array[String] = new Array(instcnt)
     var cmdstring = ""
-    var cmdstring2 = ""
+    var cmdstring2 = " OPTIONS=\""
     if (cPath != "" && rPath != "")
       cmdstring += "make crnight"
     if (cPath != "" && rPath == "")
@@ -41,25 +43,88 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
     if (cPath == "" && rPath != "")
       cmdstring += "make rnight"
 
+    val usingR = cmdstring.contains("r")
+    val usingC = cmdstring.contains("c")
+
     assert(cmdstring != "", println("No simulators were specified"))
 
-    if (email != "your@email.address") cmdstring2 += "e EMAIL=" + email
-    if (cPath != "../riscv-rocket/emulator/emulator" && cPath != "") cmdstring2 += " C_SIM=" + cPath
-    if (rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv" && rPath != "") cmdstring2 += " R_SIM=" + rPath
-    cmdstring2 += " ERRORS=" + thresh + " MINUTES=" + minutes
-    cmdstring2 += " DIR=" + permDir
+    if (email != "") cmdstring2 += " -e " + email
+    if (thresh != -1) cmdstring2 += " -t " + thresh
+    if (minutes != -1) cmdstring2 += " -m " + minutes
+    if (permDir != "") cmdstring2 += " -p " + permDir
 
+    var commitList: List[String] = List()
     for (i <- 0 until instcnt)
     {
       var tmpCmd = cmdstring
-      if (commitmap(i) != "none") tmpCmd += "g" + cmdstring2
-      if (commitmap(i) != "none") tmpCmd += " COMMIT=" + commitmap(i)
+      val tmpcommit = commitmap(i)
+      if (tmpcommit == "none")
+      {
+        if (usingC && cPath != "../riscv-rocket/emulator/emulator") tmpCmd += " C_SIM="+cPath
+        if (usingR && rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv") tmpCmd += " R_SIM="+rPath
+        tmpCmd += cmdstring2+"\""
+      } else {
+        if (!commitList.contains(tmpcommit))
+        {
+          commitList = commitList ++ List(tmpcommit)
+          checkoutRocket(tmpcommit, cPath, rPath, usingC, usingR)
+        }
+        if (usingR) tmpCmd += " R_SIM=../rocket_"+tmpcommit
+        if (usingC) tmpCmd += " C_SIM=../rocket_"+tmpcommit
+        tmpCmd += cmdstring2+"\""
+      }
       cmdRA(i) = tmpCmd
     }
     cmdRA
   }
 
-  def createInstances(insttype: String): Unit = 
+  private def checkoutRocket(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
+  {
+    def compileSim(simDir: String, bool: Boolean): Unit =
+    {
+      val workDir = new File(simDir)
+      var simPath: Path = Path("")
+      if (simDir.contains("emulator")) simPath = simDir+"/emulator"
+      if (simDir.contains("vcs-sim-rtl")) simPath = simDir+"/simv"
+      if (bool)
+      {
+        Process("make -j", workDir).!
+        if (!simPath.exists) Process("make -j", workDir).!
+      }
+    }
+    
+    var rocketDir = ""
+    if (usingC) rocketDir = cPath.substring(0,cPath.length-18)
+    if (usingR) rocketDir = rPath.substring(0,rPath.length-36)
+    if (commit == "none") return
+    if (rocketDir != "")
+    {
+      val tmpRocketDir = "../rocket_"+commit
+      val tmpRocketPath: Path = tmpRocketDir
+      val copycmd = "cp -r " + rocketDir + " " + tmpRocketDir
+      if (!tmpRocketPath.exists)
+      {
+        println(copycmd)
+        val copyexit = copycmd.!
+        
+        val cmd = "git checkout " + commit
+        val workDir = new File(tmpRocketDir)
+        println(cmd + " runin " + tmpRocketDir)
+        val proc = Process(cmd, workDir)
+        val output = proc.!!
+        println(output)
+          
+        val cWorkDir = new File(tmpRocketDir+"/emulator")
+        val rWorkDir = new File(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl")
+        println(Process("make clean", cWorkDir).!!)
+        println(Process("make clean", rWorkDir).!!)
+      }
+      compileSim(tmpRocketDir+"/emulator", usingC)
+      compileSim(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl", usingR)
+    } else return
+  }
+
+  def createInstances(): Unit = 
   {
     for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype,i,this)
   }
