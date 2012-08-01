@@ -60,7 +60,7 @@ object Overnight extends Application
       var endTime = startTime + minutes*60*1000
       var errCount = 0
 
-      val (cSim, rtlSim) = gitCheckout(opts.cSimPath.getOrElse(""), opts.rtlSimPath.getOrElse(""), opts.gitCommit.getOrElse("none"))
+      val (cSim, rtlSim) = checkoutRocket(opts.cSimPath.getOrElse(""), opts.rtlSimPath.getOrElse(""), opts.gitCommit.getOrElse("none"))
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
         val newAsmName = generator.Generator.generate(confFileName, baseName)
@@ -112,81 +112,39 @@ object Overnight extends Application
     }
   }
 
-  def gitCheckout(cPath: String, rtlPath: String, commit: String): (Option[String], Option[String]) =
+  def checkoutRocket(cPath: String, rPath: String, commit: String): (Option[String],Option[String]) =
   {
-    def compileSim(simname: String, simDir: String, bool: Boolean): Option[String] =
-    {
-      var simFile = ""
-      if (simname=="c") simFile = simDir+"/emulator"
-      if (simname=="r") simFile = simDir+"/simv" 
-      if (simFile=="") return None
-      val workDir = new File(simDir)
-      val simPath: Path = simFile
-      if (bool)
-      {
-        Process("make -j", workDir).!
-        if (!simPath.exists) Process("make -j", workDir).!
-        return Some(simFile)
-      } else return None
-    }
-        
-    val rBool = (rtlPath != "")
-    val cBool = (cPath != "")
-    var rocketDir = ""
-
-    if (cBool)
-    {
-      rocketDir = cPath.substring(0,cPath.length-18) // String ends with /emulator/emulator
-    }
-    if (rBool)
-    {
-      rocketDir = rtlPath.substring(0,rtlPath.length-36) //String ends with /vlsi-generic/build/vcs-sim-rtl/simv
-    }
-
     var cSim: Option[String] = None
     var rSim: Option[String] = None
+    if (cPath != "") cSim = Some(cPath)
+    if (rPath != "") rSim = Some(rPath)
+    if (commit == "none") return (cSim, rSim)
 
-    if (commit == "none")
+    var rocketDir = ""
+    if (cPath != "") rocketDir = cPath.substring(0,cPath.length-18)
+    if (rPath != "") rocketDir = rPath.substring(0,rPath.length-36)
+    val rocketPath: Path = rocketDir
+    val destPath: Path = (rocketPath / Path("..") / Path("rocket_"+commit))
+    val emPath: Path = destPath / Path("emulator")
+    val vcsrelPath: Path = "vlsi-generic/build/vcs-sim-rtl"
+    val vcsPath: Path = destPath / vcsrelPath
+    
+    if (!destPath.exists)
     {
-      if (cBool) cSim = Some(cPath)
-      if (rBool) rSim = Some(rtlPath)
-      return (cSim, rSim)
+      println("I DON'TEXIST!")
+      FileOperations.gitcheckout(rocketPath, destPath, commit)
+      FileOperations.clean("make clean", emPath)
+      println("Doing make clean in " + emPath.path)
+      FileOperations.clean("make clean", vcsPath)
+      println("Doing make clean in " + vcsPath.path)
     }
-    if (rocketDir != "")
-    {
-      val tmpRocketDir = "../rocket_"+commit
-      val tmpRocketPath: Path = tmpRocketDir
-      val copycmd = "cp -r " + rocketDir + " " + tmpRocketDir
-      if (!tmpRocketPath.exists)
-      {
-        println(copycmd)
-        val copyexit = copycmd.!
+    println("I EXIST!")
 
-        val cmd = "git checkout " + commit
-        val workDir = new File(tmpRocketDir)
-        println(cmd + " run in " + tmpRocketDir)
-        val proc = Process(cmd, workDir)
-        val output = proc.!!
-        println(output)
+    if (cPath != "") FileOperations.compile("make -j", emPath, emPath / Path("emulator"))
+    if (rPath != "") FileOperations.compile("make -j", vcsPath, vcsPath / Path("simv"))
 
-        val cSimDir = tmpRocketDir+"/emulator"
-        val cWorkDir = new File(cSimDir)
-        println(Process("make clean", cWorkDir).!!)
-        val rSimDir = tmpRocketDir + "/vlsi-generic/build/vcs-sim-rtl"
-        val rWorkDir = new File(rSimDir)
-        println(Process("make clean", rWorkDir).!!)
-
-        cSim = compileSim("c", cSimDir, cBool)
-        rSim = compileSim("r", rSimDir, rBool)
-        (cSim, rSim)
-      } else {
-        cSim = compileSim("c", tmpRocketDir+"/emulator", cBool)
-        rSim = compileSim("r", tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl", rBool)
-        (cSim, rSim)
-      }
-    } else {
-      (cSim, rSim)
-    }
+    if (cPath != "") cSim = Some(emPath.toAbsolute.normalize.path + "/emulator")
+    if (rPath != "") rSim = Some(vcsPath.toAbsolute.normalize.path + "/simv")
+    (cSim, rSim)
   }
 }
-
