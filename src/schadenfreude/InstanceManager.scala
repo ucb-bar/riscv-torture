@@ -4,6 +4,8 @@ package schadenfreude
 import scala.sys.process._
 import scalax.file.Path
 import java.io.File
+import java.util.Properties
+import java.io.FileInputStream
 
 class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String)
 {
@@ -12,6 +14,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
   val cfgmap = mapOptions(cfgs,"config")
   val commitmap = mapOptions(gitcmts,"none")
   val cmdstrRA: Array[String] = getCommandStrings()
+  val walltime = getWalltime()
 
   def mapOptions(optList: List[String],default: String): List[String] =
   {
@@ -31,6 +34,20 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
     map
   }
 
+  def getWalltime(): Int =
+  {
+    var max: Int = minutes
+    for (i <- 0 until instcnt)
+    {
+      val config = new Properties()
+      val configin = new FileInputStream(cfgmap(i))
+      config.load(configin)
+      configin.close()
+      val imin = config.getProperty("torture.overnight.minutes","1").toInt
+      if (imin > max) max = imin
+    }
+    max
+  } 
   def getCommandStrings(): Array[String] = 
   {
     val cmdRA: Array[String] = new Array(instcnt)
