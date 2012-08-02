@@ -81,7 +81,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
       {
         if (usingC && cPath != "../riscv-rocket/emulator/emulator") tmpCmd += " C_SIM="+cPath
         if (usingR && rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv") tmpCmd += " R_SIM="+rPath
-        if (cmdstring2 != " OPTIONS=\"\"") tmpCmd += cmdstring2 ; println("HI")
+        if (cmdstring2 != " OPTIONS=\"\"") tmpCmd += cmdstring2
       } else {
         if (!commitList.contains(tmpcommit))
         {
@@ -91,7 +91,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
         }
         if (usingR) tmpCmd += " R_SIM=../rocket_"+tmpcommit+"/vlsi-generic/build/vcs-sim-rtl/simv"
         if (usingC) tmpCmd += " C_SIM=../rocket_"+tmpcommit+"/emulator/emulator"
-        if (cmdstring2 != " OPTIONS=\"\"") tmpCmd += cmdstring2 ; println("HI")
+        if (cmdstring2 != " OPTIONS=\"\"") tmpCmd += cmdstring2
       }
       cmdRA(i) = tmpCmd
     }

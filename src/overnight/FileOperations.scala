@@ -18,6 +18,7 @@ object FileOperations
   def compileRemote(dir: Path, compiledFile: Path, host: String) =
   {
     val sshcmd = "ssh " + host + " cd " + dir.path + " ; make -j"
+    println(sshcmd)
     Process(sshcmd).!
     if (!remotePathExists(compiledFile, host)) Process(sshcmd).!
   }
@@ -31,6 +32,7 @@ object FileOperations
   def cleanRemote(dir: Path, host: String) =
   {
     val sshcmd = "ssh " + host + " cd " + dir.path + " ; make clean"
+    println(sshcmd)
     Process(sshcmd).!
   }
 
@@ -57,6 +59,7 @@ object FileOperations
       if (commit != "none")
       {
         val sshgitcheckout = "ssh " + host + " cd " + newDir.path + " ; git checkout " + commit
+        println(sshgitcheckout)
         println(Process(sshgitcheckout).!!)
       }
     }
