@@ -131,17 +131,15 @@ object Overnight extends Application
     
     if (!destPath.exists)
     {
-      println("I DON'TEXIST!")
       FileOperations.gitcheckout(rocketPath, destPath, commit)
-      FileOperations.clean("make clean", emPath)
-      println("Doing make clean in " + emPath.path)
-      FileOperations.clean("make clean", vcsPath)
-      println("Doing make clean in " + vcsPath.path)
+      println("Doing make clean in " + emPath.toAbsolute.normalize.path)
+      FileOperations.clean(emPath)
+      println("Doing make clean in " + vcsPath.toAbsolute.normalize.path)
+      FileOperations.clean(vcsPath)
     }
-    println("I EXIST!")
 
-    if (cPath != "") FileOperations.compile("make -j", emPath, emPath / Path("emulator"))
-    if (rPath != "") FileOperations.compile("make -j", vcsPath, vcsPath / Path("simv"))
+    if (cPath != "") FileOperations.compile(emPath, emPath / Path("emulator"))
+    if (rPath != "") FileOperations.compile(vcsPath, vcsPath / Path("simv"))
 
     if (cPath != "") cSim = Some(emPath.toAbsolute.normalize.path + "/emulator")
     if (rPath != "") rSim = Some(vcsPath.toAbsolute.normalize.path + "/simv")

@@ -79,61 +79,36 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
     cmdRA
   }
 
-  private def checkoutRocketPSI(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
+  def checkoutRocketPSI(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
   {
-    def remoteCompileSim(simDir: String, bool: Boolean): Unit =
-    {
-      val workDir = new File(simDir)
-      //Empty for now
-    }
     var rocketDir = ""
     //Empty for now
   }
 
-  private def checkoutRocket(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
+  def checkoutRocket(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
   {
-    def compileSim(simDir: String, bool: Boolean): Unit =
-    {
-      val workDir = new File(simDir)
-      var simPath: Path = Path("")
-      if (simDir.contains("emulator")) simPath = simDir+"/emulator"
-      if (simDir.contains("vcs-sim-rtl")) simPath = simDir+"/simv"
-      if (bool)
-      {
-        Process("make -j", workDir).!
-        if (!simPath.exists) Process("make -j", workDir).!
-      }
-    }
-    
     var rocketDir = ""
+    val fileop = overnight.FileOperations
     if (usingC) rocketDir = cPath.substring(0,cPath.length-18)
     if (usingR) rocketDir = rPath.substring(0,rPath.length-36)
     if (commit == "none") return
     if (rocketDir != "")
     {
-      val tmpRocketDir = "../rocket_"+commit
-      val tmpRocketPath: Path = tmpRocketDir
-      val copycmd = "cp -r " + rocketDir + " " + tmpRocketDir
+      val rocketPath: Path = rocketDir
+      val tmpRocketPath: Path = "../rocket_"+commit
+      val emPath: Path = (tmpRocketPath/Path("emulator"))
+      val vcsPath: Path = (tmpRocketPath/Path("vlsi-generic")/Path("build")/Path("vcs-sim-rtl"))
       if (!tmpRocketPath.exists)
       {
-        println(copycmd)
-        val copyexit = copycmd.!
-        
-        val cmd = "git checkout " + commit
-        val workDir = new File(tmpRocketDir)
-        println(cmd + " runin " + tmpRocketDir)
-        val proc = Process(cmd, workDir)
-        val output = proc.!!
-        println(output)
-          
-        val cWorkDir = new File(tmpRocketDir+"/emulator")
-        val rWorkDir = new File(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl")
-        println(Process("make clean", cWorkDir).!!)
-        println(Process("make clean", rWorkDir).!!)
+        fileop.gitcheckout(rocketPath, tmpRocketPath, commit)
+        println("Doing make clean in " + (emPath.toAbsolute.normalize.path))
+        fileop.clean(emPath)
+        println("Doing make clean in " + (vcsPath.toAbsolute.normalize.path))
+        fileop.clean(vcsPath)
       }
-      compileSim(tmpRocketDir+"/emulator", usingC)
-      compileSim(tmpRocketDir+"/vlsi-generic/build/vcs-sim-rtl", usingR)
-    } else return
+      if (usingC) fileop.compile(emPath, emPath/Path("emulator"))  
+      if (usingR) fileop.compile(vcsPath, vcsPath/Path("simv"))
+    }
   }
 
   def createInstances(): Unit = 
