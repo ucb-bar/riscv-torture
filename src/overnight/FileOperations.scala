@@ -14,11 +14,24 @@ object FileOperations
     Process("make -j", workDir).!
     if (!compiledFile.exists) Process("make -j", workDir).!
   }
+  
+  def compileRemote(dir: Path, compiledFile: Path, host: String) =
+  {
+    val sshcmd = "ssh " + host + " cd " + dir.path + " ; make -j"
+    Process(sshcmd).!
+    if (!remotePathExists(compiledFile, host)) Process(sshcmd).!
+  }
  
   def clean(dir: Path) = 
   {
     val workDir = new File(dir.toAbsolute.normalize.path)
     Process("make clean", workDir).!
+  }
+
+  def cleanRemote(dir: Path, host: String) =
+  {
+    val sshcmd = "ssh " + host + " cd " + dir.path + " ; make clean"
+    Process(sshcmd).!
   }
 
   def gitcheckout(oldDir: Path, newDir: Path, commit: String): Unit =
@@ -33,6 +46,29 @@ object FileOperations
       val out = Process("git checkout " + commit, new File(canonnew)).!!
       println(out)
     }
+  }
+
+  def gitcheckoutRemote(oldDir: Path, newDir: Path, commit: String, host: String) =
+  {
+    if (!remotePathExists(newDir, host))
+    {
+      val sshcmd = "ssh " + host + " cp -r " + oldDir.path + " " + newDir.path
+      Process(sshcmd).!
+      if (commit != "none")
+      {
+        val sshgitcheckout = "ssh " + host + " cd " + newDir.path + " ; git checkout " + commit
+        println(Process(sshgitcheckout).!!)
+      }
+    }
+  }
+
+  def remotePathExists(remote: Path, host: String): Boolean =
+  {
+    val remoteParentPath = remote.parent.get
+    val cmd = ("ssh "+host+" ls " + remoteParentPath.path)
+    val output = (cmd.!!).split("\n")
+    val remoteExists = output.contains(remote.name)
+    remoteExists
   }
 
   def copy(from: Path, to: Path): Unit = 

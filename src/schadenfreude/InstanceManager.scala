@@ -35,7 +35,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
   {
     val cmdRA: Array[String] = new Array(instcnt)
     var cmdstring = ""
-    var cmdstring2 = " OPTIONS=\""
+    var cmdstring2= " OPTIONS=\""
     if (cPath != "" && rPath != "")
       cmdstring += "make crnight"
     if (cPath != "" && rPath == "")
@@ -48,6 +48,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
 
     assert(cmdstring != "", println("No simulators were specified"))
 
+    cmdstring += " COMMIT=none"
     if (email != "") cmdstring2 += " -e " + email
     if (thresh != -1) cmdstring2 += " -t " + thresh
     if (minutes != -1) cmdstring2 += " -m " + minutes
@@ -82,7 +83,29 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
   def checkoutRocketPSI(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
   {
     var rocketDir = ""
-    //Empty for now
+    val fileop = overnight.FileOperations
+    if (usingC) rocketDir = cPath.substring(0,cPath.length-18)
+    if (usingR) rocketDir = rPath.substring(0,rPath.length-36)
+    if (rocketDir != "")
+    {
+      val rocketPath: Path = rocketDir
+      if (commit != "none")
+      {
+        val remoteDir = tmpDir + "/rocket_" + commit
+        val remoteOldPath: Path = rocketDir
+        val remotePath: Path = remoteDir
+        val remoteCPath: Path = remoteDir+"/emulator"
+        val remoteRPath: Path = remoteDir+"/vlsi-generic/build/vcs-sim-rtl"
+        if (!fileop.remotePathExists(remotePath, "psi"))
+        {
+          fileop.gitcheckoutRemote(remoteOldPath, remotePath, commit, "psi")
+          fileop.cleanRemote(remoteCPath, "psi")
+          fileop.cleanRemote(remoteRPath, "psi")
+        }
+        if (usingR) fileop.compileRemote(remoteRPath, remoteRPath/Path("simv"), "psi")
+        if (usingC) fileop.compileRemote(remoteCPath, remoteCPath/Path("emulator"), "psi")
+      }
+    }
   }
 
   def checkoutRocket(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
