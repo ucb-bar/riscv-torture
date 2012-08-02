@@ -70,6 +70,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
     if (thresh != -1) cmdstring2 += " -t " + thresh
     if (minutes != -1) cmdstring2 += " -m " + minutes
     if (permDir != "") cmdstring2 += " -p " + permDir
+    cmdstring2 += "\""
 
     var commitList: List[String] = List()
     for (i <- 0 until instcnt)
@@ -80,7 +81,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
       {
         if (usingC && cPath != "../riscv-rocket/emulator/emulator") tmpCmd += " C_SIM="+cPath
         if (usingR && rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv") tmpCmd += " R_SIM="+rPath
-        tmpCmd += cmdstring2+"\""
+        if (cmdstring2 != " OPTIONS=\"\"") tmpCmd += cmdstring2 ; println("HI")
       } else {
         if (!commitList.contains(tmpcommit))
         {
@@ -90,7 +91,7 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
         }
         if (usingR) tmpCmd += " R_SIM=../rocket_"+tmpcommit+"/vlsi-generic/build/vcs-sim-rtl/simv"
         if (usingC) tmpCmd += " C_SIM=../rocket_"+tmpcommit+"/emulator/emulator"
-        tmpCmd += cmdstring2+"\""
+        if (cmdstring2 != " OPTIONS=\"\"") tmpCmd += cmdstring2 ; println("HI")
       }
       cmdRA(i) = tmpCmd
     }
