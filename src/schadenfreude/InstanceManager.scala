@@ -88,8 +88,8 @@ class InstanceManager(val cfgs: List[String], val gitcmts: List[String], val per
           if (insttype=="local") checkoutRocket(tmpcommit, cPath, rPath, usingC, usingR)
           if (insttype=="psi") checkoutRocketPSI(tmpcommit, cPath, rPath, usingC, usingR)
         }
-        if (usingR) tmpCmd += " R_SIM=../rocket_"+tmpcommit
-        if (usingC) tmpCmd += " C_SIM=../rocket_"+tmpcommit
+        if (usingR) tmpCmd += " R_SIM=../rocket_"+tmpcommit+"/vlsi-generic/build/vcs-sim-rtl/simv"
+        if (usingC) tmpCmd += " C_SIM=../rocket_"+tmpcommit+"/emulator/emulator"
         tmpCmd += cmdstring2+"\""
       }
       cmdRA(i) = tmpCmd
