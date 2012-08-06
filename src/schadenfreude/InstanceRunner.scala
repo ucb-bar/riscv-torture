@@ -23,12 +23,20 @@ object InstanceRunner
 abstract class InstanceRunner
 {
   val instancenum: Int
-  var fileLogger: ProcessLogger
+  var fileLogger = ProcessLogger(line => (), line => ())
+  var locallogtime: Long = 0.0
   val mgr: InstanceManager
   val fileop = overnight.FileOperations
 
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit
-  def createLogger(logtime: Long): Unit //Maybe move ProcessLogger creation to be done at object instantiation
+  def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation
+  {
+    val logname = "output/schad" + instancenum + "_" + logtime + ".log"
+    val plog = ProcessLogger(line => writeln(line, logname), line => writeln(line, logname))
+    fileLogger = plog
+    locallogtime = logtime
+    println("Instance log output will be placed in " + (new File(logname)).getCanonicalPath())
+  }
   def run(cmdstr: String, workDir: String): Process
   def writeln(line: String, logfile: String): Unit =
   {
@@ -43,16 +51,6 @@ abstract class InstanceRunner
 
 class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
 {
-  var fileLogger = ProcessLogger(line => (), line => ())
-
-  def createLogger(logtime: Long): Unit =
-  {
-    val logname = "output/schad" + instancenum + "_" + logtime + ".log"
-    val plog = ProcessLogger(line => writeln(line, logname), line => writeln(line, logname))
-    fileLogger = plog
-    println("Instance log output will be placed in " + (new File(logname)).getCanonicalPath())
-  }
-
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit =
   {
     val torturePath: Path = tortureDir
@@ -87,17 +85,6 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
 
 class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
 {
-  var fileLogger = ProcessLogger(line => (), line => ())
-  var locallogtime: Long = 0
-
-  def createLogger(logtime: Long): Unit =
-  {
-    val logname = "output/schad" + instancenum + "_" + logtime + ".log"
-    val plog = ProcessLogger(line => writeln(line, logname), line => writeln(line, logname))
-    fileLogger = plog
-    locallogtime = logtime
-  }
-
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit =
   {
     val torturePath: Path = tortureDir
