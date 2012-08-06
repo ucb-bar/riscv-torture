@@ -15,6 +15,7 @@ object InstanceRunner
     val runner: InstanceRunner = insttype match {
       case "local" => new LocalRunner(instnum, mgr)
       case "psi" => new PSIRunner(instnum, mgr)
+      case "ec2" => new EC2Runner(instnum, mgr)
     }
     return runner
   }
@@ -24,11 +25,12 @@ abstract class InstanceRunner
 {
   val instancenum: Int
   var fileLogger = ProcessLogger(line => (), line => ())
-  var locallogtime: Long = 0.0
+  var locallogtime: Long = 0L
   val mgr: InstanceManager
   val fileop = overnight.FileOperations
 
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit
+  def run(cmdstr: String, workDir: String): Process
   def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation
   {
     val logname = "output/schad" + instancenum + "_" + logtime + ".log"
@@ -37,7 +39,6 @@ abstract class InstanceRunner
     locallogtime = logtime
     println("Instance log output will be placed in " + (new File(logname)).getCanonicalPath())
   }
-  def run(cmdstr: String, workDir: String): Process
   def writeln(line: String, logfile: String): Unit =
   {
     val writer = new FileWriter(logfile, true)
@@ -46,6 +47,19 @@ abstract class InstanceRunner
     } finally {
       writer.close()
     }
+  }
+}
+
+class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
+{
+  def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit =
+  {
+
+  }
+  
+  def run(cmdstr: String, workDir: String): Process =
+  {
+    Process("ls").run
   }
 }
 
@@ -89,7 +103,7 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   {
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
-    //Complete the psi.sh script
+    //Complete the psi.qsub script
     fileop.copy(torturePath / Path("partialpsi.qsub"),torturePath / Path("psi.qsub"))
     val writer = new FileWriter("psi.qsub", true)
     try {
@@ -117,7 +131,7 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   private def qsub(instDir: String): String = 
   {
     val logfile = "schad" + instancenum + "_" + locallogtime
-    val wt = mgr.walltime * 2 // Extra time so it doesn't cut the test off before it finishes.
+    val wt = mgr.runtime * 2 // Extra time so it doesn't cut the test off before it finishes.
     val walltime = (wt/60) + ":" + (wt % 60) + ":00"
     val cput = walltime // Fine to have them the same?
     

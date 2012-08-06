@@ -67,9 +67,10 @@ object Schadenfreude extends Application
       val thresh       = opts.errorThreshold.getOrElse(-1)
       val minutes      = opts.timeToRun.getOrElse(-1)
 
-      val instmgr = new InstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
+      val instmgr = InstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
       instmgr.createInstances()
       instmgr.runInstances()
+      instmgr.collectLogFiles()
     }
   }
 
