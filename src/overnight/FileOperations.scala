@@ -79,6 +79,23 @@ object FileOperations
     from.copyTo(to, replaceExisting=true)
   }
 
+  def scpFileBack(remotePath: Path, localPath: Path, host: String): Unit =
+  {
+    val localStr = localPath.path
+    val remoteStr = remotePath.path
+    if (remotePathExists(remotePath, host))
+    {
+      println("Copying remote file " + remotePath.name + " to " + host + " directory " + localStr)
+      val cmd = "scp " +host+":"+remoteStr + " " + localStr
+      println(cmd)
+      val exitCode = cmd.!
+      assert(exitCode == 0, println("SCP failed to successfully copy file " + localPath.name))
+      println("Successfully copied remote " + host + " file to directory.\n")
+    } else {
+      println("Could not find remote file " + remoteStr + " on " + host)
+    }
+  }
+
   def scp(localPath: Path, remotePath: Path, host: String): Unit = 
   {
     def scpFile(localPath: Path, remotePath: Path): Unit = 

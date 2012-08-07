@@ -9,12 +9,12 @@ import java.io.FileInputStream
 
 object InstanceManager
 {  
-  def apply(confFileList: List[String], gitCommitList: List[String], permDir: String, instdir: String, cPath: String, rPath: String, email: String, thresh: Int, minutes: Int, instcnt: Int, insttype: String): InstanceManager = 
+  def apply(confFileList: List[String], gitCommitList: List[String], permDir: String, tmpDir: String, cPath: String, rPath: String, email: String, thresh: Int, minutes: Int, instcnt: Int, insttype: String): InstanceManager = 
   {
     assert (List("local","psi").contains(insttype), println("Invalid instance type specified."))
     val mgr: InstanceManager = insttype match {
-      case "local" | "psi" => new MillInstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
-      case "ec2" => new EC2InstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
+      case "local" | "psi" => new MillInstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
+      case "ec2" => new EC2InstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
     }
     return mgr
   }
@@ -35,9 +35,24 @@ abstract class InstanceManager
   def getCommandStrings(): Array[String]
   def createInstances(): Unit
   def runInstances(): Unit
-  def waitOnInstances(): Unit
   def collectLogFiles(): Unit
 
+  def waitOnInstances(): Unit =
+  {
+    var canexit = false
+    while (!canexit)
+    {
+      println("Spinning...")
+      Thread.sleep(60000)
+      var done = true
+      for (i <- 0 until instcnt)
+      {
+        done  &= instRunners(i).isDone
+      }
+      canexit = done
+    }
+  }
+ 
   def mapOptions(optList: List[String],default: String): List[String] =
   {
     val cnt = optList.length
@@ -92,11 +107,6 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
 
   }
 
-  def waitOnInstances(): Unit =
-  {
- 
-  }
-
   def collectLogFiles(): Unit =
   {
 
@@ -117,6 +127,8 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
 
 class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String) extends InstanceManager
 {
+  var logtime: Long = 0L
+  val fileop = overnight.FileOperations
 
   def getCommandStrings(): Array[String] = 
   {
@@ -171,7 +183,6 @@ class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val
   private def checkoutRocketPSI(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
   {
     var rocketDir = ""
-    val fileop = overnight.FileOperations
     if (usingC) rocketDir = cPath.substring(0,cPath.length-18)
     if (usingR) rocketDir = rPath.substring(0,rPath.length-36)
     if (rocketDir != "")
@@ -199,7 +210,6 @@ class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val
   private def checkoutRocket(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
   {
     var rocketDir = ""
-    val fileop = overnight.FileOperations
     if (usingC) rocketDir = cPath.substring(0,cPath.length-18)
     if (usingR) rocketDir = rPath.substring(0,rPath.length-36)
     if (commit == "none") return
@@ -235,7 +245,7 @@ class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val
     } else {
       println("\nRunning %d instances of overnight.\n".format(instcnt))
     }
-    val logtime = System.currentTimeMillis
+    logtime = System.currentTimeMillis
     for (i <- 0 until instcnt)
     {
       println("Starting instance %d".format(i) + "\n")
@@ -250,25 +260,23 @@ class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val
     println("\nAll instances have been launched.")
   }
 
-  def waitOnInstances(): Unit =
-  {
-    def waitOnPSI(): Unit = 
-    {
-      //check qstat?
-    }
-    def waitOnLocal(): Unit =
-    {
-      //write a file after finish or check schadlog for status
-    }
-    insttype match {
-    case "psi" => waitOnPSI()
-    case "local" => waitOnLocal()
-    }
-    
-  }
-
   def collectLogFiles(): Unit =
   {
     if (insttype == "local") return
+    if (insttype == "psi")
+    {
+      for (i <- 0 until instcnt)
+      {
+        val remoteout: Path = tmpDir+"/schad"+i+"/schad"+i+"_"+logtime+".out"
+        val remoteerr: Path = tmpDir+"/schad"+i+"/schad"+i+"_"+logtime+".err"
+        var pdir = ""
+        if (permDir != "") pdir = permDir
+        else pdir= "output"
+        val localout: Path = pdir + "/schad"+i+"_"+logtime+".out"
+        val localerr: Path = pdir + "/schad"+i+"_"+logtime+".err"
+        fileop.scpFileBack(remoteout, localout, "psi")
+        fileop.scpFileBack(remoteerr, localerr, "psi")
+      }
+    }
   }
 } 

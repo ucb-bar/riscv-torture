@@ -70,6 +70,7 @@ object Schadenfreude extends Application
       val instmgr = InstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
       instmgr.createInstances()
       instmgr.runInstances()
+      instmgr.waitOnInstances()
       instmgr.collectLogFiles()
     }
   }

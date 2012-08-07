@@ -31,6 +31,7 @@ abstract class InstanceRunner
 
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit
   def run(cmdstr: String, workDir: String): Process
+  def isDone(): Boolean
   def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation
   {
     val logname = "output/schad" + instancenum + "_" + logtime + ".log"
@@ -60,6 +61,11 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   def run(cmdstr: String, workDir: String): Process =
   {
     Process("ls").run
+  }
+
+  def isDone(): Boolean =
+  {
+    true
   }
 }
 
@@ -95,10 +101,18 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
     println("Started running instance %d\n" format(instancenum))
     proc
   }
+
+  def isDone(): Boolean =
+  {
+    //grep the logfile. check for success message and for error messages.
+    true
+  }
 }
 
 class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
 {
+  var sshval: String = ""
+  var ssherr: String = ""
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit =
   {
     val torturePath: Path = tortureDir
@@ -127,7 +141,25 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     println("Started running instance %d\n" format(instancenum))
     proc
   }
+
+  def isDone(): Boolean =
+  {
+    assert (ssherr=="", println("Error in qsubbing."))
+    val jobid = sshval.dropRight(28)
+    var out = ""
+    val exit = Process("ssh psi qstat " + jobid).!(ProcessLogger(line=> if (line!="") out=line, line=>if (line!="") out=line))
+    return out.contains("Unknown Job Id")
+  }
   
+  override def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation
+  {
+    val logname = "output/schad" + instancenum + "_" + logtime + ".log"
+    val plog = ProcessLogger(line => { writeln(line, logname); sshval=line }, line => {writeln(line, logname); ssherr = line})
+    fileLogger = plog
+    locallogtime = logtime
+    println("Instance log output will be placed in " + (new File(logname)).getCanonicalPath())
+  }
+
   private def qsub(instDir: String): String = 
   {
     val logfile = "schad" + instancenum + "_" + locallogtime
