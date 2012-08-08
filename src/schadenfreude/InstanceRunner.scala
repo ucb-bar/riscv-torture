@@ -35,6 +35,8 @@ abstract class InstanceRunner
   def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation
   {
     val logname = "output/schad" + instancenum + "_" + logtime + ".log"
+    val logfile = new File(logname)
+    logfile.createNewFile() //Ensure that the file exists.
     val plog = ProcessLogger(line => writeln(line, logname), line => writeln(line, logname))
     fileLogger = plog
     locallogtime = logtime
@@ -104,8 +106,10 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
 
   def isDone(): Boolean =
   {
-    //grep the logfile. check for success message and for error messages.
-    true
+    val logfile = "output/schad" + instancenum + "_" + locallogtime + ".log"
+    val grepcmd = "grep Leaving " + logfile  //grep for better term.
+    val output = grepcmd.!!
+    return (output != "")
   }
 }
 
