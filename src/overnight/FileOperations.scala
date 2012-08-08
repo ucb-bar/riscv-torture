@@ -15,12 +15,12 @@ object FileOperations
     if (!compiledFile.exists) Process("make -j", workDir).!
   }
   
-  def compileRemote(dir: Path, compiledFile: Path, host: String) =
+  def compileRemote(dir: Path, compiledFile: Path, host: String, options: String) =
   {
-    val sshcmd = "ssh " + host + " cd " + dir.path + " ; make -j"
+    val sshcmd = "ssh " + options + " " + host + " cd " + dir.path + " ; make -j"
     println(sshcmd)
     Process(sshcmd).!
-    if (!remotePathExists(compiledFile, host)) Process(sshcmd).!
+    if (!remotePathExists(compiledFile, host, options)) Process(sshcmd).!
   }
  
   def clean(dir: Path) = 
@@ -29,9 +29,9 @@ object FileOperations
     Process("make clean", workDir).!
   }
 
-  def cleanRemote(dir: Path, host: String) =
+  def cleanRemote(dir: Path, host: String, options: String) =
   {
-    val sshcmd = "ssh " + host + " cd " + dir.path + " ; make clean"
+    val sshcmd = "ssh " + options + " " + host + " cd " + dir.path + " ; make clean"
     println(sshcmd)
     Process(sshcmd).!
   }
@@ -50,25 +50,25 @@ object FileOperations
     }
   }
 
-  def gitcheckoutRemote(oldDir: Path, newDir: Path, commit: String, host: String) =
+  def gitcheckoutRemote(oldDir: Path, newDir: Path, commit: String, host: String, options: String) =
   {
-    if (!remotePathExists(newDir, host))
+    if (!remotePathExists(newDir, host, options))
     {
-      val sshcmd = "ssh " + host + " cp -r " + oldDir.path + " " + newDir.path
+      val sshcmd = "ssh " + options + " " + host + " cp -r " + oldDir.path + " " + newDir.path
       Process(sshcmd).!
       if (commit != "none")
       {
-        val sshgitcheckout = "ssh " + host + " cd " + newDir.path + " ; git checkout " + commit
+        val sshgitcheckout = "ssh " + options + " " + host + " cd " + newDir.path + " ; git checkout " + commit
         println(sshgitcheckout)
         println(Process(sshgitcheckout).!!)
       }
     }
   }
 
-  def remotePathExists(remote: Path, host: String): Boolean =
+  def remotePathExists(remote: Path, host: String, options: String): Boolean =
   {
     val remoteParentPath = remote.parent.get
-    val cmd = ("ssh "+host+" ls " + remoteParentPath.path)
+    val cmd = ("ssh "+options+" "+host+" ls " + remoteParentPath.path)
     val output = (cmd.!!).split("\n")
     val remoteExists = output.contains(remote.name)
     remoteExists
@@ -79,14 +79,14 @@ object FileOperations
     from.copyTo(to, replaceExisting=true)
   }
 
-  def scpFileBack(remotePath: Path, localPath: Path, host: String): Unit =
+  def scpFileBack(remotePath: Path, localPath: Path, host: String, options: String): Unit =
   {
     val localStr = localPath.path
     val remoteStr = remotePath.path
-    if (remotePathExists(remotePath, host))
+    if (remotePathExists(remotePath, host, options))
     {
       println("Copying remote file " + remotePath.name + " to " + host + " directory " + localStr)
-      val cmd = "scp " +host+":"+remoteStr + " " + localStr
+      val cmd = "scp " +options+" "+host+":"+remoteStr + " " + localStr
       println(cmd)
       val exitCode = cmd.!
       assert(exitCode == 0, println("SCP failed to successfully copy file " + localPath.name))
@@ -96,14 +96,14 @@ object FileOperations
     }
   }
 
-  def scp(localPath: Path, remotePath: Path, host: String): Unit = 
+  def scp(localPath: Path, remotePath: Path, host: String, options: String): Unit = 
   {
     def scpFile(localPath: Path, remotePath: Path): Unit = 
     {
       val localStr = localPath.path
       val remoteStr = remotePath.path
       println("Copying file " + localPath.name + " to " + host + " remote directory " + remoteStr)
-      val cmd = "scp " + localStr + " "+host+":"+remoteStr
+      val cmd = "scp " +options+" "+localStr+" "+host+":"+remoteStr
       println(cmd)
       val exitCode = cmd.!
       assert(exitCode == 0, println("SCP failed to successfully copy file " + localPath.name))
@@ -121,7 +121,7 @@ object FileOperations
     def extractDir(remoteTgz: String, remoteDir: String): Unit = 
     {
       println("Extracting "+remoteTgz+" to "+host+" remote directory " + remoteDir)
-      val extractcmd = "ssh "+host+" tar -xzf " + remoteTgz +" -C " + remoteDir
+      val extractcmd = "ssh "+options+" "+host+" tar -xzf " + remoteTgz +" -C " + remoteDir
       println (extractcmd)
       val out = extractcmd.!
       assert (out == 0, println("Failed to extract remote file " + remoteTgz + " to directory " + remoteDir))
@@ -138,7 +138,7 @@ object FileOperations
       val tgzPath: Path = "../" + tgzName
       val remoteTgzPath: Path = (remoteParentPath / Path(tgzName))
 
-      val cmd = ("ssh "+host+" ls " + remoteParentPath.path)
+      val cmd = ("ssh "+options+" "+host+" ls " + remoteParentPath.path)
       val output = (cmd.!!).split("\n")
       val remoteExists = output.contains(remotePath.name)
       val remoteTgzExists = output.contains(tgzName)
@@ -156,7 +156,7 @@ object FileOperations
           }  
           scpFile(tgzPath, remoteTgzPath)
         }
-        val out2 = ("ssh "+host+" mkdir " + remotePath.path).!!
+        val out2 = ("ssh "+options+" "+host+" mkdir " + remotePath.path).!!
         extractDir(remoteTgzPath.path, remotePath.path)
       }
     } else {

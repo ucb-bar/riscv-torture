@@ -21,7 +21,8 @@ case class Options(var timeToRun: Option[Int] = None,
   var confFileList: Option[List[String]] = Some(List()),
   var gitCommitList: Option[List[String]] = Some(List()),
   var instanceType: Option[String] = None,
-  var instanceCnt: Option[Int] = None)
+  var instanceCnt: Option[Int] = None,
+  var ec2Instance: Option[Boolean] = None)
 
 object Schadenfreude extends Application
 {
@@ -41,6 +42,7 @@ object Schadenfreude extends Application
       opt("t", "threshold", "<count>", "number of failures to trigger email", {i: String => opts.errorThreshold = Some(i.toInt)})
       opt("m", "minutes", "<int>", "number of minutes to run tests", {i: String => opts.timeToRun = Some(i.toInt)})
       opt("n", "instcnt", "<int>", "number of instances to run", {i: String => opts.instanceCnt = Some(i.toInt)})
+      booleanOpt("ec2", "ec2instance", "<boolean>", "Running on EC2", {b: Boolean => opts.ec2Instance = Some(b)})
     }
     if (parser.parse(args))
     {
@@ -66,8 +68,9 @@ object Schadenfreude extends Application
       val email        = opts.emailAddress.getOrElse("")
       val thresh       = opts.errorThreshold.getOrElse(-1)
       val minutes      = opts.timeToRun.getOrElse(-1)
+      val ec2inst      = opts.ec2Instance.getOrElse(false)
 
-      val instmgr = InstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
+      val instmgr = InstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype, ec2inst)
       instmgr.createInstances()
       instmgr.runInstances()
       instmgr.waitOnInstances()

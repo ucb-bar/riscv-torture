@@ -11,7 +11,7 @@ object InstanceRunner
 {
   def apply(insttype: String, instnum: Int, mgr: InstanceManager): InstanceRunner = 
   {
-    assert(List("local","psi").contains(insttype), println("Invalid instance type specified."))
+    assert(List("local","psi","ec2").contains(insttype), println("Invalid instance type specified."))
     val runner: InstanceRunner = insttype match {
       case "local" => new LocalRunner(instnum, mgr)
       case "psi" => new PSIRunner(instnum, mgr)
@@ -32,6 +32,7 @@ abstract class InstanceRunner
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit
   def run(cmdstr: String, workDir: String): Process
   def isDone(): Boolean
+  def collectLogFile(): Unit
   def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation
   {
     val logname = "output/schad" + instancenum + "_" + logtime + ".log"
@@ -55,19 +56,53 @@ abstract class InstanceRunner
 
 class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
 {
+  var sshopts = " -i privkeyfile"
+  var sshhost = "ec2user@ec2address.com"
+
+  if (instancenum == 0) launchEC2Instance()
+
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit =
   {
-
+    val torturePath: Path = tortureDir
+    val instPath: Path = instDir
+    if(instancenum != 0) fileop.scp(torturePath, instPath, sshhost, sshopts)
+    fileop.scp(torturePath / Path(config), instPath / Path("config"+instancenum), sshhost, sshopts)
   }
   
   def run(cmdstr: String, workDir: String): Process =
   {
-    Process("ls").run
+    if (instancenum == 0)
+    {
+      println("Instance output log will be placed in EC2 directory " + workDir + "/output/schad"+instancenum+"_"+locallogtime+".log")
+      val sshcmd = "ssh " + sshopts + " " + sshhost + " cd " + workDir + " ; " + cmdstr
+      println("Starting EC2 remote schadenfreude job in " + workDir)
+      println(sshcmd)
+      val proc = sshcmd.run(fileLogger)
+      println("Started running remote EC2 schadenfreude job.")
+      proc
+    } else return "echo".run
   }
 
   def isDone(): Boolean =
   {
-    true
+    val remotefile: Path = mgr.tmpDir + "/riscv-torture/EC2DONE"
+    if (instancenum != 0) return true
+    else return fileop.remotePathExists(remotefile, sshhost, sshopts)
+  }
+
+  def collectLogFile(): Unit =
+  {
+    var pdir = ""
+    if (mgr.permDir != "") pdir = mgr.permDir
+    else pdir = "output"
+    val remotelog: Path = mgr.tmpDir + "riscv-torture/output/schad"+instancenum+".log"
+    val locallog: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".log"
+    fileop.scpFileBack(remotelog, locallog, sshhost, sshopts)
+  }
+
+  private def launchEC2Instance(): Unit =
+  {
+    "tmp"
   }
 }
 
@@ -111,6 +146,8 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
     val output = grepcmd.!!
     return (output != "")
   }
+
+  def collectLogFile(): Unit = return
 }
 
 class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
@@ -129,9 +166,9 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     } finally {
       writer.close()
     }
-    fileop.scp(torturePath, instPath, "psi")
-    fileop.scp(torturePath / Path("psi.qsub"), instPath / Path("psi.qsub"), "psi")
-    fileop.scp(torturePath / Path(config), instPath / Path("config"), "psi")
+    fileop.scp(torturePath, instPath, "psi","")
+    fileop.scp(torturePath / Path("psi.qsub"), instPath / Path("psi.qsub"), "psi","")
+    fileop.scp(torturePath / Path(config), instPath / Path("config"), "psi","")
   }
   
   def run(cmdstr: String, workDir: String): Process =
@@ -153,6 +190,19 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     var out = ""
     val exit = Process("ssh psi qstat " + jobid).!(ProcessLogger(line=> if (line!="") out=line, line=>if (line!="") out=line))
     return out.contains("Unknown Job Id")
+  }
+
+  def collectLogFile(): Unit =
+  {
+    val remoteout: Path = mgr.tmpDir+"/schad"+instancenum+"/schad"+instancenum+"_"+locallogtime+".out"
+    val remoteerr: Path = mgr.tmpDir+"/schad"+instancenum+"/schad"+instancenum+"_"+locallogtime+".err"
+    var pdir = ""
+    if (mgr.permDir != "") pdir = mgr.permDir
+    else pdir = "output"
+    val localout: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".out"
+    val localerr: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".err"
+    fileop.scpFileBack(remoteout, localout, "psi", "")
+    fileop.scpFileBack(remoteerr, localerr, "psi", "")
   }
   
   override def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation

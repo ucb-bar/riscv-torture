@@ -9,11 +9,12 @@ import java.io.FileInputStream
 
 object InstanceManager
 {  
-  def apply(confFileList: List[String], gitCommitList: List[String], permDir: String, tmpDir: String, cPath: String, rPath: String, email: String, thresh: Int, minutes: Int, instcnt: Int, insttype: String): InstanceManager = 
+  def apply(confFileList: List[String], gitCommitList: List[String], permDir: String, tmpDir: String, cPath: String, rPath: String, email: String, thresh: Int, minutes: Int, instcnt: Int, insttype: String, ec2inst: Boolean): InstanceManager = 
   {
-    assert (List("local","psi").contains(insttype), println("Invalid instance type specified."))
+    assert (List("local","psi","ec2").contains(insttype), println("Invalid instance type specified."))
+    if (ec2inst) return new BasicInstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
     val mgr: InstanceManager = insttype match {
-      case "local" | "psi" => new MillInstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
+      case "local" | "psi" => new BasicInstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
       case "ec2" => new EC2InstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
     }
     return mgr
@@ -31,11 +32,20 @@ abstract class InstanceManager
   val instRunners: Array[InstanceRunner] = new Array(instcnt)
   val processRA: Array[Process] = new Array(instcnt)
   val cmdstrRA: Array[String] = getCommandStrings()
+  val fileop = overnight.FileOperations
 
   def getCommandStrings(): Array[String]
-  def createInstances(): Unit
   def runInstances(): Unit
-  def collectLogFiles(): Unit
+
+  def collectLogFiles(): Unit =
+  {
+    for (i <- 0 until instcnt) instRunners(i).collectLogFile
+  }
+
+  def createInstances(): Unit = 
+  {
+    for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype,i,this)
+  }
 
   def waitOnInstances(): Unit =
   {
@@ -89,27 +99,35 @@ abstract class InstanceManager
 
 class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String) extends InstanceManager
 {
+  var logtime: Long = 0L
+  val ami: String = "AMI Image to use"
+  var instanceid: String = "ID of created instance"
 
   def getCommandStrings(): Array[String] =
   {
-    //recreate the "make *schaden" command to submit to EC2
-    Array("placeholder")
-  }
-
-  def createInstances(): Unit =
-  {
-    //create from AMI instance. copy and compile latest rocket
-    EC2Configure()
+    //do a make schaden -ec2 true -i local
+    Array("make schaden")
   }
 
   def runInstances(): Unit = 
   {
-
-  }
-
-  def collectLogFiles(): Unit =
-  {
-
+    //run instance 0. others are dummies. 
+    logtime = System.currentTimeMillis
+    for (i <- 0 until instcnt)
+    {
+      val instance = instRunners(i)
+      val instDir = tmpDir + "/riscv-torture"
+      val tortureDir = "."
+      val config = cfgmap(i)
+      if (i == 0) instance.createLogger(logtime)
+      instance.copyTortureDir(tortureDir, instDir, config)
+      if (i == 0)
+      {
+        println("Starting remote schadenfreude job.")
+        processRA(i) = instance.run(cmdstrRA(i), instDir)
+      }
+    }
+    println("\nRemote EC2 job has been launched.")
   }
 
   private def EC2Configure(): Unit =
@@ -120,15 +138,14 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
 
   private def EC2StopInstance(): Unit =
   {
-
+    //ec2-terminate-instances instance
   }
 
 }
 
-class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String) extends InstanceManager
+class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String) extends InstanceManager
 {
   var logtime: Long = 0L
-  val fileop = overnight.FileOperations
 
   def getCommandStrings(): Array[String] = 
   {
@@ -195,14 +212,14 @@ class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val
         val remotePath: Path = remoteDir
         val remoteCPath: Path = remoteDir+"/emulator"
         val remoteRPath: Path = remoteDir+"/vlsi-generic/build/vcs-sim-rtl"
-        if (!fileop.remotePathExists(remotePath, "psi"))
+        if (!fileop.remotePathExists(remotePath, "psi", ""))
         {
-          fileop.gitcheckoutRemote(remoteOldPath, remotePath, commit, "psi")
-          fileop.cleanRemote(remoteCPath, "psi")
-          fileop.cleanRemote(remoteRPath, "psi")
+          fileop.gitcheckoutRemote(remoteOldPath, remotePath, commit, "psi", "")
+          fileop.cleanRemote(remoteCPath, "psi", "")
+          fileop.cleanRemote(remoteRPath, "psi", "")
         }
-        if (usingR) fileop.compileRemote(remoteRPath, remoteRPath/Path("simv"), "psi")
-        if (usingC) fileop.compileRemote(remoteCPath, remoteCPath/Path("emulator"), "psi")
+        if (usingR) fileop.compileRemote(remoteRPath, remoteRPath/Path("simv"), "psi", "")
+        if (usingC) fileop.compileRemote(remoteCPath, remoteCPath/Path("emulator"), "psi", "")
       }
     }
   }
@@ -232,11 +249,6 @@ class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val
     }
   }
 
-  def createInstances(): Unit = 
-  {
-    for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype,i,this)
-  }
-
   def runInstances(): Unit = 
   {
     if (instcnt == 1)
@@ -258,25 +270,5 @@ class MillInstanceManager(val cfgs: List[String], val gitcmts: List[String], val
       processRA(i) = instance.run(cmdstrRA(i), instDir)
     }
     println("\nAll instances have been launched.")
-  }
-
-  def collectLogFiles(): Unit =
-  {
-    if (insttype == "local") return
-    if (insttype == "psi")
-    {
-      for (i <- 0 until instcnt)
-      {
-        val remoteout: Path = tmpDir+"/schad"+i+"/schad"+i+"_"+logtime+".out"
-        val remoteerr: Path = tmpDir+"/schad"+i+"/schad"+i+"_"+logtime+".err"
-        var pdir = ""
-        if (permDir != "") pdir = permDir
-        else pdir= "output"
-        val localout: Path = pdir + "/schad"+i+"_"+logtime+".out"
-        val localerr: Path = pdir + "/schad"+i+"_"+logtime+".err"
-        fileop.scpFileBack(remoteout, localout, "psi")
-        fileop.scpFileBack(remoteerr, localerr, "psi")
-      }
-    }
   }
 } 
