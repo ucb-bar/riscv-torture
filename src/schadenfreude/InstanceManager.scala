@@ -12,9 +12,9 @@ object InstanceManager
   def apply(confFileList: List[String], gitCommitList: List[String], permDir: String, tmpDir: String, cPath: String, rPath: String, email: String, thresh: Int, minutes: Int, instcnt: Int, insttype: String, ec2inst: Boolean): InstanceManager = 
   {
     assert (List("local","psi","ec2").contains(insttype), println("Invalid instance type specified."))
-    if (ec2inst) return new BasicInstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
+    if (ec2inst) return new BasicInstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype, ec2inst)
     val mgr: InstanceManager = insttype match {
-      case "local" | "psi" => new BasicInstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
+      case "local" | "psi" => new BasicInstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype, ec2inst)
       case "ec2" => new EC2InstanceManager(confFileList, gitCommitList, permDir, tmpDir, cPath, rPath, email, thresh, minutes, instcnt, insttype)
     }
     return mgr
@@ -36,12 +36,7 @@ abstract class InstanceManager
 
   def getCommandStrings(): Array[String]
   def runInstances(): Unit
-
   def collectLogFiles(): Unit =
-  {
-    for (i <- 0 until instcnt) instRunners(i).collectLogFile(permDir)
-  }
-
   def createInstances(): Unit = 
   {
     for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype,i,this)
@@ -159,16 +154,21 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     println("\nRemote EC2 job has been launched.")
   }
 
-  override def collectLogFiles(): Unit =
+  def collectLogFiles(): Unit =
   {
     for (i <- 0 until instcnt) instRunners(i).collectLogFile(permDir)
     instRunners(0).asInstanceOf[EC2Runner].stopEC2Instance()
   }
 }
 
-class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String) extends InstanceManager
+class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String, ec2inst: Boolean) extends InstanceManager
 {
   var logtime: Long = 0L
+  if (ec2inst) 
+  {
+    val donefile = new File("EC2DONE")
+    if (donefile.exists()) donefile.delete()
+  }
 
   def getCommandStrings(): Array[String] = 
   {
@@ -311,5 +311,15 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
       processRA(i) = instance.run(cmdstrRA(i), instDir)
     }
     println("\nAll instances have been launched.")
+  }
+
+  def collectLogFiles(): Unit =
+  {
+    for (i <- 0 until instcnt) instRunners(i).collectLogFile(permDir)
+    if (ec2inst)
+    {
+      val donefile = new File("EC2DONE")
+      donefile.createNewFile()
+    }
   }
 } 
