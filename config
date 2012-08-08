@@ -31,3 +31,10 @@ torture.overnight.email   your@email.address
 torture.schadenfreude.instcnt   1
 torture.schadenfreude.insttype  local
 torture.schadenfreude.instdir   ..
+
+torture.schadenfreude.ec2.instcnt  1
+torture.schadenfreude.ec2.insttype t1.micro
+torture.schadenfreude.ec2.group    secgrp
+torture.schadenfreude.ec2.privkey  keyfile
+torture.schadenfreude.ec2.keypair  keypair
+torture.schadenfreude.ec2.url      ec2.us-west-1.amazonaws.com

@@ -95,9 +95,6 @@ abstract class InstanceManager
 class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String) extends InstanceManager
 {
   var logtime: Long = 0L
-  val ami: String = "AMI Image to use"
-  var instanceid: String = "ID of created instance"
-
 
   def getCommandStrings(): Array[String] =
   {

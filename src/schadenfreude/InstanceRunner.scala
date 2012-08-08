@@ -6,6 +6,15 @@ import scalax.file.Path
 import scalax.file.FileSystem
 import java.io.File
 import java.io.FileWriter
+import java.util.Properties
+import java.io.FileInputStream
+
+case class Options(var instanceCnt: Option[Int] = None,
+  var instanceType: Option[String] = None,
+  var securityGroup: Option[String] = None,
+  var privateKeyFile: Option[String] = None,
+  var keypair: Option[String] = None,
+  var url: Option[String] = None)
 
 object InstanceRunner
 {
@@ -56,8 +65,21 @@ abstract class InstanceRunner
 
 class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
 {
-  var sshopts = " -i privkeyfile"
+  val config = new Properties()
+  val configin = new FileInputStream("config")
+  config.load(configin)
+  configin.close()
+
+  val instcnt = config.getProperty("torture.schadenfreude.ec2.instcnt","1").toInt
+  val insttype = config.getProperty("torture.schadenfreude.ec2.insttype","t1.micro")
+  val group = config.getProperty("torture.schadenfreude.ec2.group","") 
+  val privkey = config.getProperty("torture.schadenfreude.ec2.privkey","")
+  val keypair = config.getProperty("torture.schadenfreude.ec2.keypair","")
+  val url = config.getProperty("torture.ec2.url","ec2.us-west-1.amazonaws.com")
+  var sshopts = " -i " + privkey
   var sshhost = "ec2user@ec2address.com"
+  val ami = "AMI to launch from"
+  var instanceid = "EC2 instance"
 
   if (instancenum == 0) launchEC2Instance()
 
