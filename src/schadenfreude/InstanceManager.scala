@@ -103,10 +103,34 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   val ami: String = "AMI Image to use"
   var instanceid: String = "ID of created instance"
 
+  cfgmap = mapOptions(cfgs,"config")
+  commitmap = mapOptions(gitcmts,"none")
+  val cfgopt = " CONFIG=" cfgmap.mkString(" ")
+  val cmtopt = " COMMIT=" commitmap.mkString(" ")
+
   def getCommandStrings(): Array[String] =
   {
     //do a make schaden -ec2 true -i local
     Array("make schaden")
+    val cmdRA: Array[String] = new Array(instcnt)
+    var cmdstring = ""
+    var cmdstring2= " OPTIONS=\"-ec2 true "
+    if (cPath != "" && rPath != "")
+      cmdstring += "make crschaden"
+    if (cPath != "" && rPath == "")
+      cmdstring += "make cschaden"
+    if (cPath == "" && rPath != "")
+      cmdstring += "make rschaden"
+
+    val usingR = cmdstring.contains("r")
+    val usingC = cmdstring.contains("cs") || cmdstring.contains("crs")
+
+    assert(cmdstring != "", println("No simulators were specified"))
+    
+    cmdstring += cfgopt + cmtopt
+    if (email != "") cmdstring2 += " -e " + email
+    if (thresh != -1) cmdstring2 += " -t " + thresh
+    if (minutes != -1) cmdstring2 += " -m " + minutes
   }
 
   def runInstances(): Unit = 
@@ -188,7 +212,8 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
           if (insttype=="local") checkoutRocket(tmpcommit, cPath, rPath, usingC, usingR)
           if (insttype=="psi") checkoutRocketPSI(tmpcommit, cPath, rPath, usingC, usingR)
         }
-        if (usingR) tmpCmd += " R_SIM=../rocket_"+tmpcommit+"/vlsi-generic/build/vcs-sim-rtl/simv"
+        if (usingR && insttype == "psi") tmpCmd += " R_SIM=../rocket_"+tmpcommit+"/vlsi-generic/build/vcs-sim-rtl.psi/simv"
+        else if (usingR) tmpCmd += " R_SIM=../rocket_"+tmpcommit+"/vlsi-generic/build/vcs-sim-rtl/simv"
         if (usingC) tmpCmd += " C_SIM=../rocket_"+tmpcommit+"/emulator/emulator"
         if (cmdstring2 != " OPTIONS=\"\"") tmpCmd += cmdstring2
       }
@@ -199,9 +224,26 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
 
   private def checkoutRocketPSI(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
   {
+    private def getRocketDir(empath: String, emtype: Char): String =
+    {
+      var rdir = ""
+      val RA = empath.split("/")
+      var flag = 0
+      for (dir <- RA)
+      {
+        if (dir == "vlsi-generic" && emtype == 'r') return rdir.dropRight(1)
+        if (dir == "emulator" && emtype == 'c') return rdir.dropRight(1)
+        if (dir == "") rdir += "/"
+        else rdir += dir + "/"
+      }
+      flag = 1
+      assert(flag != 1, println("Invalid rocket path was given. " + empath))
+      return ""
+    }
+
     var rocketDir = ""
-    if (usingC) rocketDir = cPath.substring(0,cPath.length-18)
-    if (usingR) rocketDir = rPath.substring(0,rPath.length-36)
+    if (usingC) rocketDir = getRocketDir(cPath, 'c')
+    if (usingR) rocketDir = getRocketDir(rPath, 'r')
     if (rocketDir != "")
     {
       val rocketPath: Path = rocketDir
@@ -211,7 +253,7 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
         val remoteOldPath: Path = rocketDir
         val remotePath: Path = remoteDir
         val remoteCPath: Path = remoteDir+"/emulator"
-        val remoteRPath: Path = remoteDir+"/vlsi-generic/build/vcs-sim-rtl"
+        val remoteRPath: Path = remoteDir+"/vlsi-generic/build/vcs-sim-rtl.psi"
         if (!fileop.remotePathExists(remotePath, "psi", ""))
         {
           fileop.gitcheckoutRemote(remoteOldPath, remotePath, commit, "psi", "")
