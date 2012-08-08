@@ -32,7 +32,7 @@ abstract class InstanceRunner
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit
   def run(cmdstr: String, workDir: String): Process
   def isDone(): Boolean
-  def collectLogFile(): Unit
+  def collectLogFile(permdir: String): Unit
   def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation
   {
     val logname = "output/schad" + instancenum + "_" + logtime + ".log"
@@ -80,7 +80,7 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
       val proc = sshcmd.run(fileLogger)
       println("Started running remote EC2 schadenfreude job.")
       proc
-    } else return "echo".run
+    } else return "echo Should not be printing this.".run
   }
 
   def isDone(): Boolean =
@@ -90,19 +90,24 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     else return fileop.remotePathExists(remotefile, sshhost, sshopts)
   }
 
-  def collectLogFile(): Unit =
+  def collectLogFile(permdir: String): Unit =
   {
     var pdir = ""
-    if (mgr.permDir != "") pdir = mgr.permDir
+    if (permdir != "") pdir = permdir
     else pdir = "output"
-    val remotelog: Path = mgr.tmpDir + "riscv-torture/output/schad"+instancenum+".log"
+    val remotelog: Path = permdir + "riscv-torture/output/schad"+instancenum+".log"
     val locallog: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".log"
     fileop.scpFileBack(remotelog, locallog, sshhost, sshopts)
+  }
+  
+  def stopEC2Instance(): Unit =
+  {
+    //ec2-terminate-instances 
   }
 
   private def launchEC2Instance(): Unit =
   {
-    "tmp"
+    //ec2-start-instances 
   }
 }
 
@@ -147,7 +152,7 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
     return (output != "")
   }
 
-  def collectLogFile(): Unit = return
+  def collectLogFile(permdir: String): Unit = return
 }
 
 class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
@@ -192,12 +197,12 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     return out.contains("Unknown Job Id")
   }
 
-  def collectLogFile(): Unit =
+  def collectLogFile(permdir: String): Unit =
   {
     val remoteout: Path = mgr.tmpDir+"/schad"+instancenum+"/schad"+instancenum+"_"+locallogtime+".out"
     val remoteerr: Path = mgr.tmpDir+"/schad"+instancenum+"/schad"+instancenum+"_"+locallogtime+".err"
     var pdir = ""
-    if (mgr.permDir != "") pdir = mgr.permDir
+    if (permdir != "") pdir = permdir
     else pdir = "output"
     val localout: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".out"
     val localerr: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".err"

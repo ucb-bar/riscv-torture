@@ -39,7 +39,7 @@ abstract class InstanceManager
 
   def collectLogFiles(): Unit =
   {
-    for (i <- 0 until instcnt) instRunners(i).collectLogFile
+    for (i <- 0 until instcnt) instRunners(i).collectLogFile(permDir)
   }
 
   def createInstances(): Unit = 
@@ -103,18 +103,13 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   val ami: String = "AMI Image to use"
   var instanceid: String = "ID of created instance"
 
-  cfgmap = mapOptions(cfgs,"config")
-  commitmap = mapOptions(gitcmts,"none")
-  val cfgopt = " CONFIG=" cfgmap.mkString(" ")
-  val cmtopt = " COMMIT=" commitmap.mkString(" ")
 
   def getCommandStrings(): Array[String] =
   {
     //do a make schaden -ec2 true -i local
-    Array("make schaden")
     val cmdRA: Array[String] = new Array(instcnt)
     var cmdstring = ""
-    var cmdstring2= " OPTIONS=\"-ec2 true "
+    var cmdstring2= " OPTIONS=\"-ec2 true"
     if (cPath != "" && rPath != "")
       cmdstring += "make crschaden"
     if (cPath != "" && rPath == "")
@@ -127,10 +122,20 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
 
     assert(cmdstring != "", println("No simulators were specified"))
     
+    val cfgopt = " CONFIG=\"" + cfgmap.mkString(" ") + "\""
+    val cmtopt = " COMMIT=\"" + commitmap.mkString(" ") + "\""
     cmdstring += cfgopt + cmtopt
     if (email != "") cmdstring2 += " -e " + email
     if (thresh != -1) cmdstring2 += " -t " + thresh
     if (minutes != -1) cmdstring2 += " -m " + minutes
+    cmdstring2 += "\""
+    val tmpCmd = cmdstring + cmdstring2
+    for (i <- 0 until instcnt)
+    {
+      if (i == 0) cmdRA(i) = tmpCmd
+      else cmdRA(i) = ""
+    }
+    cmdRA
   }
 
   def runInstances(): Unit = 
@@ -154,17 +159,11 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     println("\nRemote EC2 job has been launched.")
   }
 
-  private def EC2Configure(): Unit =
+  override def collectLogFiles(): Unit =
   {
-    //setup instance. generate ssh keypairs. specify instance type, duration.
-    //check for aws credentials. prompt if necessary.
+    for (i <- 0 until instcnt) instRunners(i).collectLogFile(permDir)
+    instRunners(0).asInstanceOf[EC2Runner].stopEC2Instance()
   }
-
-  private def EC2StopInstance(): Unit =
-  {
-    //ec2-terminate-instances instance
-  }
-
 }
 
 class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String) extends InstanceManager
@@ -224,7 +223,7 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
 
   private def checkoutRocketPSI(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
   {
-    private def getRocketDir(empath: String, emtype: Char): String =
+    def getRocketDir(empath: String, emtype: Char): String =
     {
       var rdir = ""
       val RA = empath.split("/")
