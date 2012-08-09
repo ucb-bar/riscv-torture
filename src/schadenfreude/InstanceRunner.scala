@@ -9,13 +9,6 @@ import java.io.FileWriter
 import java.util.Properties
 import java.io.FileInputStream
 
-case class Options(var instanceCnt: Option[Int] = None,
-  var instanceType: Option[String] = None,
-  var securityGroup: Option[String] = None,
-  var privateKeyFile: Option[String] = None,
-  var keypair: Option[String] = None,
-  var url: Option[String] = None)
-
 object InstanceRunner
 {
   def apply(insttype: String, instnum: Int, mgr: InstanceManager): InstanceRunner = 
@@ -70,18 +63,17 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   config.load(configin)
   configin.close()
 
-  val instcnt = config.getProperty("torture.schadenfreude.ec2.instcnt","1").toInt
   val insttype = config.getProperty("torture.schadenfreude.ec2.insttype","t1.micro")
   val group = config.getProperty("torture.schadenfreude.ec2.group","") 
   val privkey = config.getProperty("torture.schadenfreude.ec2.privkey","")
   val keypair = config.getProperty("torture.schadenfreude.ec2.keypair","")
   val url = config.getProperty("torture.ec2.url","ec2.us-west-1.amazonaws.com")
   var sshopts = " -i " + privkey
-  var sshhost = "ec2user@ec2address.com"
-  val ami = "AMI to launch from"
-  var instanceid = "EC2 instance"
+  var sshhost = ""
+  val ami = "ami-737e5a36"
+  var instanceid = ""
 
-  if (instancenum == 0) launchEC2Instance()
+  if (instancenum == 0) startEC2Instance()
 
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit =
   {
@@ -124,12 +116,37 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   
   def stopEC2Instance(): Unit =
   {
-    //ec2-terminate-instances 
+    val termcmd = "ec2-terminate-instances -U " + url + " " + instanceid 
+    val out = termcmd.!!
+    println(out)
   }
 
-  private def launchEC2Instance(): Unit =
+  private def startEC2Instance(): Unit =
   {
-    //ec2-start-instances 
+    val startcmd = "ec2-run-instances " + ami + " -n 1 -t " +insttype + " -k " + keypair + " -g " + group + " -U " + url
+    println(startcmd)
+    val out = startcmd.!!
+    println(out)
+    val outRA = out.split("\\s+")
+    instanceid = outRA(5)
+    println(instanceid)
+    var tmphost = "pending"
+    while (tmphost == "pending")
+    {
+      val describecmd = "ec2-describe-instances -F \"instance-id="+instanceid+"\""
+      val out2 = describecmd.!!
+      val outRA2 = out2.split("\\s+")
+      tmphost = outRA2(7)
+    }
+    sshhost = "ubuntu@"+tmphost
+    println(sshhost)
+    var spin = "spin"
+    while (spin != "")
+    {
+      val describecmd = "ec2-describe-instance-status " + instanceid + " -I"
+      spin = describecmd.!!
+    }
+    println("EC2 instance has been fully initialized.")
   }
 }
 

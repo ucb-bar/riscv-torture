@@ -36,10 +36,10 @@ abstract class InstanceManager
 
   def getCommandStrings(): Array[String]
   def runInstances(): Unit
-  def collectLogFiles(): Unit =
+  def collectLogFiles(): Unit
   def createInstances(): Unit = 
   {
-    for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype,i,this)
+    for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype, i, this)
   }
 
   def waitOnInstances(): Unit =
