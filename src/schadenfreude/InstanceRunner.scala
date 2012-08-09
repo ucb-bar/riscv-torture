@@ -68,7 +68,7 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   val privkey = config.getProperty("torture.schadenfreude.ec2.privkey","")
   val keypair = config.getProperty("torture.schadenfreude.ec2.keypair","")
   val url = config.getProperty("torture.ec2.url","ec2.us-west-1.amazonaws.com")
-  var sshopts = " -i " + privkey
+  var sshopts = " -i " + privkey + " -o 'StrictHostKeyChecking no'"
   var sshhost = ""
   val ami = "ami-737e5a36"
   var instanceid = ""
