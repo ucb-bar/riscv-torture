@@ -114,7 +114,9 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
 
     assert(cmdstring != "", println("No simulators were specified"))
     
-    val cfgopt = " CONFIG=\"" + cfgmap.mkString(" ") + "\""
+    var cfgopt = " CONFIG=\"config"
+    for (i <- 1 until instcnt) cfgopt += " config"+i
+    cfgopt += "\""
     val cmtopt = " COMMIT=\"" + commitmap.mkString(" ") + "\""
     cmdstring += cfgopt + cmtopt
     if (email != "") cmdstring2 += " -e " + email
@@ -158,7 +160,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   }
 }
 
-class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String, ec2inst: Boolean) extends InstanceManager
+class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String, val ec2inst: Boolean) extends InstanceManager
 {
   var logtime: Long = 0L
   if (ec2inst) 

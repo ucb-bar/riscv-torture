@@ -70,7 +70,7 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   val url = config.getProperty("torture.ec2.url","ec2.us-west-1.amazonaws.com")
   var sshopts = " -i " + privkey
   var sshhost = ""
-  val ami = "ami-737e5a36"
+  val ami = "ami-77466232"
   var instanceid = ""
 
   if (instancenum == 0) startEC2Instance()
@@ -79,8 +79,10 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   {
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
-    if(instancenum != 0) fileop.scp(torturePath, instPath, sshhost, sshopts)
-    fileop.scp(torturePath / Path(config), instPath / Path("config"+instancenum), sshhost, sshopts)
+    if (instancenum == 0) fileop.scp(torturePath, instPath, sshhost, sshopts)
+    if (instancenum == 0) fileop.scp(torturePath/Path(config), instPath / Path("config"), sshhost, sshopts)
+    if (instancenum != 0) fileop.scp(torturePath / Path(config), instPath / Path("config"+instancenum), sshhost, sshopts)
+    
   }
   
   def run(cmdstr: String, workDir: String): Process =
@@ -200,7 +202,14 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
     return (output != "")
   }
 
-  def collectLogFile(permdir: String): Unit = return
+  def collectLogFile(permdir: String): Unit =
+  {
+    if (!mgr.asInstanceOf[BasicInstanceManager].ec2inst) return
+    val logname = "output/schad" + instancenum + "_" + locallogtime + ".log"
+    val newlogname = "output/schad"+instancenum+".log"
+    val mvcmd = "mv " + logname + " " + newlogname
+    mvcmd.!
+  }
 }
 
 class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
