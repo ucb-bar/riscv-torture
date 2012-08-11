@@ -138,7 +138,9 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
   {
     val logfile = "output/schad" + instancenum + "_" + locallogtime + ".log"
     val grepcmd = "grep Leaving " + logfile  //grep for better term.
+    println(grepcmd)
     val output = grepcmd.!!
+    println(output)
     return (output != "")
   }
 

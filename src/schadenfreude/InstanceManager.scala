@@ -116,7 +116,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     //do a make schaden -ec2 true -i local
     val cmdRA: Array[String] = new Array(instcnt)
     var cmdstring = ""
-    var cmdstring2= " OPTIONS=\"-ec2 true"
+    var cmdstring2= " OPTIONS=\"-ec2 true -i local"
     if (cPath != "" && rPath != "")
       cmdstring += "make crschaden"
     if (cPath != "" && rPath == "")
@@ -150,18 +150,19 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   def runInstances(): Unit = 
   {
     //run instance 0. others are dummies. 
+    startEC2Instance()
     logtime = System.currentTimeMillis
+    val instDir = tmpDir + "/riscv-torture"
     for (i <- 0 until instcnt)
     {
       val instance = instRunners(i)
-      val instDir = tmpDir + "/riscv-torture"
       val tortureDir = "."
       val config = cfgmap(i)
       if (i == 0) instance.createLogger(logtime)
       instance.copyTortureDir(tortureDir, instDir, config)
     }
     println("Starting remote schadenfreude job.")
-    processRA(i) = instance.run(cmdstrRA(i), instDir)
+    processRA(0) = instRunners(0).run(cmdstrRA(0), instDir)
     println("\nRemote EC2 job has been launched.")
   }
 
@@ -197,14 +198,19 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
       inststatus = outRA3(9)
     }
     println(describecmd.!!)
-    var spin = "spin"
-    while (spin != "")
+    var spin = true
+    while (spin)
     {
-      val describecmd = "ec2-describe-instance-status " + instanceid + " -I"
-      spin = describecmd.!!
+      val describecmd = "ec2-describe-instance-status " + instanceid 
+      val spinout = describecmd.!!
+      val spinRA = spinout.split("\\s+")
+      if (spinRA.length >= 13)
+      {
+        if (spinRA(10) == "passed" && spinRA(13) == "passed") spin = false
+      }
     }
-    val sshaddhost = "ssh " + sshopts + " " + sshhost + " -o StrictHostKeyChecking=no echo ".!!
-    println(sshaddhost)
+    val sshaddhost = "ssh " + sshopts + " " + sshhost + " -o StrictHostKeyChecking=no echo "
+    println(sshaddhost.!!)
     println("EC2 instance has been fully initialized.")
   }
 
