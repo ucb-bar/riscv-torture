@@ -6,8 +6,6 @@ import scalax.file.Path
 import scalax.file.FileSystem
 import java.io.File
 import java.io.FileWriter
-import java.util.Properties
-import java.io.FileInputStream
 
 object InstanceRunner
 {
@@ -58,30 +56,16 @@ abstract class InstanceRunner
 
 class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends InstanceRunner
 {
-  val config = new Properties()
-  val configin = new FileInputStream("config")
-  config.load(configin)
-  configin.close()
-
-  val insttype = config.getProperty("torture.schadenfreude.ec2.insttype","t1.micro")
-  val group = config.getProperty("torture.schadenfreude.ec2.group","") 
-  val privkey = config.getProperty("torture.schadenfreude.ec2.privkey","")
-  val keypair = config.getProperty("torture.schadenfreude.ec2.keypair","")
-  val url = config.getProperty("torture.ec2.url","ec2.us-west-1.amazonaws.com")
-  var sshopts = " -i " + privkey
-  var sshhost = ""
-  val ami = "ami-77466232"
-  var instanceid = ""
-
-  if (instancenum == 0) startEC2Instance()
+  val ec2mgr = mgr.asInstanceOf[EC2InstanceManager]
 
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit =
   {
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
-    if (instancenum == 0) fileop.scp(torturePath, instPath, sshhost, sshopts)
-    if (instancenum == 0) fileop.scp(torturePath/Path(config), instPath / Path("config"), sshhost, sshopts)
-    if (instancenum != 0) fileop.scp(torturePath / Path(config), instPath / Path("config"+instancenum), sshhost, sshopts)
+    val configPath: Path = config
+    if (instancenum == 0) fileop.scp(torturePath, instPath, ec2mgr.sshhost, ec2mgr.sshopts)
+    if (instancenum == 0) fileop.scp(torturePath / configPath, instPath / Path("config"), ec2mgr.sshhost, ec2mgr.sshopts)
+    if (instancenum != 0) fileop.scp(torturePath / configPath, instPath / Path("config"+instancenum), ec2mgr.sshhost, ec2mgr.sshopts)
     
   }
   
@@ -90,7 +74,7 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     if (instancenum == 0)
     {
       println("Instance output log will be placed in EC2 directory " + workDir + "/output/schad"+instancenum+"_"+locallogtime+".log")
-      val sshcmd = "ssh " + sshopts + " " + sshhost + " cd " + workDir + " ; " + cmdstr
+      val sshcmd = "ssh " + ec2mgr.sshopts + " " + ec2mgr.sshhost + " cd " + workDir + " ; " + cmdstr
       println("Starting EC2 remote schadenfreude job in " + workDir)
       println(sshcmd)
       val proc = sshcmd.run(fileLogger)
@@ -103,7 +87,7 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   {
     val remotefile: Path = mgr.tmpDir + "/riscv-torture/EC2DONE"
     if (instancenum != 0) return true
-    else return fileop.remotePathExists(remotefile, sshhost, sshopts)
+    else return fileop.remotePathExists(remotefile, ec2mgr.sshhost, ec2mgr.sshopts)
   }
 
   def collectLogFile(permdir: String): Unit =
@@ -113,51 +97,7 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     else pdir = "output"
     val remotelog: Path = permdir + "riscv-torture/output/schad"+instancenum+".log"
     val locallog: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".log"
-    fileop.scpFileBack(remotelog, locallog, sshhost, sshopts)
-  }
-  
-  def stopEC2Instance(): Unit =
-  {
-    val termcmd = "ec2-terminate-instances -U " + url + " " + instanceid 
-    val out = termcmd.!!
-    println(out)
-  }
-
-  private def startEC2Instance(): Unit =
-  {
-    val startcmd = "ec2-run-instances " + ami + " -n 1 -t " +insttype + " -k " + keypair + " -g " + group + " -U " + url
-    println(startcmd)
-    val out = startcmd.!!
-    val outRA = out.split("\\s+")
-    instanceid = outRA(5)
-    println(instanceid)
-    val describecmd = "ec2-describe-instances -F \"instance-id="+instanceid+"\""
-    var tmphost = "pending"
-    while (tmphost == "pending")
-    {
-      val out2 = describecmd.!!
-      val outRA2 = out2.split("\\s+")
-      tmphost = outRA2(7)
-    }
-    sshhost = "ubuntu@"+tmphost
-    println(sshhost)
-    var inststatus = "pending"
-    while (inststatus != "running")
-    {
-      val out3 = describecmd.!!
-      val outRA3 = out3.split("\\s+")
-      inststatus = outRA3(9)
-    }
-    println(describecmd.!!)
-    var spin = "spin"
-    while (spin != "")
-    {
-      val describecmd = "ec2-describe-instance-status " + instanceid + " -I"
-      spin = describecmd.!!
-    }
-    val sshaddhost = "ssh " + sshopts + " " + sshhost + " -o StrictHostKeyChecking=no echo ".!!
-    println(sshaddhost)
-    println("EC2 instance has been fully initialized.")
+    fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost, ec2mgr.sshopts)
   }
 }
 

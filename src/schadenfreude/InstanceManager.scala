@@ -96,6 +96,21 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
 {
   var logtime: Long = 0L
 
+  val config = new Properties()
+  val configin = new FileInputStream("config")
+  config.load(configin)
+  configin.close()
+
+  val ec2insttype = config.getProperty("torture.schadenfreude.ec2.insttype","t1.micro")
+  val group = config.getProperty("torture.schadenfreude.ec2.group","") 
+  val privkey = config.getProperty("torture.schadenfreude.ec2.privkey","")
+  val keypair = config.getProperty("torture.schadenfreude.ec2.keypair","")
+  val url = config.getProperty("torture.ec2.url","ec2.us-west-1.amazonaws.com")
+  var sshopts = " -i " + privkey
+  var sshhost = ""
+  val ami = "ami-77466232"
+  var instanceid = ""
+
   def getCommandStrings(): Array[String] =
   {
     //do a make schaden -ec2 true -i local
@@ -144,19 +159,60 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
       val config = cfgmap(i)
       if (i == 0) instance.createLogger(logtime)
       instance.copyTortureDir(tortureDir, instDir, config)
-      if (i == 0)
-      {
-        println("Starting remote schadenfreude job.")
-        processRA(i) = instance.run(cmdstrRA(i), instDir)
-      }
     }
+    println("Starting remote schadenfreude job.")
+    processRA(i) = instance.run(cmdstrRA(i), instDir)
     println("\nRemote EC2 job has been launched.")
   }
 
   def collectLogFiles(): Unit =
   {
     for (i <- 0 until instcnt) instRunners(i).collectLogFile(permDir)
-    instRunners(0).asInstanceOf[EC2Runner].stopEC2Instance()
+    stopEC2Instance()
+  }
+
+  private def startEC2Instance(): Unit =
+  {
+    val startcmd = "ec2-run-instances " + ami + " -n 1 -t " + ec2insttype + " -k " + keypair + " -g " + group + " -U " + url
+    println(startcmd)
+    val out = startcmd.!!
+    val outRA = out.split("\\s+")
+    instanceid = outRA(5)
+    println(instanceid)
+    val describecmd = "ec2-describe-instances -F \"instance-id="+instanceid+"\""
+    var tmphost = "pending"
+    while (tmphost == "pending")
+    {
+      val out2 = describecmd.!!
+      val outRA2 = out2.split("\\s+")
+      tmphost = outRA2(7)
+    }
+    sshhost = "ubuntu@"+tmphost
+    println(sshhost)
+    var inststatus = "pending"
+    while (inststatus != "running")
+    {
+      val out3 = describecmd.!!
+      val outRA3 = out3.split("\\s+")
+      inststatus = outRA3(9)
+    }
+    println(describecmd.!!)
+    var spin = "spin"
+    while (spin != "")
+    {
+      val describecmd = "ec2-describe-instance-status " + instanceid + " -I"
+      spin = describecmd.!!
+    }
+    val sshaddhost = "ssh " + sshopts + " " + sshhost + " -o StrictHostKeyChecking=no echo ".!!
+    println(sshaddhost)
+    println("EC2 instance has been fully initialized.")
+  }
+
+  private def stopEC2Instance(): Unit =
+  {
+    val termcmd = "ec2-terminate-instances -U " + url + " " + instanceid 
+    val out = termcmd.!!
+    println(out)
   }
 }
 
