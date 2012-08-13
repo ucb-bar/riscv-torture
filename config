@@ -33,7 +33,8 @@ torture.schadenfreude.insttype  local
 torture.schadenfreude.instdir   ..
 
 torture.schadenfreude.ec2.insttype t1.micro
-torture.schadenfreude.ec2.group    grp
-torture.schadenfreude.ec2.privkey  privkey
-torture.schadenfreude.ec2.keypair  keypair
+torture.schadenfreude.ec2.group    ec2securitygroup
+torture.schadenfreude.ec2.privkey  ec2privatekey
+torture.schadenfreude.ec2.keypair  ec2keypair
 torture.schadenfreude.ec2.url      ec2.us-west-1.amazonaws.com
+torture.schadenfreude.ec2.ami      ami-77466232
