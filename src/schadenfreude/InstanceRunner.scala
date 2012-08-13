@@ -137,11 +137,10 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
   def isDone(): Boolean =
   {
     val logfile = "output/schad" + instancenum + "_" + locallogtime + ".log"
-    val grepcmd = "grep Leaving " + logfile  //grep for better term.
-    println(grepcmd)
-    val output = grepcmd.!!
-    println(output)
-    return (output != "")
+    val catcmd = "cat " + logfile
+    val output = catcmd.!!
+    println(output.contains("Leaving"))
+    return (output.contains("Leaving")) //Search for better term
   }
 
   def collectLogFile(permdir: String): Unit =
