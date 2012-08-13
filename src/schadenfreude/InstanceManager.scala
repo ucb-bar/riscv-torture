@@ -106,7 +106,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   val privkey = config.getProperty("torture.schadenfreude.ec2.privkey","")
   val keypair = config.getProperty("torture.schadenfreude.ec2.keypair","")
   val url = config.getProperty("torture.schadenfreude.ec2.url","ec2.us-west-1.amazonaws.com")
-  val ami = config.getProperty("torture.schadenfreude.ec2.ami","ami-77466232")
+  val ami = config.getProperty("torture.schadenfreude.ec2.ami","ami-a54b6fe0")
   var sshopts = " -i " + privkey
   var sshhost = ""
   var instanceid = ""

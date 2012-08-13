@@ -37,4 +37,4 @@ torture.schadenfreude.ec2.group    ec2securitygroup
 torture.schadenfreude.ec2.privkey  ec2privatekey
 torture.schadenfreude.ec2.keypair  ec2keypair
 torture.schadenfreude.ec2.url      ec2.us-west-1.amazonaws.com
-torture.schadenfreude.ec2.ami      ami-77466232
+torture.schadenfreude.ec2.ami      ami-a54b6fe0
