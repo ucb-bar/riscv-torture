@@ -95,7 +95,7 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     var pdir = ""
     if (permdir != "") pdir = permdir
     else pdir = "output"
-    val remotelog: Path = permdir + "riscv-torture/output/schad"+instancenum+".log"
+    val remotelog: Path = mgr.tmpDir + "/riscv-torture/output/schad"+instancenum+".log"
     val locallog: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".log"
     fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost, ec2mgr.sshopts)
   }

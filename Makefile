@@ -5,6 +5,7 @@ C_SIM := ../riscv-rocket/emulator/emulator
 R_SIM := ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv
 TEST := output/test.S
 OPTIONS := $(empty)
+EC2OPTIONS := $(empty)
 SUITE := output
 CONFIG := config
 COMMIT := none
@@ -74,10 +75,10 @@ crnight:
 	$(SBT) 'overnight/run -c $(C_SIM) -r $(R_SIM) -g $(COMMIT) $(OPTIONS)'
 
 cschaden:
-	$(SBT) 'schadenfreude/run -f $(CFG) -c $(C_SIM) -g $(GITCMT) $(OPTIONS)'
+	$(SBT) 'schadenfreude/run -f $(CFG) -c $(C_SIM) -g $(GITCMT) $(EC2OPTIONS) $(OPTIONS)'
 
 rschaden:
-	$(SBT) 'schadenfreude/run -f $(CFG) -r $(R_SIM) -g $(GITCMT) $(OPTIONS)'
+	$(SBT) 'schadenfreude/run -f $(CFG) -r $(R_SIM) -g $(GITCMT) $(EC2OPTIONS) $(OPTIONS)'
 
 crschaden:
-	$(SBT) 'schadenfreude/run -f $(CFG) -c $(C_SIM) -r $(R_SIM) -g $(GITCMT) $(OPTIONS)'
+	$(SBT) 'schadenfreude/run -f $(CFG) -c $(C_SIM) -r $(R_SIM) -g $(GITCMT) $(EC2OPTIONS) $(OPTIONS)'

@@ -116,7 +116,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     //do a make schaden -ec2 true -i local
     val cmdRA: Array[String] = new Array(instcnt)
     var cmdstring = ""
-    var cmdstring2= " OPTIONS=\"-ec2 true -i local"
+    var cmdstring2= " EC2OPTIONS=\"-ec2 true -i local"
     if (cPath != "" && rPath != "")
       cmdstring += "make crschaden"
     if (cPath != "" && rPath == "")
@@ -158,7 +158,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
       val instance = instRunners(i)
       val tortureDir = "."
       val config = cfgmap(i)
-      if (i == 0) instance.createLogger(logtime)
+      instance.createLogger(logtime)
       instance.copyTortureDir(tortureDir, instDir, config)
     }
     println("Starting remote schadenfreude job.")
