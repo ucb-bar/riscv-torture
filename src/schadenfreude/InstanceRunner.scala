@@ -142,18 +142,20 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
     val logfile = "output/schad" + instancenum + "_" + locallogtime + ".log"
     val catcmd = "cat " + logfile
     val output = catcmd.!!
-    println(output.contains("Leaving"))
     return (output.contains("Leaving")) //Search for better term
   }
 
   def collectFiles(permdir: String): Unit =
   {
     var pdir = permdir
+    val cwdname = Path(".").toAbsolute.normalize.path
     if (pdir == "") pdir = "output/failedtests"
-    val tarname = pdir + "/failedtests"+instancenum+"_"+locallogtime+".tgz"
-    val tartestcmd = "tar -czf " + tarname+ " " + mgr.tmpDir+"/schad"+instancenum+"/"+pdir
+    val ppath: Path = pdir
+    val tarname = cwdname + "/" + pdir + "/failedtests"+instancenum+"_"+locallogtime+".tgz"
+    val tartestcmd = "tar -czf " + tarname+ " " + ppath.name
+    val tarproc = Process(tartestcmd, new File(mgr.tmpDir + "/schad"+instancenum+"/"+pdir+"/.."))
     println(tartestcmd)
-    tartestcmd.!
+    tarproc.!
     if (!mgr.asInstanceOf[BasicInstanceManager].ec2inst) return
     val logname = "output/schad" + instancenum + "_" + locallogtime + ".log"
     val newlogname = "output/schad"+instancenum+".log"
