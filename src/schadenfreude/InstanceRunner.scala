@@ -94,11 +94,11 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   {
     var pdir = ""
     if (permdir != "") pdir = permdir
-    else pdir = "output"
+    else pdir = "output/failedtests"
     val testtgz: Path = ec2mgr.tmpDir + "/riscv-torture/output/failedtests/failedtests_"+instancenum+".tgz"
-    val localtgz: Path = pdir + "/output/failedtests"+instancenum+"_"+locallogtime+".tgz"
+    val localtgz: Path = pdir + "/failedtests"+instancenum+"_"+locallogtime+".tgz"
     val remotelog: Path = ec2mgr.tmpDir + "/riscv-torture/output/schad"+instancenum+".log"
-    val locallog: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".log"
+    val locallog: Path = "output/schad"+instancenum+"_"+locallogtime+".log"
     fileop.scpFileBack(testtgz, localtgz, ec2mgr.sshhost, ec2mgr.sshopts)
     fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost, ec2mgr.sshopts)
   }
