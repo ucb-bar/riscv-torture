@@ -32,7 +32,7 @@ abstract class InstanceRunner
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit
   def run(cmdstr: String, workDir: String): Process
   def isDone(): Boolean
-  def collectLogFile(permdir: String): Unit
+  def collectFiles(permdir: String): Unit
   def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation
   {
     val logname = "output/schad" + instancenum + "_" + logtime + ".log"
@@ -90,13 +90,16 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     else return fileop.remotePathExists(remotefile, ec2mgr.sshhost, ec2mgr.sshopts)
   }
 
-  def collectLogFile(permdir: String): Unit =
+  def collectFiles(permdir: String): Unit =
   {
     var pdir = ""
     if (permdir != "") pdir = permdir
     else pdir = "output"
-    val remotelog: Path = mgr.tmpDir + "/riscv-torture/output/schad"+instancenum+".log"
+    val testtgz: Path = ec2mgr.tmpDir + "/riscv-torture/output/failedtests/failedtests_"+instancenum+".tgz"
+    val localtgz: Path = pdir + "/output/failedtests"+instancenum+"_"+locallogtime+".tgz"
+    val remotelog: Path = ec2mgr.tmpDir + "/riscv-torture/output/schad"+instancenum+".log"
     val locallog: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".log"
+    fileop.scpFileBack(testtgz, localtgz, ec2mgr.sshhost, ec2mgr.sshopts)
     fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost, ec2mgr.sshopts)
   }
 }
@@ -143,13 +146,22 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
     return (output.contains("Leaving")) //Search for better term
   }
 
-  def collectLogFile(permdir: String): Unit =
+  def collectFiles(permdir: String): Unit =
   {
+    var pdir = permdir
+    if (pdir == "") pdir = "output/failedtests"
+    val tarname = pdir + "/failedtests"+instancenum+"_"+locallogtime+".tgz"
+    val tartestcmd = "tar -czf " + tarname+ " " + mgr.tmpDir+"/schad"+instancenum+"/"+pdir
+    println(tartestcmd)
+    tartestcmd.!
     if (!mgr.asInstanceOf[BasicInstanceManager].ec2inst) return
     val logname = "output/schad" + instancenum + "_" + locallogtime + ".log"
     val newlogname = "output/schad"+instancenum+".log"
-    val mvcmd = "mv " + logname + " " + newlogname
-    mvcmd.!
+    val mvlogcmd = "mv " + logname + " " + newlogname
+    mvlogcmd.!
+    val newtarname = pdir + "/failedtests_"+instancenum+".tgz"
+    val mvtarcmd = "mv " + tarname + " " + newtarname
+    mvtarcmd.!
   }
 }
 
@@ -195,17 +207,21 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     return out.contains("Unknown Job Id")
   }
 
-  def collectLogFile(permdir: String): Unit =
+  def collectFiles(permdir: String): Unit =
   {
     val remoteout: Path = mgr.tmpDir+"/schad"+instancenum+"/schad"+instancenum+"_"+locallogtime+".out"
     val remoteerr: Path = mgr.tmpDir+"/schad"+instancenum+"/schad"+instancenum+"_"+locallogtime+".err"
-    var pdir = ""
-    if (permdir != "") pdir = permdir
-    else pdir = "output"
-    val localout: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".out"
-    val localerr: Path = pdir + "/schad"+instancenum+"_"+locallogtime+".err"
+    val tarname = "failedtests"+instancenum+"_"+locallogtime+".tgz"
+    val tarcmd = "ssh psi cd " + mgr.tmpDir + "/schad"+instancenum+"/output/ ; tar -czf " + tarname + " failedtests"
+    val remotetgz: Path = mgr.tmpDir + "/schad"+instancenum+"/output/" + tarname
+    var pdir = permdir
+    if (pdir == "") pdir = "output/failedtests"
+    val localout: Path = "output/schad"+instancenum+"_"+locallogtime+".out"
+    val localerr: Path = "output/schad"+instancenum+"_"+locallogtime+".err"
+    val localtgz: Path = pdir + "/failedtests_"+instancenum+"_"+locallogtime+".tgz"
     fileop.scpFileBack(remoteout, localout, "psi", "")
     fileop.scpFileBack(remoteerr, localerr, "psi", "")
+    fileop.scpFileBack(remotetgz, localtgz, "psi", "")
   }
   
   override def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation

@@ -74,7 +74,7 @@ object Schadenfreude extends Application
       instmgr.createInstances()
       instmgr.runInstances()
       instmgr.waitOnInstances()
-      instmgr.collectLogFiles()
+      instmgr.collectFiles()
     }
   }
 

@@ -36,7 +36,7 @@ abstract class InstanceManager
 
   def getCommandStrings(): Array[String]
   def runInstances(): Unit
-  def collectLogFiles(): Unit
+  def collectFiles(): Unit
   def createInstances(): Unit = 
   {
     for (i <- 0 until instcnt) instRunners(i) = InstanceRunner(insttype, i, this)
@@ -47,7 +47,6 @@ abstract class InstanceManager
     var canexit = false
     while (!canexit)
     {
-      println("Spinning...")
       Thread.sleep(60000)
       var done = true
       for (i <- 0 until instcnt)
@@ -166,9 +165,9 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     println("\nRemote EC2 job has been launched.")
   }
 
-  def collectLogFiles(): Unit =
+  def collectFiles(): Unit =
   {
-    for (i <- 0 until instcnt) instRunners(i).collectLogFile(permDir)
+    for (i <- 0 until instcnt) instRunners(i).collectFiles(permDir)
     stopEC2Instance()
   }
 
@@ -374,9 +373,9 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
     println("\nAll instances have been launched.")
   }
 
-  def collectLogFiles(): Unit =
+  def collectFiles(): Unit =
   {
-    for (i <- 0 until instcnt) instRunners(i).collectLogFile(permDir)
+    for (i <- 0 until instcnt) instRunners(i).collectFiles(permDir)
     if (ec2inst)
     {
       val donefile = new File("EC2DONE")
