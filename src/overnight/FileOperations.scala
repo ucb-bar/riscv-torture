@@ -42,7 +42,7 @@ object FileOperations
     val canonnew = newDir.toAbsolute.normalize.path
     if (newDir.exists) return
     Process("cp -r " + canonold + " " + canonnew).!
-    if (commit != "none")
+    if (commit.toLowerCase != "none")
     {
       println("Checking out commit " + commit + " in " + canonnew)
       val out = Process("git checkout " + commit, new File(canonnew)).!!
@@ -56,7 +56,7 @@ object FileOperations
     {
       val sshcmd = "ssh " + options + " " + host + " cp -r " + oldDir.path + " " + newDir.path
       Process(sshcmd).!
-      if (commit != "none")
+      if (commit.toLowerCase != "none")
       {
         val sshgitcheckout = "ssh " + options + " " + host + " cd " + newDir.path + " ; git checkout " + commit
         println(sshgitcheckout)

@@ -6,6 +6,7 @@ import scalax.file.Path
 import java.io.File
 import java.util.Properties
 import java.io.FileInputStream
+import overnight.FileOperations._
 
 object InstanceManager
 {  
@@ -32,7 +33,6 @@ abstract class InstanceManager
   val instRunners: Array[InstanceRunner] = new Array(instcnt)
   val processRA: Array[Process] = new Array(instcnt)
   val cmdstrRA: Array[String] = getCommandStrings()
-  val fileop = overnight.FileOperations
 
   def getCommandStrings(): Array[String]
   def runInstances(): Unit
@@ -227,6 +227,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
 class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String, val ec2inst: Boolean) extends InstanceManager
 {
   var logtime: Long = 0L
+  val fileop = overnight.FileOperations
   if (ec2inst) 
   {
     val donefile = new File("EC2DONE")
@@ -262,7 +263,7 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
     {
       var tmpCmd = cmdstring
       val tmpcommit = commitmap(i)
-      if (tmpcommit == "none")
+      if (tmpcommit.toLowerCase == "none")
       {
         if (usingC && cPath != "../riscv-rocket/emulator/emulator") tmpCmd += " C_SIM="+cPath
         if (usingR && rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv") tmpCmd += " R_SIM="+rPath
@@ -309,21 +310,21 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
     if (rocketDir != "")
     {
       val rocketPath: Path = rocketDir
-      if (commit != "none")
+      if (commit.toLowerCase != "none")
       {
         val remoteDir = tmpDir + "/rocket_" + commit
         val remoteOldPath: Path = rocketDir
         val remotePath: Path = remoteDir
         val remoteCPath: Path = remoteDir+"/emulator"
         val remoteRPath: Path = remoteDir+"/vlsi-generic/build/vcs-sim-rtl.psi"
-        if (!fileop.remotePathExists(remotePath, "psi", ""))
+        if (!remotePathExists(remotePath, "psi", ""))
         {
-          fileop.gitcheckoutRemote(remoteOldPath, remotePath, commit, "psi", "")
-          fileop.cleanRemote(remoteCPath, "psi", "")
-          fileop.cleanRemote(remoteRPath, "psi", "")
+          gitcheckoutRemote(remoteOldPath, remotePath, commit, "psi", "")
+          cleanRemote(remoteCPath, "psi", "")
+          cleanRemote(remoteRPath, "psi", "")
         }
-        if (usingR) fileop.compileRemote(remoteRPath, remoteRPath/Path("simv"), "psi", "")
-        if (usingC) fileop.compileRemote(remoteCPath, remoteCPath/Path("emulator"), "psi", "")
+        if (usingR) compileRemote(remoteRPath, remoteRPath/Path("simv"), "psi", "")
+        if (usingC) compileRemote(remoteCPath, remoteCPath/Path("emulator"), "psi", "")
       }
     }
   }
@@ -333,7 +334,7 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
     var rocketDir = ""
     if (usingC) rocketDir = cPath.substring(0,cPath.length-18)
     if (usingR) rocketDir = rPath.substring(0,rPath.length-36)
-    if (commit == "none") return
+    if (commit.toLowerCase == "none") return
     if (rocketDir != "")
     {
       val rocketPath: Path = rocketDir
@@ -342,14 +343,14 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
       val vcsPath: Path = (tmpRocketPath/Path("vlsi-generic")/Path("build")/Path("vcs-sim-rtl"))
       if (!tmpRocketPath.exists)
       {
-        fileop.gitcheckout(rocketPath, tmpRocketPath, commit)
+        gitcheckout(rocketPath, tmpRocketPath, commit)
         println("Doing make clean in " + (emPath.toAbsolute.normalize.path))
-        fileop.clean(emPath)
+        clean(emPath)
         println("Doing make clean in " + (vcsPath.toAbsolute.normalize.path))
-        fileop.clean(vcsPath)
+        clean(vcsPath)
       }
-      if (usingC) fileop.compile(emPath, emPath/Path("emulator"))  
-      if (usingR) fileop.compile(vcsPath, vcsPath/Path("simv"))
+      if (usingC) compile(emPath, emPath/Path("emulator"))  
+      if (usingR) compile(vcsPath, vcsPath/Path("simv"))
     }
   }
 
