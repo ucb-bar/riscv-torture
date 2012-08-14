@@ -47,7 +47,7 @@ abstract class InstanceManager
     var canexit = false
     while (!canexit)
     {
-      Thread.sleep(60000)
+      Thread.sleep(30000)
       var done = true
       for (i <- 0 until instcnt)
       {
@@ -183,27 +183,30 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     var tmphost = "pending"
     while (tmphost == "pending")
     {
+      Thread.sleep(100)
       val out2 = describecmd.!!
       val outRA2 = out2.split("\\s+")
-      tmphost = outRA2(7)
+      if (outRA2.length > 7) tmphost = outRA2(7)
     }
     sshhost = "ubuntu@"+tmphost
     println(sshhost)
     var inststatus = "pending"
     while (inststatus != "running")
     {
+      Thread.sleep(100)
       val out3 = describecmd.!!
       val outRA3 = out3.split("\\s+")
-      inststatus = outRA3(9)
+      if(outRA3.length > 9) inststatus = outRA3(9)
     }
     println(describecmd.!!)
     var spin = true
     while (spin)
     {
+      Thread.sleep(100)
       val describecmd = "ec2-describe-instance-status " + instanceid 
       val spinout = describecmd.!!
       val spinRA = spinout.split("\\s+")
-      if (spinRA.length >= 13)
+      if (spinRA.length > 13)
       {
         if (spinRA(10) == "passed" && spinRA(13) == "passed") spin = false
       }
