@@ -91,7 +91,7 @@ abstract class InstanceManager
   } 
 }
 
-class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String) extends InstanceManager
+class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val localinstcnt: Int, val insttype: String) extends InstanceManager
 {
   var logtime: Long = 0L
 
@@ -101,14 +101,15 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   configin.close()
 
   val ec2insttype = config.getProperty("torture.schadenfreude.ec2.insttype","t1.micro")
+  val instcnt  = config.getProperty("torture.schadenfreude.ec2.instcnt","1").toInt
   val group = config.getProperty("torture.schadenfreude.ec2.group","") 
   val privkey = config.getProperty("torture.schadenfreude.ec2.privkey","")
   val keypair = config.getProperty("torture.schadenfreude.ec2.keypair","")
   val url = config.getProperty("torture.schadenfreude.ec2.url","ec2.us-west-1.amazonaws.com")
   val ami = config.getProperty("torture.schadenfreude.ec2.ami","ami-a54b6fe0")
   var sshopts = " -i " + privkey
-  var sshhost = ""
-  var instanceid = ""
+  var sshhost: Array[String] = new Array(instcnt)
+  var instanceid: Array[String] = new Array(instcnt)
 
   def getCommandStrings(): Array[String] =
   {
@@ -129,7 +130,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     assert(cmdstring != "", println("No simulators were specified"))
     
     var cfgopt = " CONFIG=\"config"
-    for (i <- 1 until instcnt) cfgopt += " config"+i
+    for (i <- 1 until localinstcnt) cfgopt += " config"+i
     cfgopt += "\""
     val cmtopt = " COMMIT=\"" + commitmap.mkString(" ") + "\""
     cmdstring += cfgopt + cmtopt
@@ -140,8 +141,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     val tmpCmd = cmdstring + cmdstring2
     for (i <- 0 until instcnt)
     {
-      if (i == 0) cmdRA(i) = tmpCmd
-      else cmdRA(i) = ""
+      cmdRA(i) = tmpCmd
     }
     cmdRA
   }
@@ -149,36 +149,46 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   def runInstances(): Unit = 
   {
     //run instance 0. others are dummies. 
-    startEC2Instance()
     logtime = System.currentTimeMillis
     val instDir = tmpDir + "/riscv-torture"
+    val tortureDir = "."
     for (i <- 0 until instcnt)
     {
+      startEC2Instance(i)
       val instance = instRunners(i)
-      val tortureDir = "."
       val config = cfgmap(i)
       instance.createLogger(logtime)
-      instance.copyTortureDir(tortureDir, instDir, config)
+      for (i <- 0 until localinstcnt)
+      {
+        val config = cfgmap(i)
+        instance.copyTortureDir(tortureDir, instDir, config)
+      }
     }
-    println("Starting remote schadenfreude job.")
-    processRA(0) = instRunners(0).run(cmdstrRA(0), instDir)
-    println("\nRemote EC2 job has been launched.")
+    for (i <- 0 until instcnt)
+    {
+      println("Starting remote schadenfreude job.")
+      processRA(i) = instRunners(i).run(cmdstrRA(i), instDir)
+      println("\nRemote EC2 job has been launched.")
+    }
   }
 
   def collectFiles(): Unit =
   {
-    for (i <- 0 until instcnt) instRunners(i).collectFiles(permDir)
-    stopEC2Instance()
+    for (i <- 0 until instcnt)
+    {
+      instRunners(i).collectFiles(permDir)
+      stopEC2Instances()
+    }
   }
 
-  private def startEC2Instance(): Unit =
+  private def startEC2Instance(n: Int): Unit =
   {
     val startcmd = "ec2-run-instances " + ami + " -n 1 -t " + ec2insttype + " -k " + keypair + " -g " + group + " -U " + url
     println(startcmd)
     val out = startcmd.!!
     val outRA = out.split("\\s+")
-    instanceid = outRA(5)
-    println(instanceid)
+    instanceid(n) = outRA(5)
+    println(instanceid(n))
     val describecmd = "ec2-describe-instances -F \"instance-id="+instanceid+"\""
     var tmphost = "pending"
     while (tmphost == "pending")
@@ -188,8 +198,8 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
       val outRA2 = out2.split("\\s+")
       if (outRA2.length > 7) tmphost = outRA2(7)
     }
-    sshhost = "ubuntu@"+tmphost
-    println(sshhost)
+    sshhost(n) = "ubuntu@"+tmphost
+    println(sshhost(n))
     var inststatus = "pending"
     while (inststatus != "running")
     {
@@ -211,16 +221,19 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
         if (spinRA(10) == "passed" && spinRA(13) == "passed") spin = false
       }
     }
-    val sshaddhost = "ssh " + sshopts + " " + sshhost + " -o StrictHostKeyChecking=no echo "
+    val sshaddhost = "ssh " + sshopts + " " + sshhost(n) + " -o StrictHostKeyChecking=no echo "
     println(sshaddhost.!!)
     println("EC2 instance has been fully initialized.")
   }
 
-  private def stopEC2Instance(): Unit =
+  private def stopEC2Instances(): Unit =
   {
-    val termcmd = "ec2-terminate-instances -U " + url + " " + instanceid 
-    val out = termcmd.!!
-    println(out)
+    for (n <- 0 until instcnt)
+    {
+      val termcmd = "ec2-terminate-instances -U " + url + " " + instanceid(n)
+      val out = termcmd.!!
+      println(out)
+    }
   }
 }
 
