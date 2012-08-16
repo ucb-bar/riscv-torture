@@ -63,31 +63,29 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
     val configPath: Path = config
-    if (instancenum == 0) fileop.scp(torturePath, instPath, ec2mgr.sshhost, ec2mgr.sshopts)
-    if (instancenum == 0) fileop.scp(torturePath / configPath, instPath / Path("config"), ec2mgr.sshhost, ec2mgr.sshopts)
-    if (instancenum != 0) fileop.scp(torturePath / configPath, instPath / Path("config"+instancenum), ec2mgr.sshhost, ec2mgr.sshopts)
-    
+    fileop.scp(torturePath, instPath, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+    fileop.scp(torturePath / configPath, instPath / Path("config"), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+    for (i <- 1 until ec2mgr.localinstcnt)
+    {
+      fileop.scp(torturePath / configPath, instPath / Path("config"+i), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+    }
   }
   
   def run(cmdstr: String, workDir: String): Process =
   {
-    if (instancenum == 0)
-    {
-      println("Instance output log will be placed in EC2 directory " + workDir + "/output/schad"+instancenum+"_"+locallogtime+".log")
-      val sshcmd = "ssh " + ec2mgr.sshopts + " " + ec2mgr.sshhost + " cd " + workDir + " ; " + cmdstr
-      println("Starting EC2 remote schadenfreude job in " + workDir)
-      println(sshcmd)
-      val proc = sshcmd.run(fileLogger)
-      println("Started running remote EC2 schadenfreude job.")
-      proc
-    } else return "echo Should not be printing this.".run
+    println("Instance output log will be placed in EC2 directory " + workDir + "/output/schad"+instancenum+"_"+locallogtime+".log")
+    val sshcmd = "ssh " + ec2mgr.sshopts + " " + ec2mgr.sshhost(instancenum) + " cd " + workDir + " ; " + cmdstr
+    println("Starting EC2 remote schadenfreude job in " + workDir)
+    println(sshcmd)
+    val proc = sshcmd.run(fileLogger)
+    println("Started running remote EC2 schadenfreude job.")
+    proc
   }
 
   def isDone(): Boolean =
   {
     val remotefile: Path = mgr.tmpDir + "/riscv-torture/EC2DONE"
-    if (instancenum != 0) return true
-    else return fileop.remotePathExists(remotefile, ec2mgr.sshhost, ec2mgr.sshopts)
+    return fileop.remotePathExists(remotefile, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
   }
 
   def collectFiles(permdir: String): Unit =
@@ -95,12 +93,15 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     var pdir = ""
     if (permdir != "") pdir = permdir
     else pdir = "output/failedtests"
-    val testtgz: Path = ec2mgr.tmpDir + "/riscv-torture/output/failedtests/failedtests_"+instancenum+".tgz"
-    val localtgz: Path = pdir + "/failedtests"+instancenum+"_"+locallogtime+".tgz"
-    val remotelog: Path = ec2mgr.tmpDir + "/riscv-torture/output/schad"+instancenum+".log"
-    val locallog: Path = "output/schad"+instancenum+"_"+locallogtime+".log"
-    fileop.scpFileBack(testtgz, localtgz, ec2mgr.sshhost, ec2mgr.sshopts)
-    fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost, ec2mgr.sshopts)
+    for (i <- 0 until ec2mgr.localinstcnt)
+    {
+      val testtgz: Path = ec2mgr.tmpDir + "/riscv-torture/output/failedtests/failedtests_"+i+".tgz"
+      val localtgz: Path = pdir + "/failedtests"+instancenum+"_"+i+"_"+locallogtime+".tgz"
+      val remotelog: Path = ec2mgr.tmpDir + "/riscv-torture/output/schad"+i+".log"
+      val locallog: Path = "output/schad"+instancenum+"_"+i+"_"+locallogtime+".log"
+      fileop.scpFileBack(testtgz, localtgz, ec2mgr.sshhost, ec2mgr.sshopts)
+      fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost, ec2mgr.sshopts)
+    }
   }
 }
 

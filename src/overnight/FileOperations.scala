@@ -85,7 +85,7 @@ object FileOperations
     val remoteStr = remotePath.path
     if (remotePathExists(remotePath, host, options))
     {
-      println("Copying remote file " + remotePath.name + " to " + host + " directory " + localStr)
+      println("Copying remote file " + remotePath.name + " from " + host + "to directory " + localStr)
       val cmd = "scp " +options+" "+host+":"+remoteStr + " " + localStr
       println(cmd)
       val exitCode = cmd.!
