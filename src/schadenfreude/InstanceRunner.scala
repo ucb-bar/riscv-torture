@@ -62,12 +62,13 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   {
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
-    val configPath: Path = config
+    val configRA: Array[String] = config.split(" ")
     fileop.scp(torturePath, instPath, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
-    fileop.scp(torturePath / configPath, instPath / Path("config"), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
-    for (i <- 1 until ec2mgr.localinstcnt)
+    for (i <- 0 until ec2mgr.localinstcnt)
     {
-      fileop.scp(torturePath / configPath, instPath / Path("config"+i), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+      val configPath: Path = configRA(i)
+      if (i == 0) fileop.scp(torturePath / configPath, instPath / Path("config"), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+      else fileop.scp(torturePath / configPath, instPath / Path("config"+i), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
     }
   }
   
@@ -99,8 +100,8 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
       val localtgz: Path = pdir + "/failedtests"+instancenum+"_"+i+"_"+locallogtime+".tgz"
       val remotelog: Path = ec2mgr.tmpDir + "/riscv-torture/output/schad"+i+".log"
       val locallog: Path = "output/schad"+instancenum+"_"+i+"_"+locallogtime+".log"
-      fileop.scpFileBack(testtgz, localtgz, ec2mgr.sshhost, ec2mgr.sshopts)
-      fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost, ec2mgr.sshopts)
+      fileop.scpFileBack(testtgz, localtgz, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+      fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
     }
   }
 }

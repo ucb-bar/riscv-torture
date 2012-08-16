@@ -25,11 +25,11 @@ abstract class InstanceManager
 {
   val cfgs, gitcmts: List[String]
 
-  val cfgmap = mapOptions(cfgs,"config")
-  val commitmap = mapOptions(gitcmts,"NONE")
   val permDir, tmpDir, cPath, rPath, email, insttype: String
   val thresh, minutes, instcnt: Int
   val runtime: Int = getWalltime()
+  val cfgmap = mapOptions(cfgs,"config")
+  val commitmap = mapOptions(gitcmts,"NONE")
   val instRunners: Array[InstanceRunner] = new Array(instcnt)
   val processRA: Array[Process] = new Array(instcnt)
   val cmdstrRA: Array[String] = getCommandStrings()
@@ -110,6 +110,27 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   var sshopts = " -i " + privkey
   var sshhost: Array[String] = new Array(instcnt)
   var instanceid: Array[String] = new Array(instcnt)
+  override val instRunners: Array[InstanceRunner] = new Array(instcnt)
+  override val processRA: Array[Process] = new Array(instcnt)
+  override val cmdstrRA: Array[String] = getCommandStrings()
+
+  override def mapOptions(optList: List[String],default: String): List[String] =
+  {
+    val cnt = optList.length
+    assert (cnt <= localinstcnt, println("Number of options was greater than the number of instances specified"))
+    var map: List[String] = List()
+    if (cnt == 0)
+    {
+      for (i <- 0 until localinstcnt) map ++= List(default)
+    } else {
+      for (i <- 0 until localinstcnt)
+      {
+        val indx = i % cnt
+        map ++= List(optList(indx))
+      }
+    }
+    map
+  }
 
   def getCommandStrings(): Array[String] =
   {
@@ -158,16 +179,15 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
       val instance = instRunners(i)
       val config = cfgmap(i)
       instance.createLogger(logtime)
-      for (i <- 0 until localinstcnt)
-      {
-        val config = cfgmap(i)
-        instance.copyTortureDir(tortureDir, instDir, config)
-      }
+      val configstr = cfgmap.mkString(" ")
+      instance.copyTortureDir(tortureDir, instDir, configstr)
     }
     for (i <- 0 until instcnt)
     {
       println("Starting remote schadenfreude job.")
-      processRA(i) = instRunners(i).run(cmdstrRA(i), instDir)
+      val instance = instRunners(i)
+      val cmdstr = cmdstrRA(i)
+      processRA(i) = instance.run(cmdstr, instDir)
       println("\nRemote EC2 job has been launched.")
     }
   }
@@ -177,8 +197,8 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     for (i <- 0 until instcnt)
     {
       instRunners(i).collectFiles(permDir)
-      stopEC2Instances()
     }
+    stopEC2Instances()
   }
 
   private def startEC2Instance(n: Int): Unit =
@@ -189,7 +209,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     val outRA = out.split("\\s+")
     instanceid(n) = outRA(5)
     println(instanceid(n))
-    val describecmd = "ec2-describe-instances -F \"instance-id="+instanceid+"\""
+    val describecmd = "ec2-describe-instances -F \"instance-id="+instanceid(n)+"\""
     var tmphost = "pending"
     while (tmphost == "pending")
     {
@@ -213,7 +233,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     while (spin)
     {
       Thread.sleep(100)
-      val describecmd = "ec2-describe-instance-status " + instanceid 
+      val describecmd = "ec2-describe-instance-status " + instanceid(n)
       val spinout = describecmd.!!
       val spinRA = spinout.split("\\s+")
       if (spinRA.length > 13)
@@ -222,6 +242,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
       }
     }
     val sshaddhost = "ssh " + sshopts + " " + sshhost(n) + " -o StrictHostKeyChecking=no echo "
+    Thread.sleep(3000)
     println(sshaddhost.!!)
     println("EC2 instance has been fully initialized.")
   }
