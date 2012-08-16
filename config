@@ -33,6 +33,7 @@ torture.schadenfreude.insttype  local
 torture.schadenfreude.instdir   ..
 
 torture.schadenfreude.ec2.insttype m1.small
+torture.schadenfreude.ec2.instcnt  1
 torture.schadenfreude.ec2.group    ec2securitygrp
 torture.schadenfreude.ec2.privkey  /home/eecs/user/.ssh/keypairprivkey
 torture.schadenfreude.ec2.keypair  ec2keypair
