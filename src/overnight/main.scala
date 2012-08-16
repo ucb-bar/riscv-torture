@@ -116,22 +116,23 @@ object Overnight extends Application
   {
     var cSim: Option[String] = None
     var rSim: Option[String] = None
+    val cmmt = commit.toUpperCase
     if (cPath != "") cSim = Some(cPath)
     if (rPath != "") rSim = Some(rPath)
-    if (commit == "none") return (cSim, rSim)
+    if (cmmt == "NONE") return (cSim, rSim)
 
     var rocketDir = ""
     if (cPath != "") rocketDir = cPath.substring(0,cPath.length-18)
     if (rPath != "") rocketDir = rPath.substring(0,rPath.length-36)
     val rocketPath: Path = rocketDir
-    val destPath: Path = (rocketPath / Path("..") / Path("rocket_"+commit))
+    val destPath: Path = (rocketPath / Path("..") / Path("rocket_"+cmmt))
     val emPath: Path = destPath / Path("emulator")
     val vcsrelPath: Path = "vlsi-generic/build/vcs-sim-rtl"
     val vcsPath: Path = destPath / vcsrelPath
     
     if (!destPath.exists)
     {
-      FileOperations.gitcheckout(rocketPath, destPath, commit)
+      FileOperations.gitcheckout(rocketPath, destPath, cmmt)
       println("Doing make clean in " + emPath.toAbsolute.normalize.path)
       FileOperations.clean(emPath)
       println("Doing make clean in " + vcsPath.toAbsolute.normalize.path)

@@ -26,7 +26,7 @@ abstract class InstanceManager
   val cfgs, gitcmts: List[String]
 
   val cfgmap = mapOptions(cfgs,"config")
-  val commitmap = mapOptions(gitcmts,"none")
+  val commitmap = mapOptions(gitcmts,"NONE")
   val permDir, tmpDir, cPath, rPath, email, insttype: String
   val thresh, minutes, instcnt: Int
   val runtime: Int = getWalltime()
@@ -262,8 +262,8 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
     for (i <- 0 until instcnt)
     {
       var tmpCmd = cmdstring
-      val tmpcommit = commitmap(i)
-      if (tmpcommit.toLowerCase == "none")
+      val tmpcommit = commitmap(i).toUpperCase
+      if (tmpcommit.toLowerCase == "NONE")
       {
         if (usingC && cPath != "../riscv-rocket/emulator/emulator") tmpCmd += " C_SIM="+cPath
         if (usingR && rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv") tmpCmd += " R_SIM="+rPath
@@ -310,16 +310,17 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
     if (rocketDir != "")
     {
       val rocketPath: Path = rocketDir
-      if (commit.toLowerCase != "none")
+      val cmmt = commit.toUpperCase
+      if (cmmt != "NONE")
       {
-        val remoteDir = tmpDir + "/rocket_" + commit
+        val remoteDir = tmpDir + "/rocket_" + cmmt
         val remoteOldPath: Path = rocketDir
         val remotePath: Path = remoteDir
         val remoteCPath: Path = remoteDir+"/emulator"
         val remoteRPath: Path = remoteDir+"/vlsi-generic/build/vcs-sim-rtl.psi"
         if (!remotePathExists(remotePath, "psi", ""))
         {
-          gitcheckoutRemote(remoteOldPath, remotePath, commit, "psi", "")
+          gitcheckoutRemote(remoteOldPath, remotePath, cmmt, "psi", "")
           cleanRemote(remoteCPath, "psi", "")
           cleanRemote(remoteRPath, "psi", "")
         }
@@ -332,18 +333,19 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
   private def checkoutRocket(commit: String, cPath: String, rPath: String, usingC: Boolean, usingR: Boolean): Unit =
   {
     var rocketDir = ""
+    val cmmt = commit.toUpperCase
     if (usingC) rocketDir = cPath.substring(0,cPath.length-18)
     if (usingR) rocketDir = rPath.substring(0,rPath.length-36)
-    if (commit.toLowerCase == "none") return
+    if (cmmt == "NONE") return
     if (rocketDir != "")
     {
       val rocketPath: Path = rocketDir
-      val tmpRocketPath: Path = "../rocket_"+commit
+      val tmpRocketPath: Path = "../rocket_"+cmmt
       val emPath: Path = (tmpRocketPath/Path("emulator"))
       val vcsPath: Path = (tmpRocketPath/Path("vlsi-generic")/Path("build")/Path("vcs-sim-rtl"))
       if (!tmpRocketPath.exists)
       {
-        gitcheckout(rocketPath, tmpRocketPath, commit)
+        gitcheckout(rocketPath, tmpRocketPath, cmmt)
         println("Doing make clean in " + (emPath.toAbsolute.normalize.path))
         clean(emPath)
         println("Doing make clean in " + (vcsPath.toAbsolute.normalize.path))
