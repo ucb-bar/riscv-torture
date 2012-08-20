@@ -75,7 +75,7 @@ object Overnight extends Application
             println(permFiles.mkString)
             println(statFile)
             permFiles.foreach( f => f.copyTo( permDir / f.name))
-            statFile.copyTo(permDir / statFile.name)
+            statFile.copyTo(permDir / statFile.name, replaceExisting=true)
           }
         } 
         test foreach { t =>

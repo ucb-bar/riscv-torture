@@ -4,7 +4,8 @@ torture.generator.memsize 1024
 torture.generator.mix.xmem    10
 torture.generator.mix.xbranch 25
 torture.generator.mix.xalu    45
-torture.generator.mix.fgen    15
+torture.generator.mix.fgen    10
+torture.generator.mix.fpmem   5
 torture.generator.mix.fax     4
 torture.generator.mix.vec     1
 

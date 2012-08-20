@@ -38,14 +38,14 @@ object Generator extends Application
 
   def generate(nseqs: Int, memsize: Int, mix: Map[String,Int], veccfg: Map[String,Int], outFileName: String): String = {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
-    assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fax","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
+    assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fpmem","fax","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
     val vmemsize = veccfg.getOrElse("memsize", 32)
     val vnseq = veccfg.getOrElse("seq", 100)
     val vfnum = veccfg.getOrElse("vf", 10)
     val vecmix = veccfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
     assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
-    assert (vecmix.keys.forall(List("vmem","xalu","fgen","fax","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
+    assert (vecmix.keys.forall(List("vmem","xalu","fgen","fpmem","fax","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
 
     val prog = new Prog(memsize)
     ProgSeg.cnt = 0

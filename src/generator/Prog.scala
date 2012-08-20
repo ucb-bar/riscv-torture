@@ -167,7 +167,7 @@ class Prog(memsize: Int)
     def seq_lt(seq1: (String, Int), seq2: (String, Int)): Boolean =
     {
       val seqhash = HashMap("xmem"->1,"xbranch"->2,"xalu"->3,"vmem"->4, 
-      "fgen"->5,"fax"->6, "vec"->7,"vonly"->8,"Generic"->9).withDefaultValue(100)
+      "fgen"->5,"fpmem"->6,"fax"->7, "vec"->8,"vonly"->9,"Generic"->10).withDefaultValue(100)
       if (seqhash(seq1._1) == 100 && seqhash(seq2._1) == 100) return (seq1._1 < seq2._1)
       return seqhash(seq1._1) < seqhash(seq2._1)
     }
@@ -175,7 +175,7 @@ class Prog(memsize: Int)
     val sortedMix = mix.toSeq.sortWith(seq_lt)
     val sortedVecmix = vecmix.toSeq.sortWith(seq_lt)
     var s = "----- Sequence Types Used:"
-    for ((seqtype,percent) <- sortedMix) s += " " + seqtype.toUpperCase
+    for ((seqtype,percent) <- sortedMix) if (percent > 0) s += " " + seqtype.toUpperCase
     s += " -----\n"
     s += "--------------------------------------------------------------------------\n"
     s += "---------- Configured Sequence Mix ----------\n"
@@ -405,7 +405,7 @@ class Prog(memsize: Int)
     resolved
   }
 
-  def names = List("xmem","xbranch","xalu","fgen","fax","vec")
+  def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","vec")
 
   def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
   {
@@ -414,6 +414,7 @@ class Prog(memsize: Int)
       "xbranch" -> (() => new SeqBranch(xregs)),
       "xalu" -> (() => new SeqALU(xregs, true)), //true means use_divider, TODO: make better
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
+      "fpmem" -> (() => new SeqFPMem(xregs, fregs_s, fregs_d, core_memory)),
       "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
       "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d, used_vl, veccfg)))
 
@@ -572,7 +573,7 @@ class Prog(memsize: Int)
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
-    val using_fpu = (mix.filterKeys(List("fgen","fax") contains _).values.reduce(_+_) > 0) || using_vec
+    val using_fpu = (mix.filterKeys(List("fgen","fpmem","fax") contains _).values.reduce(_+_) > 0) || using_vec
     // TODO: make a config object that is passed around?
 
     header(nseqs) +
