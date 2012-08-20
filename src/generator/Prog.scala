@@ -174,7 +174,11 @@ class Prog(memsize: Int)
    
     val sortedMix = mix.toSeq.sortWith(seq_lt)
     val sortedVecmix = vecmix.toSeq.sortWith(seq_lt)
-    var s = "---------- Configured Sequence Mix ----------\n"
+    var s = "----- Sequence Types Used:"
+    for ((seqtype,percent) <- sortedMix) s += " " + seqtype.toUpperCase
+    s += " -----\n"
+    s += "--------------------------------------------------------------------------\n"
+    s += "---------- Configured Sequence Mix ----------\n"
     for ((seqtype, percent) <- sortedMix)
     {
       s += "---------- " + seqtype + ": " + percent + "% ----------\n"
