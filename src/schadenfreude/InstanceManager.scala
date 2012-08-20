@@ -27,11 +27,11 @@ abstract class InstanceManager
 
   val permDir, tmpDir, cPath, rPath, email, insttype: String
   val thresh, minutes, instcnt: Int
-  val runtime: Int = getWalltime()
   val cfgmap = mapOptions(cfgs,"config")
   val commitmap = mapOptions(gitcmts,"NONE")
   val instRunners: Array[InstanceRunner] = new Array(instcnt)
   val processRA: Array[Process] = new Array(instcnt)
+  val runtime: Int = getWalltime()
   val cmdstrRA: Array[String] = getCommandStrings()
 
   def getCommandStrings(): Array[String]
