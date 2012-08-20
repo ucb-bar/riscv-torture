@@ -297,7 +297,7 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
     {
       var tmpCmd = cmdstring
       val tmpcommit = commitmap(i).toUpperCase
-      if (tmpcommit.toLowerCase == "NONE")
+      if (tmpcommit.toUpperCase == "NONE")
       {
         if (usingC && cPath != "../riscv-rocket/emulator/emulator") tmpCmd += " C_SIM="+cPath
         if (usingR && rPath != "../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv") tmpCmd += " R_SIM="+rPath

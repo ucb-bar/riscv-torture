@@ -71,8 +71,11 @@ object Overnight extends Application
             println(t)
             println(t.last)
             val permFiles:PathSet[Path] = Path(t.init:_*) * (t.last + "*")
+            val statFile: Path = Path(t.init:_*) / (baseName+".stats")
             println(permFiles.mkString)
+            println(statFile)
             permFiles.foreach( f => f.copyTo( permDir / f.name))
+            statFile.copyTo(permDir / statFile.name)
           }
         } 
         test foreach { t =>
