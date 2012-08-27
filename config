@@ -1,5 +1,6 @@
-torture.generator.nseqs 1000
+torture.generator.nseqs   1000
 torture.generator.memsize 1024
+torture.generator.fprnd   0
 
 torture.generator.mix.xmem    10
 torture.generator.mix.xbranch 25

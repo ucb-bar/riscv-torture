@@ -31,12 +31,13 @@ object Generator extends Application
     in.close()
     val nseqs   = config.getProperty("torture.generator.nseqs", "1000").toInt
     val memsize = config.getProperty("torture.generator.memsize", "1024").toInt
+    val fprnd   = config.getProperty("torture.generator.fprnd", "0").toInt
     val mix     = config.filterKeys(_ contains "torture.generator.mix").map { case (k,v) => (k.split('.')(3), v.toInt) }.asInstanceOf[Map[String,Int]]
     val vec     = config.filterKeys(_ contains "torture.generator.vec").map { case (k,v) => (k.split('.').drop(3).reduce(_+"."+_), v.toInt) }.asInstanceOf[Map[String,Int]]
-    generate(nseqs, memsize, mix, vec, outFileName)
+    generate(nseqs, memsize, fprnd, mix, vec, outFileName)
   }
 
-  def generate(nseqs: Int, memsize: Int, mix: Map[String,Int], veccfg: Map[String,Int], outFileName: String): String = {
+  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,Int], outFileName: String): String = {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
     assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fpmem","fax","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
@@ -50,13 +51,13 @@ object Generator extends Application
     val prog = new Prog(memsize)
     ProgSeg.cnt = 0
     SeqVec.cnt = 0
-    val s = prog.generate(nseqs, mix, veccfg)
+    val s = prog.generate(nseqs, fprnd, mix, veccfg)
 
     val oname = "output/" + outFileName + ".S"
     val fw = new FileWriter(oname)
     fw.write(s)
     fw.close()
-    val stats = prog.statistics(nseqs,mix,vnseq,vmemsize,vfnum,vecmix)
+    val stats = prog.statistics(nseqs,fprnd,mix,vnseq,vmemsize,vfnum,vecmix)
     val sname = "output/" + outFileName + ".stats"
     val fw2 = new FileWriter(sname)
     fw2.write(stats)

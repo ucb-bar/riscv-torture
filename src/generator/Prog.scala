@@ -471,12 +471,18 @@ class Prog(memsize: Int)
     "\tTEST_RISCV\n"
   }
 
-  def code_header(using_fpu: Boolean, using_vec: Boolean) =
+  def code_header(using_fpu: Boolean, using_vec: Boolean, fprnd: Int) =
   {
     "\n" +
     "\tTEST_CODEBEGIN\n" +
 //    (if(using_fpu) "\tTEST_FP_ENABLE\n" else "") + //line breaks VM
     (if(using_vec) init_vector() else "") + 
+    (if (using_fpu)
+    {
+      "\tmffsr t0\n" + 
+      "\tori t0, t0, " + (fprnd << 5) + " \n" +
+      "\tmtfsr t0\n"
+    } else "") +
     "\n" +
     "\tj test_start\n" +
     "\n" +
@@ -569,7 +575,7 @@ class Prog(memsize: Int)
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -577,7 +583,7 @@ class Prog(memsize: Int)
     // TODO: make a config object that is passed around?
 
     header(nseqs) +
-    code_header(using_fpu, using_vec) +
+    code_header(using_fpu, using_vec, fprnd) +
     code_body(nseqs, mix, veccfg) +
     code_footer(using_fpu) +
     data_header() +
@@ -586,7 +592,7 @@ class Prog(memsize: Int)
     data_footer()
   }
 
-  def statistics(nseqs: Int, mix: Map[String, Int], vnseq: Int, vmemsize: Int, vfnum: Int, vecmix: Map[String, Int]) =
+  def statistics(nseqs: Int, fprnd: Int, mix: Map[String, Int], vnseq: Int, vmemsize: Int, vfnum: Int, vecmix: Map[String, Int]) =
   {
     "--------------------------------------------------------------------------\n" + 
     "-- Statistics for assembly code created by RISCV torture test generator --\n" +
@@ -598,6 +604,7 @@ class Prog(memsize: Int)
     "---------- vnseq = " + vnseq + " ----------\n" +
     "---------- vfnum = " + vfnum + " ----------\n" +
     "---------- vmemsize = " + vmemsize + " ----------\n" +
+    "---------- fprnd = " + fprnd + " ----------\n" +
     "--------------------------------------------------------------------------\n\n" +
     "--------------------------------------------------------------------------\n" +
     sequence_stats(mix, vecmix, nseqs, vnseq, vfnum) +
