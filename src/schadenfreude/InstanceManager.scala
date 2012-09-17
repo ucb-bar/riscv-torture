@@ -90,7 +90,8 @@ abstract class InstanceManager
       if (imin > max) max = imin
     }
     max += 15
-    max = max + (60 - (max % 60)) //Add extra time then round up to nearest hour
+    max += (60 - (max % 60)) //Add extra time then round up to nearest hour
+    max
   } 
 }
 
@@ -116,6 +117,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
   override val instRunners: Array[InstanceRunner] = new Array(instcnt)
   override val processRA: Array[Process] = new Array(instcnt)
   override val cmdstrRA: Array[String] = getCommandStrings()
+  sys.addShutdownHook(stopEC2Instances())
 
   override def mapOptions(optList: List[String],default: String): List[String] =
   {
@@ -255,6 +257,7 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
     for (n <- 0 until instcnt)
     {
       val termcmd = "ec2-terminate-instances -U " + url + " " + instanceid(n)
+      println(termcmd)
       val out = termcmd.!!
       println(out)
     }
