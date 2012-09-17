@@ -240,7 +240,7 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   private def qsub(instDir: String): String = 
   {
     val logfile = "schad" + instancenum + "_" + locallogtime
-    val wt = mgr.runtime * 2 // Extra time so it doesn't cut the test off before it finishes.
+    val wt = mgr.runtime
     val walltime = (wt/60) + ":" + (wt % 60) + ":00"
     val cput = walltime // Fine to have them the same?
     

@@ -45,6 +45,7 @@ abstract class InstanceManager
   def waitOnInstances(): Unit =
   {
     var canexit = false
+    val endtime = runtime*60*1000*1000*1000 + System.nanoTime()
     while (!canexit)
     {
       Thread.sleep(30000)
@@ -54,6 +55,7 @@ abstract class InstanceManager
         done  &= instRunners(i).isDone
       }
       canexit = done
+      if (System.nanoTime() > endtime) canexit = done
     }
   }
  
@@ -87,7 +89,8 @@ abstract class InstanceManager
       val imin = config.getProperty("torture.overnight.minutes","1").toInt
       if (imin > max) max = imin
     }
-    max
+    max += 15
+    max = max + (60 - (max % 60)) //Add extra time then round up to nearest hour
   } 
 }
 
