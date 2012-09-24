@@ -6,6 +6,7 @@ import scalax.file.Path
 import scalax.file.FileSystem
 import java.io.File
 import java.io.FileWriter
+import torture.fileop._
 
 object InstanceRunner
 {
@@ -27,7 +28,6 @@ abstract class InstanceRunner
   var fileLogger = ProcessLogger(line => (), line => ())
   var locallogtime: Long = 0L
   val mgr: InstanceManager
-  val fileop = overnight.FileOperations
 
   def copyTortureDir(tortureDir: String, instDir: String, config: String): Unit
   def run(cmdstr: String, workDir: String): Process
@@ -63,12 +63,12 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
     val configRA: Array[String] = config.split(" ")
-    fileop.scp(torturePath, instPath, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+    FileOperations.scp(torturePath, instPath, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
     for (i <- 0 until ec2mgr.localinstcnt)
     {
       val configPath: Path = configRA(i)
-      if (i == 0) fileop.scp(torturePath / configPath, instPath / Path("config"), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
-      else fileop.scp(torturePath / configPath, instPath / Path("config"+i), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+      if (i == 0) FileOperations.scp(torturePath / configPath, instPath / Path("config"), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+      else FileOperations.scp(torturePath / configPath, instPath / Path("config"+i), ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
     }
   }
   
@@ -86,7 +86,7 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
   def isDone(): Boolean =
   {
     val remotefile: Path = mgr.tmpDir + "/riscv-torture/EC2DONE"
-    return fileop.remotePathExists(remotefile, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+    return FileOperations.remotePathExists(remotefile, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
   }
 
   def collectFiles(permdir: String): Unit =
@@ -100,8 +100,8 @@ class EC2Runner(val instancenum: Int, val mgr: InstanceManager) extends Instance
       val localtgz: Path = pdir + "/failedtests"+instancenum+"_"+i+"_"+locallogtime+".tgz"
       val remotelog: Path = ec2mgr.tmpDir + "/riscv-torture/output/schad"+i+".log"
       val locallog: Path = "output/schad"+instancenum+"_"+i+"_"+locallogtime+".log"
-      fileop.scpFileBack(testtgz, localtgz, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
-      fileop.scpFileBack(remotelog, locallog, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+      FileOperations.scpFileBack(testtgz, localtgz, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
+      FileOperations.scpFileBack(remotelog, locallog, ec2mgr.sshhost(instancenum), ec2mgr.sshopts)
     }
   }
 }
@@ -118,10 +118,10 @@ class LocalRunner(val instancenum: Int, val mgr: InstanceManager) extends Instan
     {
       println(instPath.normalize.path + " already exists. Not copying torture.")
     } else {
-      fileop.copy(torturePath, instPath)
+      FileOperations.copy(torturePath, instPath)
       println("Copied torture to " + instPath.normalize.path)
     }
-    fileop.copy(cfgPath, instPath / Path("config"))
+    FileOperations.copy(cfgPath, instPath / Path("config"))
     println("Using config file: " + cfgPath.path)
     println(" Cleaning up " + (instPath / Path("output")).normalize.path + " before running.")
     Process("make clean-all", new File(instDir + "/output")).!
@@ -178,16 +178,16 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     val torturePath: Path = tortureDir
     val instPath: Path = instDir
     //Complete the psi.qsub script
-    fileop.copy(torturePath / Path("partialpsi.qsub"),torturePath / Path("psi.qsub"))
+    FileOperations.copy(torturePath / Path("partialpsi.qsub"),torturePath / Path("psi.qsub"))
     val writer = new FileWriter("psi.qsub", true)
     try {
       writer.write(mgr.cmdstrRA(instancenum))
     } finally {
       writer.close()
     }
-    fileop.scp(torturePath, instPath, "psi","")
-    fileop.scp(torturePath / Path("psi.qsub"), instPath / Path("psi.qsub"), "psi","")
-    fileop.scp(torturePath / Path(config), instPath / Path("config"), "psi","")
+    FileOperations.scp(torturePath, instPath, "psi","")
+    FileOperations.scp(torturePath / Path("psi.qsub"), instPath / Path("psi.qsub"), "psi","")
+    FileOperations.scp(torturePath / Path(config), instPath / Path("config"), "psi","")
   }
   
   def run(cmdstr: String, workDir: String): Process =
@@ -223,9 +223,9 @@ class PSIRunner(val instancenum: Int, val mgr: InstanceManager) extends Instance
     val localout: Path = "output/schad"+instancenum+"_"+locallogtime+".out"
     val localerr: Path = "output/schad"+instancenum+"_"+locallogtime+".err"
     val localtgz: Path = pdir + "/failedtests_"+instancenum+"_"+locallogtime+".tgz"
-    fileop.scpFileBack(remoteout, localout, "psi", "")
-    fileop.scpFileBack(remoteerr, localerr, "psi", "")
-    fileop.scpFileBack(remotetgz, localtgz, "psi", "")
+    FileOperations.scpFileBack(remoteout, localout, "psi", "")
+    FileOperations.scpFileBack(remoteerr, localerr, "psi", "")
+    FileOperations.scpFileBack(remotetgz, localtgz, "psi", "")
   }
   
   override def createLogger(logtime: Long): Unit = //Maybe move processlogger creation to instantiation

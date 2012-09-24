@@ -6,7 +6,7 @@ import scalax.file.Path
 import java.io.File
 import java.util.Properties
 import java.io.FileInputStream
-import overnight.FileOperations._
+import torture.fileop._
 
 object InstanceManager
 {  
@@ -267,7 +267,6 @@ class EC2InstanceManager(val cfgs: List[String], val gitcmts: List[String], val 
 class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], val permDir: String, val tmpDir: String, val cPath: String, val rPath: String, val email: String, val thresh: Int, val minutes: Int, val instcnt: Int, val insttype: String, val ec2inst: Boolean) extends InstanceManager
 {
   var logtime: Long = 0L
-  val fileop = overnight.FileOperations
   if (ec2inst) 
   {
     val donefile = new File("EC2DONE")
@@ -358,14 +357,14 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
         val remotePath: Path = remoteDir
         val remoteCPath: Path = remoteDir+"/emulator"
         val remoteRPath: Path = remoteDir+"/vlsi-generic/build/vcs-sim-rtl.psi"
-        if (!remotePathExists(remotePath, "psi", ""))
+        if (!FileOperations.remotePathExists(remotePath, "psi", ""))
         {
-          gitcheckoutRemote(remoteOldPath, remotePath, cmmt, "psi", "")
-          cleanRemote(remoteCPath, "psi", "")
-          cleanRemote(remoteRPath, "psi", "")
+          FileOperations.gitcheckoutRemote(remoteOldPath, remotePath, cmmt, "psi", "")
+          FileOperations.cleanRemote(remoteCPath, "psi", "")
+          FileOperations.cleanRemote(remoteRPath, "psi", "")
         }
-        if (usingR) compileRemote(remoteRPath, remoteRPath/Path("simv"), "psi", "")
-        if (usingC) compileRemote(remoteCPath, remoteCPath/Path("emulator"), "psi", "")
+        if (usingR) FileOperations.compileRemote(remoteRPath, remoteRPath/Path("simv"), "psi", "")
+        if (usingC) FileOperations.compileRemote(remoteCPath, remoteCPath/Path("emulator"), "psi", "")
       }
     }
   }
@@ -385,14 +384,14 @@ class BasicInstanceManager(val cfgs: List[String], val gitcmts: List[String], va
       val vcsPath: Path = (tmpRocketPath/Path("vlsi-generic")/Path("build")/Path("vcs-sim-rtl"))
       if (!tmpRocketPath.exists)
       {
-        gitcheckout(rocketPath, tmpRocketPath, cmmt)
+        FileOperations.gitcheckout(rocketPath, tmpRocketPath, cmmt)
         println("Doing make clean in " + (emPath.toAbsolute.normalize.path))
-        clean(emPath)
+        FileOperations.clean(emPath)
         println("Doing make clean in " + (vcsPath.toAbsolute.normalize.path))
-        clean(vcsPath)
+        FileOperations.clean(vcsPath)
       }
-      if (usingC) compile(emPath, emPath/Path("emulator"))  
-      if (usingR) compile(vcsPath, vcsPath/Path("simv"))
+      if (usingC) FileOperations.compile(emPath, emPath/Path("emulator"))  
+      if (usingR) FileOperations.compile(vcsPath, vcsPath/Path("simv"))
     }
   }
 

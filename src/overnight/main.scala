@@ -15,6 +15,7 @@ import scopt.OptionParser
 import java.io.File
 import java.util.Properties
 import java.io.FileInputStream
+import torture.fileop._
 
 case class Options(var timeToRun: Option[Int] = None,
   var emailAddress: Option[String] = None,

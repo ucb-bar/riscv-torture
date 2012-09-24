@@ -1,13 +1,15 @@
 package torture
-package overnight
+package fileop
 
 import scala.sys.process._
 import scalax.file.Path
 import scalax.file.FileSystem
 import java.io.File
 
-object FileOperations
+object FileOperations extends Application
 {
+  override def main(args: Array[String]) = { System.exit(0) }
+
   def compile(dir: Path, compiledFile: Path) =
   {
     val workDir = new File(dir.toAbsolute.normalize.path)
