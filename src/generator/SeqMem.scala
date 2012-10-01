@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqMem(xregs: HWRegPool, mem: Mem) extends InstSeq
+class SeqMem(xregs: HWRegPool, mem: Mem, use_amo: Boolean) extends InstSeq
 {
   override val seqname = "xmem"
   def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
@@ -54,23 +54,25 @@ class SeqMem(xregs: HWRegPool, mem: Mem) extends InstSeq
   candidates += seq_store_addrfn(SW, rand_addr_w)
   candidates += seq_store_addrfn(SD, rand_addr_d)
 
-  candidates += seq_amo_addrfn(AMOADD_W, rand_addr_w)
-  candidates += seq_amo_addrfn(AMOSWAP_W, rand_addr_w)
-  candidates += seq_amo_addrfn(AMOAND_W, rand_addr_w)
-  candidates += seq_amo_addrfn(AMOOR_W, rand_addr_w)
-  candidates += seq_amo_addrfn(AMOMIN_W, rand_addr_w)
-  candidates += seq_amo_addrfn(AMOMINU_W, rand_addr_w)
-  candidates += seq_amo_addrfn(AMOMAX_W, rand_addr_w)
-  candidates += seq_amo_addrfn(AMOMAXU_W, rand_addr_w)
-
-  candidates += seq_amo_addrfn(AMOADD_D, rand_addr_d)
-  candidates += seq_amo_addrfn(AMOSWAP_D, rand_addr_d)
-  candidates += seq_amo_addrfn(AMOAND_D, rand_addr_d)
-  candidates += seq_amo_addrfn(AMOOR_D, rand_addr_d)
-  candidates += seq_amo_addrfn(AMOMIN_D, rand_addr_d)
-  candidates += seq_amo_addrfn(AMOMINU_D, rand_addr_d)
-  candidates += seq_amo_addrfn(AMOMAX_D, rand_addr_d)
-  candidates += seq_amo_addrfn(AMOMAXU_D, rand_addr_d)
+  if (use_amo) 
+  {
+    candidates += seq_amo_addrfn(AMOADD_W, rand_addr_w)
+    candidates += seq_amo_addrfn(AMOSWAP_W, rand_addr_w)
+    candidates += seq_amo_addrfn(AMOAND_W, rand_addr_w)
+    candidates += seq_amo_addrfn(AMOOR_W, rand_addr_w)
+    candidates += seq_amo_addrfn(AMOMIN_W, rand_addr_w)
+    candidates += seq_amo_addrfn(AMOMINU_W, rand_addr_w)
+    candidates += seq_amo_addrfn(AMOMAX_W, rand_addr_w)
+    candidates += seq_amo_addrfn(AMOMAXU_W, rand_addr_w)
+    candidates += seq_amo_addrfn(AMOADD_D, rand_addr_d)
+    candidates += seq_amo_addrfn(AMOSWAP_D, rand_addr_d)
+    candidates += seq_amo_addrfn(AMOAND_D, rand_addr_d)
+    candidates += seq_amo_addrfn(AMOOR_D, rand_addr_d)
+    candidates += seq_amo_addrfn(AMOMIN_D, rand_addr_d)
+    candidates += seq_amo_addrfn(AMOMINU_D, rand_addr_d)
+    candidates += seq_amo_addrfn(AMOMAX_D, rand_addr_d)
+    candidates += seq_amo_addrfn(AMOMAXU_D, rand_addr_d)
+  }
 
   rand_pick(candidates)()
 }

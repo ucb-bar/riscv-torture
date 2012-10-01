@@ -17,6 +17,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   val memsize = cfg.getOrElse("memsize", 32)
   val vfnum   = cfg.getOrElse("vf", 10)
   val seqnum  = cfg.getOrElse("seq", 100)
+  val use_amo = cfg.getOrElse("amo", "true")
   val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
   val vseqstats = new HashMap[String,Int].withDefaultValue(0)
 
@@ -105,7 +106,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(shadow_vxregs, shadow_vfregs_s, shadow_vfregs_d, vec_mem, seqnum, mixcfg)
+    val vf_instseq = new SeqSeq(shadow_vxregs, shadow_vfregs_s, shadow_vfregs_d, vec_mem, seqnum, mixcfg, true, true, false) //TODO: Enable configuration of enabling amo,mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt

@@ -32,12 +32,15 @@ object Generator extends Application
     val nseqs   = config.getProperty("torture.generator.nseqs", "1000").toInt
     val memsize = config.getProperty("torture.generator.memsize", "1024").toInt
     val fprnd   = config.getProperty("torture.generator.fprnd", "0").toInt
+    val use_amo = (config.getProperty("torture.generator.amo", "true").toLowerCase == "true")
+    val use_mul = (config.getProperty("torture.generator.mul", "true").toLowerCase == "true")
+    val use_div = (config.getProperty("torture.generator.divider", "true").toLowerCase == "true")
     val mix     = config.filterKeys(_ contains "torture.generator.mix").map { case (k,v) => (k.split('.')(3), v.toInt) }.asInstanceOf[Map[String,Int]]
     val vec     = config.filterKeys(_ contains "torture.generator.vec").map { case (k,v) => (k.split('.').drop(3).reduce(_+"."+_), v.toInt) }.asInstanceOf[Map[String,Int]]
-    generate(nseqs, memsize, fprnd, mix, vec, outFileName)
+    generate(nseqs, memsize, fprnd, mix, vec, use_amo, use_mul, use_div, outFileName)
   }
 
-  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,Int], outFileName: String): String = {
+  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String): String = {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
     assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fpmem","fax","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
@@ -51,7 +54,7 @@ object Generator extends Application
     val prog = new Prog(memsize)
     ProgSeg.cnt = 0
     SeqVec.cnt = 0
-    val s = prog.generate(nseqs, fprnd, mix, veccfg)
+    val s = prog.generate(nseqs, fprnd, mix, veccfg, use_amo, use_mul, use_div)
 
     val oname = "output/" + outFileName + ".S"
     val fw = new FileWriter(oname)

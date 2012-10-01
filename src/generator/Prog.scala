@@ -407,12 +407,12 @@ class Prog(memsize: Int)
 
   def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","vec")
 
-  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
+  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
   {
     val name_to_seq = Map(
-      "xmem" -> (() => new SeqMem(xregs, core_memory)),
+      "xmem" -> (() => new SeqMem(xregs, core_memory, use_amo)),
       "xbranch" -> (() => new SeqBranch(xregs)),
-      "xalu" -> (() => new SeqALU(xregs, true)), //true means use_divider, TODO: make better
+      "xalu" -> (() => new SeqALU(xregs, use_mul, use_div)), //true means use_divider, TODO: make better
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
       "fpmem" -> (() => new SeqFPMem(xregs, fregs_s, fregs_d, core_memory)),
       "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
@@ -575,7 +575,7 @@ class Prog(memsize: Int)
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, Int]) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -584,7 +584,7 @@ class Prog(memsize: Int)
 
     header(nseqs) +
     code_header(using_fpu, using_vec, fprnd) +
-    code_body(nseqs, mix, veccfg) +
+    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div) +
     code_footer(using_fpu) +
     data_header() +
     data_input(using_fpu) +

@@ -4,7 +4,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import Rand._
 
-class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int]) extends InstSeq
+class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) extends InstSeq
 {
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
@@ -18,9 +18,9 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
   def are_pools_fully_unallocated = List(xregs, fregs_s, fregs_d).forall(_.is_fully_unallocated)
 
   val name_to_seq = Map(
-    "xmem" -> (() => new SeqMem(xregs, mem)),
+    "xmem" -> (() => new SeqMem(xregs, mem, use_amo)),
     "vmem" -> (() => new SeqVMem(xregs, mem.asInstanceOf[VMem])), // TODO: Clean up
-    "xalu" -> (() => new SeqALU(xregs, false)), //false means no divider, TODO: make better 
+    "xalu" -> (() => new SeqALU(xregs, use_mul, use_div)),
     "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
     "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
     "vonly" -> (() => new SeqVOnly(xregs, fregs_s, fregs_d)))
