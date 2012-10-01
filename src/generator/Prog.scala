@@ -592,7 +592,8 @@ class Prog(memsize: Int)
     data_footer()
   }
 
-  def statistics(nseqs: Int, fprnd: Int, mix: Map[String, Int], vnseq: Int, vmemsize: Int, vfnum: Int, vecmix: Map[String, Int]) =
+  def statistics(nseqs: Int, fprnd: Int, mix: Map[String, Int], vnseq: Int, vmemsize: Int, vfnum: Int, vecmix: Map[String, Int],
+                 use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
   {
     "--------------------------------------------------------------------------\n" + 
     "-- Statistics for assembly code created by RISCV torture test generator --\n" +
@@ -605,6 +606,9 @@ class Prog(memsize: Int)
     "---------- vfnum = " + vfnum + " ----------\n" +
     "---------- vmemsize = " + vmemsize + " ----------\n" +
     "---------- fprnd = " + fprnd + " ----------\n" +
+    "---------- use_amo = " + use_amo + " ----------\n" +
+    "---------- use_mul = " + use_mul + " ----------\n" +
+    "---------- use_div = " + use_div + " ----------\n" + 
     "--------------------------------------------------------------------------\n\n" +
     "--------------------------------------------------------------------------\n" +
     sequence_stats(mix, vecmix, nseqs, vnseq, vfnum) +

@@ -60,7 +60,7 @@ object Generator extends Application
     val fw = new FileWriter(oname)
     fw.write(s)
     fw.close()
-    val stats = prog.statistics(nseqs,fprnd,mix,vnseq,vmemsize,vfnum,vecmix)
+    val stats = prog.statistics(nseqs,fprnd,mix,vnseq,vmemsize,vfnum,vecmix,use_amo,use_mul,use_div)
     val sname = "output/" + outFileName + ".stats"
     val fw2 = new FileWriter(sname)
     fw2.write(stats)
