@@ -43,4 +43,4 @@ torture.schadenfreude.ec2.group    ec2securitygrp
 torture.schadenfreude.ec2.privkey  /home/eecs/user/.ssh/keypairprivkey
 torture.schadenfreude.ec2.keypair  ec2keypair
 torture.schadenfreude.ec2.url      ec2.us-west-1.amazonaws.com
-torture.schadenfreude.ec2.ami      ami-db26029e
+torture.schadenfreude.ec2.ami      ami-47c6e102
