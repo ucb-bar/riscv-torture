@@ -20,7 +20,7 @@ extra_files =
 #--------------------------------------------------------------------
 
 RISCV_GCC = riscv-gcc
-RISCV_GCC_OPTS = -std=gnu99 -O2 -D__USER_PHYSICAL_VECTOR -T../riscv-testvms/rv64up/test.ld -I../riscv-testvms/rv64up -lc
+RISCV_GCC_OPTS = -std=gnu99 -O2 -D__USER_PHYSICAL_VECTOR -T../riscv-testvms/rv64up/test.ld -I../riscv-testvms/rv64up -lc -nostartfiles -nostdlib
 RISCV_OBJDUMP = riscv-objdump --disassemble-all --disassemble-zeroes --section=.text --section=.data
 RISCV_SIM = fesvr -testrun
 
