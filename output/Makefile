@@ -20,41 +20,40 @@ extra_files =
 #--------------------------------------------------------------------
 
 RISCV_GCC = riscv-gcc
-RISCV_GCC_OPTS = -std=gnu99 -O2 -D__USER_PHYSICAL_VECTOR -T../riscv-testvms/rv64up/test.ld -I../riscv-testvms/rv64up -lc -nostartfiles -nostdlib
-RISCV_OBJDUMP = riscv-objdump --disassemble-all --disassemble-zeroes --section=.text --section=.data
-RISCV_SIM = fesvr -testrun
+RISCV_GCC_OPTS = -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha
+RISCV_OBJDUMP = riscv-objdump --disassemble-all --section=.text --section=.data --section=.bss
+RISCV_SIM = spike --extension=hwacha
 
 #------------------------------------------------------------
 # Build assembly tests
 
 asm_tests_bin  = $(patsubst %.S, %, $(asm_tests))
 asm_tests_dump = $(addsuffix .dump, $(asm_tests_bin))
-asm_tests_out  = $(addsuffix .out,  $(asm_tests_bin))
+asm_tests_sig  = $(addsuffix .sig,  $(asm_tests_bin))
 asm_tests_hex  = $(addsuffix .hex,  $(asm_tests_bin))
 
 $(asm_tests_dump): %.dump: %
 	$(RISCV_OBJDUMP) $< > $@
 
 $(asm_tests_bin): %: %.S $(extra_files)
-	$(RISCV_GCC) $< $(RISCV_GCC_OPTS) -o $@
+	$(RISCV_GCC) $(RISCV_GCC_OPTS) -I../env/p -T../env/p/link.ld $< -o $@
 
 $(asm_tests_hex): %.hex: % $(extra_files)
 	elf2hex 16 16384 $< > $@
 
-$(asm_tests_out): %.out: %
-	$(RISCV_SIM) $< > $@
+$(asm_tests_sig): %.sig: %
+	$(RISCV_SIM) +signature=$@ $<
 
-riscv-: $(asm_tests_dump) $(asm_tests_hex)
-run: $(asm_tests_out)
+run: $(asm_tests_sig)
 	echo; perl -ne 'print "  [$$1] $$ARGV \t$$2\n" if /\*{3}(.{8})\*{3}(.*)/' \
-	       $(asm_tests_out); echo;
+	       $(asm_tests_sig); echo;
 
-junk += $(asm_tests_bin) $(asm_tests_dump) $(asm_tests_out) $(asm_tests_hex)
+junk += $(asm_tests_bin) $(asm_tests_dump) $(asm_tests_sig) $(asm_tests_hex)
 
 #------------------------------------------------------------
 # Default
 
-all: riscv-
+all: $(asm_tests_dump) $(asm_tests_hex)
 
 #------------------------------------------------------------
 # Clean up

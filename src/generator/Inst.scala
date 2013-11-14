@@ -27,17 +27,17 @@ class Inst(opcode: String, val operands: Array[Operand])
 
   def is_branch = List("beq", "bne", "blt", "bge", "bltu", "bgeu").contains(opcode)
 
-  def is_jalr = List("jalr", "jalr.c", "jalr.j", "jalr.r").contains(opcode)
+  def is_jalr = List("jalr").contains(opcode)
 
-  def is_jmp = List("j", "jal").contains(opcode)
+  def is_jmp = List("jal").contains(opcode)
 
   def is_la = opcode == "la"
 
   def is_mem = List("lb", "lh", "lw", "ld", "lbu", "lhu", "lwu", "sb", "sh", "sw", "sd").contains(opcode)
 
   def is_amo = List("amoadd.w", "amoswap.w", "amoand.w", "amoor.w", "amomin.w", "amominu.w",
-    "amomax.w", "amomaxu.w", "amoadd.d", "amoswap.d", "amoand.d", "amoor.d", "amomin.d",
-    "amominu.d", "amomax.d", "amomaxu.d").contains(opcode)
+    "amomax.w", "amomaxu.w", "amoxor.w", "amoadd.d", "amoswap.d", "amoand.d", "amoor.d",
+    "amomin.d", "amominu.d", "amomax.d", "amomaxu.d", "amoxor.d").contains(opcode)
 
   def is_cmp = List("slti", "sltiu", "slt", "sltu").contains(opcode)
 
@@ -61,13 +61,13 @@ class Inst(opcode: String, val operands: Array[Operand])
     "fcvt.lu.s", "fcvt.w.s", "fcvt.wu.s", "fcvt.l.d", "fcvt.lu.d",
     "fcvt.w.d", "fcvt.wu.d").contains(opcode)
 
-  def is_fpmisc = List("fmovz", "fmovn", "mffsr", "mtfsr", "mxtf.s", "mxtf.d",
-    "mtfx.s", "mtfx.d", "mftx.s", "mftx.d").contains(opcode)
+  def is_fpmisc = List("fmovz", "fmovn", "frsr", "fssr", "fmv.s.x", "fmv.x.s",
+    "fmv.d.x", "fmv.x.d").contains(opcode)
 
   def is_fpcmp = List("feq.s", "flt.s", "fle.s", "feq.d", "flt.d", "fle.d").contains(opcode)
 
   def is_misc = List("syscall", "break", "rdcycle", "rdtime", "rdinstret",
-    "nop", "li", "mfpcr", "mtpcr", "rdnpc", "movz", "movn", "fence.i", "fence").contains(opcode)
+    "nop", "li", "mfpcr", "mtpcr", "auipc", "movz", "movn", "fence.i", "fence").contains(opcode)
 
   def is_vmem = List("vld", "vsd", "vlw", "vsw", "vflw", "vfsw", "vfld", "vfsd").contains(opcode)
 
@@ -84,16 +84,13 @@ class Opcode(name: String)
 
 object J extends Opcode("j")
 object JAL extends Opcode("jal")
+object JALR extends Opcode("jalr")
 object BEQ extends Opcode("beq")
 object BNE extends Opcode("bne")
 object BLT extends Opcode("blt")
 object BGE extends Opcode("bge")
 object BLTU extends Opcode("bltu")
 object BGEU extends Opcode("bgeu")
-object JALR extends Opcode("jalr")
-object JALR_C extends Opcode("jalr.c")
-object JALR_R extends Opcode("jalr.r")
-object JALR_J extends Opcode("jalr.j")
 
 object LA extends Opcode("la")
 object LB extends Opcode("lb")
@@ -116,6 +113,7 @@ object AMOMIN_W extends Opcode("amomin.w")
 object AMOMINU_W extends Opcode("amominu.w")
 object AMOMAX_W extends Opcode("amomax.w")
 object AMOMAXU_W extends Opcode("amomaxu.w")
+object AMOXOR_W extends Opcode("amoxor.w")
 object AMOADD_D extends Opcode("amoadd.d")
 object AMOSWAP_D extends Opcode("amoswap.d")
 object AMOAND_D extends Opcode("amoand.d")
@@ -124,6 +122,7 @@ object AMOMIN_D extends Opcode("amomin.d")
 object AMOMINU_D extends Opcode("amominu.d")
 object AMOMAX_D extends Opcode("amomax.d")
 object AMOMAXU_D extends Opcode("amomaxu.d")
+object AMOXOR_D extends Opcode("amoxor.d")
 
 object ADDI extends Opcode("addi")
 object SLLI extends Opcode("slli")
@@ -223,13 +222,13 @@ object FCVT_LU_D extends Opcode("fcvt.lu.d")
 object FCVT_W_D extends Opcode("fcvt.w.d")
 object FCVT_WU_D extends Opcode("fcvt.wu.d")
 
-object MXTF_S extends Opcode("mxtf.s")
-object MXTF_D extends Opcode("mxtf.d")
-object MFTX_S extends Opcode("mftx.s")
-object MFTX_D extends Opcode("mftx.d")
+object FMV_X_S extends Opcode("fmv.x.s")
+object FMV_S_X extends Opcode("fmv.s.x")
+object FMV_X_D extends Opcode("fmv.x.d")
+object FMV_D_X extends Opcode("fmv.d.x")
 
-object MFFSR extends Opcode("mffsr")
-object MTFSR extends Opcode("mtfsr")
+object FRSR extends Opcode("frsr")
+object FSSR extends Opcode("fssr")
 
 object FEQ_S extends Opcode("feq.s")
 object FLT_S extends Opcode("flt.s")
@@ -250,7 +249,7 @@ object NOP extends Opcode("nop")
 object LI extends Opcode("li")
 object MFPCR extends Opcode("mfpcr")
 object MTPCR extends Opcode("mtpcr")
-object RDNPC extends Opcode("rdnpc")
+object AUIPC extends Opcode("auipc")
 
 object VVCFGIVL extends Opcode("vvcfgivl")
 object STOP extends Opcode("stop")

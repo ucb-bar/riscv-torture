@@ -466,33 +466,27 @@ class Prog(memsize: Int)
     "// nseqs = " + nseqs + "\n" +
     "// memsize = " + memsize + "\n" +
     "\n" +
-    "#include \"test_riscv.h\"\n" +
-    "\n" +
-    "\tTEST_RISCV\n"
+    "#include \"riscv_test.h\"\n"
   }
 
   def code_header(using_fpu: Boolean, using_vec: Boolean, fprnd: Int) =
   {
     "\n" +
-    "\tTEST_CODEBEGIN\n" +
-//    (if(using_fpu) "\tTEST_FP_ENABLE\n" else "") + //line breaks VM
-    (if(using_vec) init_vector() else "") + 
-    (if (using_fpu)
-    {
-      "\tmffsr t0\n" + 
-      "\tori t0, t0, " + (fprnd << 5) + " \n" +
-      "\tmtfsr t0\n"
-    } else "") +
+    (if (using_vec) "RVTEST_RV64UV\n"
+     else if (using_fpu) "RVTEST_RV64UF\n"
+     else "RVTEST_RV64U\n") +
+    "RVTEST_CODE_BEGIN\n" +
+    (if (using_vec) init_vector() else "") + 
     "\n" +
     "\tj test_start\n" +
     "\n" +
     "crash_backward:\n" +
-    "\tTEST_FAIL\n" +
+    "\tRVTEST_FAIL\n" +
     "\n" +
     "test_start:\n" +
     "\n" +
     // fregs must be initialized before xregs!
-    (if(using_fpu) fregs.init_regs() else "")  +
+    (if (using_fpu) fregs.init_regs() else "") +
     xregs.init_regs() +
     "\tj pseg_0\n" +
     "\n"
@@ -501,7 +495,6 @@ class Prog(memsize: Int)
   def init_vector() = 
   {
     "\n" +
-//    "\tTEST_VEC_ENABLE\n" + //line breaks VM
     "\tli x1, " + used_vl + "\n" +
     "\tvvcfgivl x1, x1, " + num_vxregs + ", " + num_vfregs + "\n" 
   }
@@ -515,12 +508,12 @@ class Prog(memsize: Int)
     "\tj test_end\n" +
     "\n" +
     "crash_forward:\n" +
-    "\tTEST_FAIL\n" +
+    "\tRVTEST_FAIL\n" +
     "\n" +
     "test_end:\n" +
-    "\tTEST_PASS\n" +
+    "\tRVTEST_PASS\n" +
     "\n" +
-    "\tTEST_CODEEND\n" +
+    "RVTEST_CODE_END\n" +
     "\n"
     for(seq <- seqs.filter(_.is_done))
     {
@@ -565,12 +558,12 @@ class Prog(memsize: Int)
 
   def data_output(using_fpu: Boolean) =
   {
-    "\tTEST_DATABEGIN\n" +
+    "RVTEST_DATA_BEGIN\n" +
     "\n" +
     xregs.output_regs_data() +
     (if(using_fpu) fregs.output_regs_data() else "") +
     output_mem_data() +
-    "\tTEST_DATAEND\n"
+    "RVTEST_DATA_END\n"
   }
 
   def data_footer() = ""

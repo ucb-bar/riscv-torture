@@ -116,24 +116,15 @@ class SeqBranch(xregs: HWRegPool) extends InstSeq
     insts += JAL(taken)
   }
 
-  def seq_taken_jalr(funct3: String) = () =>
+  def seq_taken_jalr() = () =>
   {
     val reg_x1 = reg_write_ra(xregs)
     val reg_src1 = reg_read_zero(xregs)
     val reg_dst1 = reg_write_hidden(xregs)
     val reg_dst2 = reg_write_hidden(xregs)
-    funct3 match {
-      case "c" => 
-        insts += LA(reg_dst1, Label("__needs_jalr_patch1"))
-        insts += JALR(reg_dst2, reg_dst1, Label("__needs_jalr_patch2"))//TODO: "jalr.c" is invalid opcode?
-      case "r" => 
-        insts += LA(reg_dst1,  Label("__needs_jalr_patch1"))
-        insts += JALR_R(reg_dst2, reg_dst1, Label("__needs_jalr_patch2"))
-      case "j" => 
-        insts += LA(reg_dst1,  Label("__needs_jalr_patch1"))
-        insts += JALR_J(reg_dst2, reg_dst1,  Label("__needs_jalr_patch2"))
-      case _ => insts += RDNPC(reg_dst1)
-    }
+
+    insts += LA(reg_dst1, Label("__needs_jalr_patch1"))
+    insts += JALR(reg_dst2, reg_dst1, Label("__needs_jalr_patch2"))
   }
 
   def get_two_regs_and_branch_with_label( op: Opcode, helper: () => (Operand, Operand), label: Label, flip_ops:Boolean = false) = () =>
@@ -202,7 +193,7 @@ class SeqBranch(xregs: HWRegPool) extends InstSeq
 
   candidates += seq_taken_j()
   candidates += seq_taken_jal()
-  List("c","r","j","rdnpc").map( candidates += seq_taken_jalr(_))
+  candidates += seq_taken_jalr()
 
   reversible_tests.foreach( t => candidates += get_two_regs_and_branch_with_label(t._1, t._2, t._3, false))
   chiral_tests.foreach( t => candidates += get_two_regs_and_branch_with_label(t._1, t._2, t._3, false))

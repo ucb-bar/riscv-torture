@@ -10,8 +10,8 @@ torture.generator.mix.xbranch 25
 torture.generator.mix.xalu    45
 torture.generator.mix.fgen    10
 torture.generator.mix.fpmem   5
-torture.generator.mix.fax     4
-torture.generator.mix.vec     1
+torture.generator.mix.fax     5
+torture.generator.mix.vec     0
 
 torture.generator.vec.vf 4
 torture.generator.vec.seq 20

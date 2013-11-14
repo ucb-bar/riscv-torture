@@ -34,16 +34,16 @@ class SeqFaX(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool) extends I
     candidates += seq_src2(op, fregs_d, fregs_d)
 
   // X<->F Instructions
-  for (op <- List(FCVT_S_L, FCVT_S_LU, FCVT_S_W, FCVT_S_WU, MXTF_S))
+  for (op <- List(FCVT_S_L, FCVT_S_LU, FCVT_S_W, FCVT_S_WU, FMV_S_X))
     candidates += seq_src1(op, fregs_s, xregs)
 
-  for (op <- List(FCVT_D_L, FCVT_D_LU, FCVT_D_W, FCVT_D_WU, MXTF_D))
+  for (op <- List(FCVT_D_L, FCVT_D_LU, FCVT_D_W, FCVT_D_WU, FMV_D_X))
     candidates += seq_src1(op, fregs_d, xregs)
   
-  for (op <- List(FCVT_L_S, FCVT_LU_S, FCVT_W_S, FCVT_WU_S, MFTX_S))
+  for (op <- List(FCVT_L_S, FCVT_LU_S, FCVT_W_S, FCVT_WU_S, FMV_X_S))
     candidates += seq_src1(op, xregs, fregs_s)
 
-  for (op <- List(FCVT_L_D, FCVT_LU_D, FCVT_W_D, FCVT_WU_D, MFTX_D))
+  for (op <- List(FCVT_L_D, FCVT_LU_D, FCVT_W_D, FCVT_WU_D, FMV_X_D))
     candidates += seq_src1(op, xregs, fregs_d)
 
   for (op <- List(FEQ_S, FLT_S, FLE_S))
