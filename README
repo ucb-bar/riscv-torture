@@ -17,19 +17,21 @@ duration or until a failure count.
 Some basic use cases are illustrated here.
 
 Make a single test:
-% sbt generator/run
+% ./sbt generator/run
 % cd output
 % make
-% fesvr -testrun test
+% spike +signature=test.sig test
 
 Take an existing test and diff the signatures of ISA and C simulators:
-% sbt 'testrun/run -a output/test.S -c ../riscv-rocket/emulator/emulator'
+% ./sbt 'testrun/run -a output/test.S -c /path/to/reference-chip/emulator/emulator'
 
-Generate a random test and diff the signatures of ISA and RTL simulators:
-% sbt 'testrun/run -r ../riscv-rocket/vlsi/build/vcs-sim-rtl/sim'
+*** Currently, due to the limiation of scala process library, you cannot
+torture the RTL simulator ***
+# Generate a random test and diff the signatures of ISA and RTL simulators:
+# % ./sbt 'testrun/run -r /path/to/reference-chip/vlsi/build/vcs-sim-rtl/simv'
 
 Run tests for 30 minutes, email hcook when done, and save failures to dir:
-% sbt 'overnight/run -m 30 -e hcook@eecs.berkeley.edu -p dir'
+% ./sbt 'overnight/run -m 30 -e hcook@eecs.berkeley.edu -p dir'
 
 ---------------------------------------------------------------------------
 Overnight Overview

@@ -7,6 +7,8 @@ import scala.collection.mutable.ArrayBuffer
 import java.io.FileWriter
 import java.util.Properties
 import java.io.FileInputStream
+import java.util.Scanner
+import java.io.File
 
 case class Options(var testAsmName: Option[String] = None,
   var testBinName: Option[String] = None,
@@ -74,14 +76,14 @@ object TestRunner extends Application
     }
 
     // Add the simulators that should be tested
-    val simulators = new ArrayBuffer[(String) => (String, String)]
-    simulators += (runIsaSim _)
+    val simulators = new ArrayBuffer[(String, (String) => String)]
+    simulators += (("spike",runIsaSim _ ))
     cSimPath match { 
-      case Some(p) => simulators += (runCSim(p) _ ) 
+      case Some(p) => simulators += (("csim",runCSim(p) _ ))
       case None =>
     }
     rtlSimPath match { 
-      case Some(p) => simulators += (runRtlSim(p) _ )  
+      case Some(p) => simulators += (("rtlsim",runRtlSim(p) _ ))
       case None => 
     }
 
@@ -131,12 +133,12 @@ object TestRunner extends Application
     if (virtualMode)
     {
       println("Virtual mode")
-      process = "riscv-gcc -DENABLE_STATS -O2 -nostdlib -nostartfiles -std=gnu99 -O2 -D__USER_VIRTUAL_VECTOR -T./riscv-testvms/rv64uv/test.ld ./riscv-testvms/rv64uv/entry.S ./riscv-testvms/rv64uv/vm.c " + asmFileName + " -I./riscv-testvms/rv64uv -lc -o " + binFileName
+      process = "riscv-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -std=gnu99 -O2 -I./env/v -T./env/v/link.ld ./env/v/entry.S ./env/v/vm.c " + asmFileName + " -lc -o " + binFileName
     }
     else
     {
       println("Physical mode")
-      process = "riscv-gcc -DENABLE_STATS -O2 -nostdlib -nostartfiles -D__USER_PHYSICAL_VECTOR -T./riscv-testvms/rv64up/test.ld " + asmFileName + " -I./riscv-testvms/rv64up -o " + binFileName
+      process = "riscv-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -I./env/p -T./env/p/link.ld " + asmFileName + " -o " + binFileName
     }
     val pb = Process(process)
     val exitCode = pb.!
@@ -145,7 +147,7 @@ object TestRunner extends Application
 
   def dumpFromBin(binFileName: String): Option[String] = {
     val dumpFileName = binFileName + ".dump"
-    val pd = Process("riscv-objdump --disassemble-all --disassemble-zeroes --section=.text --section=.data " + binFileName)
+    val pd = Process("riscv-objdump --disassemble-all --section=.text --section=.data --section=.bss " + binFileName)
     val dump = pd.!!
     val fw = new FileWriter(dumpFileName)
     fw.write(dump)
@@ -170,74 +172,41 @@ object TestRunner extends Application
     hexFileName
   }
 
-  def runSim(bin: String, args: Seq[String], invokebin: String): String = {
-    val readelf_dump = Process("riscv-readelf -Ws " + bin).!!
-    val contents = List.fromString(readelf_dump, '\n')
-    var found_begin = false
-    var found_end = false
-    var sig_addr = 0
-    var sig_len = 0
-    for ( line <- contents ) {
-      if (line.contains("begin_signature")) {
-        sig_addr = Integer.parseInt(line.split("""\s+""")(2), 16)
-        found_begin = true
-      } else if (line.contains("end_signature")) {
-        sig_len  = Integer.parseInt(line.split("""\s+""")(2), 16)
-        found_end = true
-      }
-    }
+  def runSim(sim: String, signature: String, args: Seq[String], invokebin: String): String = {
+    val cmd = Seq(sim, "+signature="+signature) ++ args ++ Seq(invokebin)
+    cmd!!
 
-    if( !found_begin || !found_end) {
-      println("Error: Couldn't find the .test_signature section in %s", bin)
-      throw new RuntimeException()
-    }
-    
-
-    val cmd = Seq("fesvr") ++ args ++ Seq("-testsig", sig_addr.toString, (sig_len-sig_addr).toString, invokebin) 
-    println(cmd)
-    val out = try {
-      cmd.!!
-    } catch {
-      case e:RuntimeException => "SIM CRASHED"
-    }
-    out.toString
+    new Scanner(new File(signature)).useDelimiter("\\Z").next()
   }
 
-  def runCSim(sim: String)(bin: String): (String, String) = {
-    val hexfile = generateHexFromBin(bin) 
-    ("C_Simulator", runSim(bin, Seq("-c"+sim,"-m"+maxcycles,"+loadmem="+hexfile),"none"))
+  def runCSim(sim: String)(bin: String): String = {
+    runSim(sim, bin+".csim.sig", Seq("+max-cycles="+maxcycles),bin)
   }
 
-  def runRtlSim(sim: String)(bin: String): (String, String) = {
-    val hexfile = generateHexFromBin(bin) 
-    ("RTL_Simulator", runSim(bin, Seq("-quiet","-c"+sim, "+silent=1", "+max-cycles="+maxcycles,"+loadmem="+hexfile),"none"))
+  def runRtlSim(sim: String)(bin: String): String = {
+    runSim(sim, bin+".rtlsim.sig", Seq("+max-cycles="+maxcycles),bin)
   }
 
-  def runIsaSim(bin: String): (String, String) = {
-    ("ISA_Simulator", runSim(bin, Seq("-testrun"), bin))
+  def runIsaSim(bin: String): String = {
+    runSim("spike", bin+".spike.sig", Seq(), bin)
   }
 
-  def runSimulators(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): Seq[(String, (String) => (String, String), Result)] = { 
+  def runSimulators(bin: String, simulators: Seq[(String, (String) => String)], dumpSigs: Boolean): Seq[(String, (String, (String) => String), Result)] = { 
     if(simulators.length == 0) println("Warning: No simulators specified for comparison. Comparing ISA to ISA...")
-    val isa_sig = runIsaSim(bin)._2
+    val isa_sig = runIsaSim(bin)
     simulators.map( sim => {
-      val (name, sig) = sim(bin)
-      val res = if(isa_sig != sig) Mismatched
-                else if (sig == "SIM CRASHED") Failed
-                else Matched
-      if(res == Mismatched && dumpSigs) {
-        val fwISA = new FileWriter(bin + "-ISA_Simulator.sig")
-        fwISA.write(isa_sig)
-        fwISA.close()
-        val fw = new FileWriter(bin + "-" + name + ".sig")
-        fw.write(sig)
-        fw.close()
-      }
-      (name, sim, res)
+      val res =
+        try {
+          if (isa_sig != sim._2(bin)) Mismatched
+          else Matched
+        } catch {
+          case e:RuntimeException => Failed
+        }
+      (sim._1, sim, res)
     })
   }
 
-  def seekOutFailureBinary(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): String =
+  def seekOutFailureBinary(bin: String, simulators: Seq[(String, (String) => String)], dumpSigs: Boolean): String =
   {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
@@ -288,7 +257,7 @@ object TestRunner extends Application
     }
   }
 
-  def seekOutFailure(bin: String, simulators: Seq[(String) => (String, String)], dumpSigs: Boolean): String = {
+  def seekOutFailure(bin: String, simulators: Seq[(String, (String) => String)], dumpSigs: Boolean): String = {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
     val lines = source.mkString
