@@ -1,3 +1,0 @@
-[submodule "riscv-testvms"]
-	path = riscv-testvms
-	url = git@github.com:ucb-bar/riscv-testvms.git
