@@ -2,25 +2,25 @@ package torture
 
 class Inst(opcode: String, val operands: Array[Operand])
 {
-  def optype(): String = { 
-	if (is_alu) return "alu"
-	if (is_cmp) return "cmp"
+  def optype(): String = {
+    if (is_alu) return "alu"
+    if (is_cmp) return "cmp"
     if (is_branch) return "branch"
-	if (is_jalr) return "jalr"
-	if (is_jmp) return "jmp"
-	if (is_la) return "la"
-	if (is_mem) return "mem"
-	if (is_amo) return "amo"
-	if (is_misc) return "misc"
-	if (is_fpalu) return "fpalu"
-	if (is_fpcmp) return "fpcmp"
-	if (is_fpfma) return "fpfma"
-	if (is_fpmem) return "fpmem"
-	if (is_fpcvt) return "fpcvt"
-	if (is_fpmisc) return "fpmisc"
-	if (is_vmem) return "vmem"
-	if (is_vmisc) return "vmisc"
-	return "unknown" //Shouldn't return this.
+    if (is_jalr) return "jalr"
+    if (is_jmp) return "jmp"
+    if (is_la) return "la"
+    if (is_mem) return "mem"
+    if (is_amo) return "amo"
+    if (is_misc) return "misc"
+    if (is_fpalu) return "fpalu"
+    if (is_fpcmp) return "fpcmp"
+    if (is_fpfma) return "fpfma"
+    if (is_fpmem) return "fpmem"
+    if (is_fpcvt) return "fpcvt"
+    if (is_fpmisc) return "fpmisc"
+    if (is_vmem) return "vmem"
+    if (is_vmisc) return "vmisc"
+    return "unknown" //Shouldn't return this.
   }
 
   def opcode(): String = { return opcode }
@@ -34,41 +34,41 @@ class Inst(opcode: String, val operands: Array[Operand])
   def is_la = opcode == "la"
 
   def is_mem = List("lb", "lh", "lw", "ld", "lbu", "lhu", "lwu", "sb", "sh", "sw", "sd").contains(opcode)
-  
+
   def is_amo = List("amoadd.w", "amoswap.w", "amoand.w", "amoor.w", "amomin.w", "amominu.w",
     "amomax.w", "amomaxu.w", "amoadd.d", "amoswap.d", "amoand.d", "amoor.d", "amomin.d",
-	"amominu.d", "amomax.d", "amomaxu.d").contains(opcode)
-	
+    "amominu.d", "amomax.d", "amomaxu.d").contains(opcode)
+
   def is_cmp = List("slti", "sltiu", "slt", "sltu").contains(opcode)
-	
+
   def is_alu = List("addi", "slli", "xori", "srli", "srai", "ori", "andi",
     "add", "sub", "sll", "xor", "srl", "sra", "or", "and", "mul", "mulh",
-	"mulhsu", "mulhu", "div", "divu", "rem", "remu", "lui", "addiw", "slliw", "srliw",
-	"sraiw", "addw", "subw", "sllw", "srlw", "sraw", "mulw", "divw", "divuw", "remw", 
-	"remuw").contains(opcode)
-	
+    "mulhsu", "mulhu", "div", "divu", "rem", "remu", "lui", "addiw", "slliw", "srliw",
+    "sraiw", "addw", "subw", "sllw", "srlw", "sraw", "mulw", "divw", "divuw", "remw",
+    "remuw").contains(opcode)
+
   def is_fpmem = List("flw", "fld", "fsw", "fsd").contains(opcode)
-  
+
   def is_fpalu = List("fadd.s", "fsub.s", "fmul.s", "fdiv.s", "fsqrt.s", "fmin.s", "fmax.s",
     "fadd.d", "fsub.d", "fmul.d", "fdiv.d", "fsqrt.d", "fmin.d", "fmax.d",
-	"fsgnj.s", "fsgnjn.s", "fsgnjx.s", "fsgnj.d", "fsgnjn.d", "fsgnjx.d").contains(opcode)
-	
-  def is_fpfma = List("fmadd.s", "fmsub.s", "fnmsub.s", "fnmadd.s", 
+    "fsgnj.s", "fsgnjn.s", "fsgnjx.s", "fsgnj.d", "fsgnjn.d", "fsgnjx.d").contains(opcode)
+
+  def is_fpfma = List("fmadd.s", "fmsub.s", "fnmsub.s", "fnmadd.s",
     "fmadd.d", "fmsub.d", "fnmsub.d", "fnmadd.d").contains(opcode)
-	
-  def is_fpcvt = List("fcvt.s.d", "fcvt.d.s", "fcvt.s.l", "fcvt.s.lu", "fcvt.s.w", 
+
+  def is_fpcvt = List("fcvt.s.d", "fcvt.d.s", "fcvt.s.l", "fcvt.s.lu", "fcvt.s.w",
     "fcvt.s.wu", "fcvt.d.l", "fcvt.d.lu", "fcvt.d.w", "fcvt.d.wu", "fcvt.l.s",
-	"fcvt.lu.s", "fcvt.w.s", "fcvt.wu.s", "fcvt.l.d", "fcvt.lu.d", 
-	"fcvt.w.d", "fcvt.wu.d").contains(opcode)
-  
+    "fcvt.lu.s", "fcvt.w.s", "fcvt.wu.s", "fcvt.l.d", "fcvt.lu.d",
+    "fcvt.w.d", "fcvt.wu.d").contains(opcode)
+
   def is_fpmisc = List("fmovz", "fmovn", "mffsr", "mtfsr", "mxtf.s", "mxtf.d",
     "mtfx.s", "mtfx.d", "mftx.s", "mftx.d").contains(opcode)
-  
+
   def is_fpcmp = List("feq.s", "flt.s", "fle.s", "feq.d", "flt.d", "fle.d").contains(opcode)
-  
+
   def is_misc = List("syscall", "break", "rdcycle", "rdtime", "rdinstret",
     "nop", "li", "mfpcr", "mtpcr", "rdnpc", "movz", "movn", "fence.i", "fence").contains(opcode)
-	
+
   def is_vmem = List("vld", "vsd", "vlw", "vsw", "vflw", "vfsw", "vfld", "vfsd").contains(opcode)
 
   def is_vmisc = List("vvcfgivl", "stop", "vsetvl", "utidx", "vf",
