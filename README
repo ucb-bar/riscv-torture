@@ -32,6 +32,13 @@ torture the RTL simulator ***
 
 Run tests for 30 minutes, email hcook when done, and save failures to dir:
 % ./sbt 'overnight/run -m 30 -e hcook@eecs.berkeley.edu -p dir'
+ 
+---------------------------------------------------------------------------
+Installing
+---------------------------------------------------------------------------
+
+% git submodule update --init
+
 
 ---------------------------------------------------------------------------
 Overnight Overview
