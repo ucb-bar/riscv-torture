@@ -77,7 +77,7 @@ class Inst(opcode: String, val operands: Array[Operand])
   override def toString = opcode + operands.mkString(" ", ", ", "")
 }
 
-class Opcode(name: String)
+class Opcode(val name: String)
 {
   def apply(opnds: Operand*) = new Inst(name, opnds.toArray)
 }
