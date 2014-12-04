@@ -333,78 +333,6 @@ class Prog(memsize: Int)
     }
   }
 
-  var far_branches = 0
-
-  def resolve_far_branches =
-  {
-    var resolved = false
-
-    val labels = new HashMap[String, Int]
-    var line = 0
-
-    labels += ("crash_backward" -> line)
-    line += 100 // TODO: Get this count more accurately
-
-    for (progseg <- progsegs)
-    {
-      labels += (progseg.name -> line)
-      line += progseg.insts.length
-    }
-
-    labels += ("reg_dump" -> line)
-    line += 100
-    labels += ("crash_forward" -> line)
-
-    val progsegs_insert = new ArrayBuffer[(ProgSeg, ProgSeg)]
-
-    for (progseg <- progsegs)
-    {
-      val branches = new ArrayBuffer[Inst]
-      line = labels(progseg.name)
-
-      for (inst <- progseg.insts)
-      {
-        if (inst.is_la) line += 1
-        if (inst.is_branch)
-        {
-          //println("%d: %d %s" format (line, math.abs(line - labels(inst.operands(2).asInstanceOf[Label].label)), inst))
-          if (math.abs(line - labels(inst.operands(2).asInstanceOf[Label].label)) > 800)
-            branches += inst
-        }
-        line += 1
-      }
-
-      // only split the first far branch in a progseg
-      if (branches.length > 0)
-      {
-        val label = branches(0).operands(2)
-        branches(0).operands(2) = Label("far_branch_" + far_branches)
-        val idx_split = progseg.insts.indexOf(branches(0)) + 1
-        val (insts, insts_split) = progseg.insts.splitAt(idx_split)
-        insts += J(Label("far_branch_" + (far_branches+1)))
-        progseg.insts = insts
-
-        val progseg_fb0 = new ProgSeg("far_branch_" + far_branches)
-        progseg_fb0.insts += J(label)
-        progsegs_insert += ((progseg, progseg_fb0))
-        val progseg_fb1 = new ProgSeg("far_branch_" + (far_branches+1))
-        progseg_fb1.insts = insts_split
-        progsegs_insert += ((progseg_fb0, progseg_fb1))
-
-        far_branches += 2
-        resolved = true
-      }
-    }
-
-    for ((progseg, progseg_insert) <- progsegs_insert)
-    {
-      val idx_insert = progsegs.indexOf(progseg) + 1
-      progsegs.insert(idx_insert, progseg_insert)
-    }
-
-    resolved
-  }
-
   def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","vec")
 
   def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
@@ -454,8 +382,6 @@ class Prog(memsize: Int)
     {
       println("Warning: Prog killed an excessive number of sequences. (#X=%d, #Fs=%d, #Fd=%d, #VX=%d, #VFs=%d, #VFd=%d)" format (xregs.size, fregs_s.size, fregs_d.size, vxregs.size, vfregs_s.size, vfregs_d.size))
     }
-
-    while (resolve_far_branches) {}
 
     ("" /: progsegs)(_ + _) + "\n"
   }
