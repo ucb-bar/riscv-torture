@@ -133,12 +133,12 @@ object TestRunner extends Application
     if (virtualMode)
     {
       println("Virtual mode")
-      process = "riscv-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -std=gnu99 -O2 -I./env/v -T./env/v/link.ld ./env/v/entry.S ./env/v/vm.c " + asmFileName + " -lc -o " + binFileName
+      process = "riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -std=gnu99 -O2 -I./env/v -T./env/v/link.ld ./env/v/entry.S ./env/v/vm.c " + asmFileName + " -lc -o " + binFileName
     }
     else
     {
       println("Physical mode")
-      process = "riscv-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -I./env/p -T./env/p/link.ld " + asmFileName + " -o " + binFileName
+      process = "riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -I./env/p -T./env/p/link.ld " + asmFileName + " -o " + binFileName
     }
     val pb = Process(process)
     val exitCode = pb.!
