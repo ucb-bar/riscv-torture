@@ -23,7 +23,7 @@ class SeqVOnly(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool) extends
   val candidates = new ArrayBuffer[() => insts.type]
 
   // Intra-FPU Instructions
-  candidates += seq_xdest(UTIDX)
+  candidates += seq_xdest(VEIDX)
 
   for (op <- List(MOVZ, MOVN))
     candidates += seq_src2(op, xregs)

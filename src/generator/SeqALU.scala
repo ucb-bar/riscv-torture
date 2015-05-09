@@ -77,8 +77,8 @@ class SeqALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean) extends InstS
 
   oplist += (ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND)
   oplist += (ADDW, SUBW, SLLW, SRLW, SRAW)
-  if(use_mul) oplist += (MUL, MULH, MULHSU, MULHU, MULW)
-  if(use_div) oplist += (DIV, DIVU, REM, REMU, DIVW, DIVUW, REMW, REMUW)
+  if (use_mul) oplist += (MUL, MULH, MULHSU, MULHU, MULW)
+  if (use_div) oplist += (DIV, DIVU, REM, REMU, DIVW, DIVUW, REMW, REMUW)
 
   for (op <- oplist)
   {

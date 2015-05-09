@@ -8,12 +8,13 @@ class SeqVMem(xregs: HWRegPool, mem: VMem) extends InstSeq
   override val seqname = "vmem"
   def helper_setup_address(reg_addr: Reg, reg_helper: Reg, baseaddr: Int) =
   {
-    insts += UTIDX(reg_helper)
+    insts += VEIDX(reg_helper)
     insts += ADDI(reg_addr, reg_read_zero(xregs), Imm(mem.ut_size))
     insts += MUL(reg_helper, reg_helper, reg_addr)
     insts += LA(reg_addr, BaseImm(mem.toString, baseaddr))
     insts += ADD(reg_addr, reg_addr, reg_helper)
   }
+
   def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
   {
     val reg_addr   = reg_write_hidden(xregs)

@@ -18,6 +18,9 @@ class Inst(opcode: String, val operands: Array[Operand])
     if (is_fpmem) return "fpmem"
     if (is_fpcvt) return "fpcvt"
     if (is_fpmisc) return "fpmisc"
+    if (is_vshared) return "vshared"
+    if (is_valu) return "valu"
+    if (is_vvec) return "vvec"
     if (is_vmem) return "vmem"
     if (is_vmisc) return "vmisc"
     return "unknown" //Shouldn't return this.
@@ -69,10 +72,35 @@ class Inst(opcode: String, val operands: Array[Operand])
   def is_misc = List("syscall", "break", "rdcycle", "rdtime", "rdinstret",
     "nop", "li", "mfpcr", "mtpcr", "auipc", "movz", "movn", "fence.i", "fence").contains(opcode)
 
-  def is_vmem = List("vld", "vsd", "vlw", "vsw", "vflw", "vfsw", "vfld", "vfsd").contains(opcode)
+  def is_vshared = List("vaddi", "vslli", "vxori", "vsrli", "vsrai", "vori", "vandi", "vlui",
+    "vaddiw", "vslliw", "vsrliw", "vsraiw").contains(opcode)
 
-  def is_vmisc = List("vvcfgivl", "stop", "vsetvl", "utidx", "vf",
-    "vmsv", "vmvv", "vfmvv", "fence.v.g", "fence.v.l").contains(opcode)
+  def is_valu = List("vadd", "vsub", "vsll", "vxor", "vsrl", "vsra", "vor", "vand", "vmul", "vmulh",
+    "vmulhsu", "vmulhu", "vdiv", "vdivu", "vrem", "vremu", "vaddw", "vsubw", "vsllw",
+    "vsrlw", "vsraw", "vmulw", "vdivw", "vdivuw", "vremw", "vremuw").contains(opcode)
+
+  def is_vvec = List("vpop").contains(opcode)
+
+  def is_vfpalu = List("vfadd.s", "vfsub.s", "vfmul.s", "vfdiv.s", "vfsqrt.s", "vfmin.s", "vfmax.s",
+    "vfadd.d", "vfsub.d", "vfmul.d", "vfdiv.d", "vfsqrt.d", "vfmin.d", "vfmax.d",
+    "vfsgnj.s", "vfsgnjn.s", "vfsgnjx.s", "vfsgnj.d", "vfsgnjn.d", "vfsgnjx.d").contains(opcode)
+
+  def is_vfpfma = List("vfmadd.s", "vfmsub.s", "vfnmsub.s", "vfnmadd.s",
+    "vfmadd.d", "vfmsub.d", "vfnmsub.d", "vfnmadd.d").contains(opcode)
+
+  def is_vfpcvt = List("vfcvt.s.d", "vfcvt.d.s", "vfcvt.s.l", "vfcvt.s.lu", "vfcvt.s.w",
+    "vfcvt.s.wu", "vfcvt.d.l", "vfcvt.d.lu", "vfcvt.d.w", "vfcvt.d.wu", "vfcvt.l.s",
+    "vfcvt.lu.s", "vfcvt.w.s", "vfcvt.wu.s", "vfcvt.l.d", "vfcvt.lu.d",
+    "vfcvt.w.d", "vfcvt.wu.d").contains(opcode)
+
+  def is_vsmem = List("vlsb", "vlsh", "vlsw", "vlsd", "vlsbu", "vlshu", "vlswu", "vssb", "vssh", "vssw", "vssd",
+    "vlab", "vlah", "vlaw", "vlad", "vlabu", "vlahu", "vlawu", "vsab", "vsah", "vsaw", "vsad").contains(opcode)
+
+  def is_vmem = List("vlb", "vlh", "vlw", "vld", "vlbu", "vlhu", "vlwu", "vsb", "vsh", "vsw", "vsd", 
+    "vlxb", "vlxh", "vlxw", "vlxd", "vlxbu", "vlxhu", "vlxwu", "vsxb", "vsxh", "vsxw", "vsxd").contains(opcode)
+
+  def is_vmisc = List("vsetcfg", "vstop", "vsetvl", "veidx", "vf",
+    "vmss", "vmsa", "fence").contains(opcode)
 
   override def toString = opcode + operands.mkString(" ", ", ", "")
 }
@@ -252,29 +280,155 @@ object MTPCR extends Opcode("mtpcr")
 object AUIPC extends Opcode("auipc")
 
 object VVCFGIVL extends Opcode("vvcfgivl")
-object STOP extends Opcode("stop")
+object VSTOP extends Opcode("vstop")
 object VSETVL extends Opcode("vsetvl")
-object UTIDX extends Opcode("utidx")
+object VEIDX extends Opcode("veidx")
 object VF extends Opcode("vf")
-object VMSV extends Opcode("vmsv")
-object VMVV extends Opcode("vmvv")
-object VFMVV extends Opcode("vfmvv")
+object VMSS extends Opcode("vmss")
+object VMSA extends Opcode("vmsa")
 
-object VLD extends Opcode("vld")
-object VSD extends Opcode("vsd")
+object VADDI extends Opcode("vaddi")
+object VSLLI extends Opcode("vslli")
+object VXORI extends Opcode("vxori")
+object VSRLI extends Opcode("vsrli")
+object VSRAI extends Opcode("vsrai")
+object VORI extends Opcode("vori")
+object VANDI extends Opcode("vandi")
+object VLUI extends Opcode("vlui")
+object VADDIW extends Opcode("vaddiw")
+object VSLLIW extends Opcode("vslliw")
+object VSRLIW extends Opcode("vsrliw")
+object VSRAIW extends Opcode("vsraiw")
+
+object VADD extends Opcode("vadd")
+object VSUB extends Opcode("vsub")
+object VSLL extends Opcode("vsll")
+object VXOR extends Opcode("vxor")
+object VSRL extends Opcode("vsrl")
+object VSRA extends Opcode("vsra")
+object VOR extends Opcode("vor")
+object VAND extends Opcode("vand")
+object VMUL extends Opcode("vmul")
+object VMULH extends Opcode("vmulh")
+object VMULHSU extends Opcode("vmulhsu")
+object VMULHU extends Opcode("vmulhu")
+object VDIV extends Opcode("vdiv")
+object VDIVU extends Opcode("vdivu")
+object VREM extends Opcode("vrem")
+object VREMU extends Opcode("vremu")
+object VADDW extends Opcode("vaddw")
+object VSUBW extends Opcode("vsubw")
+object VSLLW extends Opcode("vsllw")
+object VSRLW extends Opcode("vsrlw")
+object VSRAW extends Opcode("vsraw")
+object VMULW extends Opcode("vmulw")
+object VDIVW extends Opcode("vdivw")
+object VDIVUW extends Opcode("vdivuw")
+object VREMW extends Opcode("vremw")
+object VREMUW extends Opcode("vremuw")
+
+object VPOP extends Opcode("vpop")
+
+object VFADD_S extends Opcode("vfadd.s")
+object VFSUB_S extends Opcode("vfsub.s")
+object VFMUL_S extends Opcode("vfmul.s")
+object VFDIV_S extends Opcode("vfdiv.s")
+object VFSQRT_S extends Opcode("vfsqrt.s")
+object VFMIN_S extends Opcode("vfmin.s")
+object VFMAX_S extends Opcode("vfmax.s")
+object VFADD_D extends Opcode("vfadd.d")
+object VFSUB_D extends Opcode("vfsub.d")
+object VFMUL_D extends Opcode("vfmul.d")
+object VFDIV_D extends Opcode("vfdiv.d")
+object VFSQRT_D extends Opcode("vfsqrt.d")
+object VFMIN_D extends Opcode("vfmin.d")
+object VFMAX_D extends Opcode("vfmax.d")
+object VFSGNJ_S extends Opcode("vfsgnj.s")
+object VFSGNJN_S extends Opcode("vfsgnjn.s")
+object VFSGNJX_S extends Opcode("vfsgnjx.s")
+object VFSGNJ_D extends Opcode("vfsgnj.d")
+object VFSGNJN_D extends Opcode("vfsgnjn.d")
+object VFSGNJX_D extends Opcode("vfsgnjx.d")
+
+object VFMADD_S extends Opcode("vfmadd.s")
+object VFMSUB_S extends Opcode("vfmsub.s")
+object VFNMSUB_S extends Opcode("vfnmsub.s")
+object VFNMADD_S extends Opcode("vfnmadd.s")
+object VFMADD_D extends Opcode("vfmadd.d")
+object VFMSUB_D extends Opcode("vfmsub.d")
+object VFNMSUB_D extends Opcode("vfnmsub.d")
+object VFNMADD_D extends Opcode("vfnmadd.d")
+
+object VFCVT_S_D extends Opcode("vfcvt.s.d")
+object VFCVT_D_S extends Opcode("vfcvt.d.s")
+object VFCVT_S_L extends Opcode("vfcvt.s.l")
+object VFCVT_S_LU extends Opcode("vfcvt.s.lu")
+object VFCVT_S_W extends Opcode("vfcvt.s.w")
+object VFCVT_S_WU extends Opcode("vfcvt.s.wu")
+object VFCVT_D_L extends Opcode("vfcvt.d.l")
+object VFCVT_D_LU extends Opcode("vfcvt.d.lu")
+object VFCVT_D_W extends Opcode("vfcvt.d.w")
+object VFCVT_D_WU extends Opcode("vfcvt.d.wu")
+object VFCVT_L_S extends Opcode("vfcvt.l.s")
+object VFCVT_LU_S extends Opcode("vfcvt.lu.s")
+object VFCVT_W_S extends Opcode("vfcvt.w.s")
+object VFCVT_WU_S extends Opcode("vfcvt.wu.s")
+object VFCVT_L_D extends Opcode("vfcvt.l.d")
+object VFCVT_LU_D extends Opcode("vfcvt.lu.d")
+object VFCVT_W_D extends Opcode("vfcvt.w.d")
+object VFCVT_WU_D extends Opcode("vfcvt.wu.d")
+
+object VLSB extends Opcode("vlsb")
+object VLSH extends Opcode("vlsh")
+object VLSW extends Opcode("vlsw")
+object VLSD extends Opcode("vlsd")
+object VLSBU extends Opcode("vlsbu")
+object VLSHU extends Opcode("vlshu")
+object VLSWU extends Opcode("vlswu")
+object VSSB extends Opcode("vssb")
+object VSSH extends Opcode("vssh")
+object VSSW extends Opcode("vssw")
+object VSSD extends Opcode("vssd")
+object VLAB extends Opcode("vlab")
+object VLAH extends Opcode("vlah")
+object VLAW extends Opcode("vlaw")
+object VLAD extends Opcode("vlad")
+object VLABU extends Opcode("vlabu")
+object VLAHU extends Opcode("vlahu")
+object VLAWU extends Opcode("vlawu")
+object VSAB extends Opcode("vsab")
+object VSAH extends Opcode("vsah")
+object VSAW extends Opcode("vsaw")
+object VSAD extends Opcode("vsad")
+
+object VLB extends Opcode("vlb")
+object VLH extends Opcode("vlh")
 object VLW extends Opcode("vlw")
+object VLD extends Opcode("vld")
+object VLBU extends Opcode("vlbu")
+object VLHU extends Opcode("vlhu")
+object VLWU extends Opcode("vlwu")
+object VSB extends Opcode("vsb")
+object VSH extends Opcode("vsh")
 object VSW extends Opcode("vsw")
-object VFLW extends Opcode("vflw")
-object VFSW extends Opcode("vfsw")
-object VFLD extends Opcode("vfld")
-object VFSD extends Opcode("vfsd")
+object VSD extends Opcode("vsd")
+object VLXB extends Opcode("vlxb")
+object VLXH extends Opcode("vlxh")
+object VLXW extends Opcode("vlxw")
+object VLXD extends Opcode("vlxd")
+object VLXBU extends Opcode("vlxbu")
+object VLXHU extends Opcode("vlxhu")
+object VLXWU extends Opcode("vlxwu")
+object VSXB extends Opcode("vsxb")
+object VSXH extends Opcode("vsxh")
+object VSXW extends Opcode("vsxw")
+object VSXD extends Opcode("vsxd")
 
 object MOVZ extends Opcode("movz")
 object MOVN extends Opcode("movn")
 object FMOVZ extends Opcode("fmovz")
 object FMOVN extends Opcode("fmovn")
 
-object FENCE_V_G extends Opcode("fence.v.g")
-object FENCE_V_L extends Opcode("fence.v.l")
+object FENCE_V extends Opcode("fence")
 
 object ILLEGAL extends Opcode(".word")

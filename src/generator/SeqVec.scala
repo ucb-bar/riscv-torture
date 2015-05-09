@@ -11,7 +11,7 @@ object SeqVec
 }
 
 
-class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d: HWRegPool, vl: Int, cfg: Map[String, Int]) extends InstSeq
+class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWRegPool, varegs: HWRegPool, vl: Int, cfg: Map[String, Int]) extends InstSeq
 {
   override val seqname = "vec"
   val memsize = cfg.getOrElse("memsize", 32)
@@ -19,6 +19,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   val seqnum  = cfg.getOrElse("seq", 100)
   val use_amo = cfg.getOrElse("amo", "true")
   val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
+  System.out.println("mixcfg:"+mixcfg)
   val vseqstats = new HashMap[String,Int].withDefaultValue(0)
 
   val name = "seqvec_" + SeqVec.cnt
@@ -26,6 +27,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   override def toString = name
 
   val xreg_helper = reg_write_hidden(xregs)
+  val vareg_helper = reg_write_hidden(varegs)
   val vec_mem = new VMem(name+"_mem", memsize, vl)
   extra_visible_data += MemDump(vec_mem)
 
@@ -42,71 +44,44 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
         rand_range(3, max/2)
     Math.min(max, attempt)
   }
-  val num_vxreg   = get_rand_reg_num(vxregs.size-1) // excluding x0
-  val num_vfreg_s = get_rand_reg_num(vfregs_s.size)
-  val num_vfreg_d = get_rand_reg_num(vfregs_d.size)
+  val num_vxreg   = get_rand_reg_num(vxregs.size)
+  val num_vpreg   = get_rand_reg_num(vpregs.size) 
 
-  // Create shadow register pools to mimic those registers
-  val shadow_vxregs   = new ShadowRegPool
-  val shadow_vfregs_s = new ShadowRegPool
-  val shadow_vfregs_d = new ShadowRegPool
-
-  // Check them out and add to shadow pools
   val vxregs_checkout = new ArrayBuffer[Reg]
-  shadow_vxregs.hwregs += new HWShadowReg(reg_read_zero(vxregs), "x0_shadow", true, false)
-    // x0 does not need to be added to checked out list since will not write to it
-  for(i <- 1 to num_vxreg)
+  for(i <- 0 to num_vxreg)
   {
     val vreg_adding = reg_write_visible(vxregs)
     vxregs_checkout += vreg_adding
-    shadow_vxregs.hwregs += new HWShadowReg(vreg_adding, "x_shadow", true, true)
   }
 
-  val vfregs_s_checkout = new ArrayBuffer[Reg]
-  for(i <- 1 to num_vfreg_s)
+  val vpregs_checkout = new ArrayBuffer[Reg]
+  for(i <- 0 to num_vpreg)
   {
-    val vreg_adding = reg_write_visible(vfregs_s)
-    vfregs_s_checkout += vreg_adding
-    shadow_vfregs_s.hwregs += new HWShadowReg(vreg_adding, "vf_s_shadow", true, true)
+    val vreg_adding = reg_write_visible(vpregs)
+    vpregs_checkout += vreg_adding
   }
 
-  val vfregs_d_checkout = new ArrayBuffer[Reg]
-  for(i <- 1 to num_vfreg_d)
-  {
-    val vreg_adding = reg_write_visible(vfregs_d)
-    vfregs_d_checkout += vreg_adding
-    shadow_vfregs_d.hwregs += new HWShadowReg(vreg_adding, "vf_d_shadow", true, true)
-  }
-  
   // Handle initialization of vreg from memories
-  for(vreg <- vxregs_checkout)
+  for((vreg,i) <- vxregs_checkout.zipWithIndex)
   {
     val init_mem = new Mem(Array(Label(name+"_"), vreg, Label("_init"))  , 8*vl)
     extra_hidden_data  += MemDump(init_mem)
     insts += LA(xreg_helper, init_mem)
-    insts += VLD(vreg, xreg_helper)
+    insts += VMSA(vareg_helper, xreg_helper)
+    val vf_init_block = new ProgSeg(name+"_"+i+"_vf_init")
+    vf_init_block.insts += VLD(vreg, vareg_helper)
+    vf_init_block.insts += VSTOP()
+    extra_code += ProgSegDump(vf_init_block)
+    insts += LUI(xreg_helper, Label("%hi("+vf_init_block.name+")"))
+    insts += VF(RegStrImm(xreg_helper, "%lo("+vf_init_block.name+")"))
   }
+  System.out.println("finished init vxregs");
   
-  for(vreg <- vfregs_s_checkout)
-  {
-    val init_mem = new Mem(Array(Label(name+"_"), vreg, Label("_init"))  , 4*vl)
-    extra_hidden_data  += MemDump(init_mem)
-    insts += LA(xreg_helper, init_mem)
-    insts += VFLW(vreg, xreg_helper)
-  }
-
-  for(vreg <- vfregs_d_checkout)
-  {
-    val init_mem = new Mem(Array(Label(name+"_"), vreg, Label("_init"))  , 8*vl)
-    extra_hidden_data  += MemDump(init_mem)
-    insts += LA(xreg_helper, init_mem)
-    insts += VFLD(vreg, xreg_helper)
-  }
-
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(shadow_vxregs, shadow_vfregs_s, shadow_vfregs_d, vec_mem, seqnum, mixcfg, true, true, false) //TODO: Enable configuration of enabling amo,mul,div ops
+    val vf_instseq = new SeqSeq(vxregs, vpregs, vsregs, vec_mem, seqnum, mixcfg, true, true, false) //TODO: Enable configuration of enabling amo,mul,div ops
+    //val vf_instseq = new SeqVALU(vxregs, true, false) //TODO: Enable configuration of enabling amo,mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt
@@ -116,9 +91,10 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
     val vf_block = new ProgSeg(name+"_vf_"+i)
     while(!vf_instseq.is_done)
     {
+      System.out.println("vf inst")
       vf_block.insts += vf_instseq.next_inst()
     }
-    vf_block.insts += STOP()
+    vf_block.insts += VSTOP()
     extra_code += ProgSegDump(vf_block)
 
     insts += LUI(xreg_helper, Label("%hi("+vf_block.name+")"))
@@ -126,30 +102,22 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vfregs_s: HWRegPool, vfregs_d:
   }
 
   // Handling dumping of vreg to output memories 
-  for((shadow_reg, vreg) <- shadow_vxregs.pairings(_.is_visible))
+  for((vreg,i) <- vxregs_checkout.zipWithIndex)
   {
-    val out_mem = new Mem(Array(Label(name+"_"), vreg, Label("_output"))  , 8*vl)
-    extra_visible_data  += MemDump(out_mem)
-    insts += LA(xreg_helper, out_mem)
-    insts += VSD(vreg, xreg_helper)
-  }
-
-  for((shadow_reg, vreg) <- shadow_vfregs_s.pairings(_.is_visible))
-  {
-    val out_mem = new Mem(Array(Label(name+"_"), vreg, Label("_output"))  , 4*vl)
-    extra_visible_data  += MemDump(out_mem)
-    insts += LA(xreg_helper, out_mem)
-    insts += VFSW(vreg, xreg_helper)
-  }
-  
-  for((shadow_reg, vreg) <- shadow_vfregs_d.pairings(_.is_visible))
-  {
-    val out_mem = new Mem(Array(Label(name+"_"), vreg, Label("_output"))  , 8*vl)
-    extra_visible_data  += MemDump(out_mem)
-    insts += LA(xreg_helper, out_mem)
-    insts += VFSD(vreg, xreg_helper)
+    if(vreg.hwreg.is_visible) {
+      val out_mem = new Mem(Array(Label(name+"_"), vreg, Label("_output"))  , 8*vl)
+      extra_visible_data  += MemDump(out_mem)
+      insts += LA(xreg_helper, out_mem)
+      insts += VMSA(vareg_helper, xreg_helper)
+      val vf_init_block = new ProgSeg(name+"_"+i+"_vf_dump")
+      vf_init_block.insts += VSD(vreg, vareg_helper)
+      vf_init_block.insts += VSTOP()
+      extra_code += ProgSegDump(vf_init_block)
+      insts += LUI(xreg_helper, Label("%hi("+vf_init_block.name+")"))
+      insts += VF(RegStrImm(xreg_helper, "%lo("+vf_init_block.name+")"))
+    }
   }
 
   // Fence to close out the vector sequence
-  insts += FENCE_V_L(Label("// " + name))
+  insts += FENCE_V(Label("// " + name))
 }

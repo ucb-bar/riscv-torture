@@ -20,6 +20,7 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
   val name_to_seq = Map(
     "xmem" -> (() => new SeqMem(xregs, mem, use_amo)),
     "vmem" -> (() => new SeqVMem(xregs, mem.asInstanceOf[VMem])), // TODO: Clean up
+    "valu" -> (() => new SeqVALU(xregs, use_mul, use_div)), // TODO: Clean up
     "xalu" -> (() => new SeqALU(xregs, use_mul, use_div)),
     "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
     "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
@@ -32,27 +33,12 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
   {
     val nxtseq = InstSeq(prob_tbl)
     seqs += nxtseq
-    xregs.backup()
-    fregs_s.backup()
-    fregs_d.backup()
-    if (!nxtseq.allocate_regs())
-    {
-      seqs -= nxtseq
-      killed_seqs += 1
-      if (killed_seqs < (nseqs*5)) //TODO: get a good metric
-        gen_seq()
-    }
-    else
-    {
-      seqstats(nxtseq.seqname) += 1
-    }
-    xregs.restore()
-    fregs_s.restore()
-    fregs_d.restore()
+    seqstats(nxtseq.seqname) += 1
   }
  
   def seqs_find_active(): Unit =
   {
+    System.out.println("seqseq.seq_find_active")
     for (seq <- seqs_not_allocated)
     {
       xregs.backup()
@@ -76,12 +62,15 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
 
   for(i <- 1 to nseqs) gen_seq()
   
+  System.out.println("finished seqseq.gen_seq")
   while(!is_seqs_empty)
   {
+    System.out.println("!is_seqs_empty")
     seqs_find_active()
 
     while(!is_seqs_active_empty)
     {
+      System.out.println("seqseq.rand pick and add inst")
       val seq = rand_pick(seqs_active)
       insts += seq.next_inst()
 

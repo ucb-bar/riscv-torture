@@ -162,53 +162,45 @@ class FRegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool
     hwregs += new HWReg("f" + i.toString(), true, true)
 }
 
-class VRegsMaster(num_xregs: Int, num_fregs: Int) extends PoolsMaster
+class VRegsMaster(num_xregs: Int, num_pregs: Int) extends PoolsMaster
 {
   assert(num_xregs >= 5, "For VRegMaster, num_xregs >=5 enforced")
-  assert(num_fregs >= 8, "For VRegMaster, num_fregs >=8 enforced")
+  assert(num_pregs >= 1, "For VRegMaster, num_pregs >=1 enforced")
 
-  // Randomly segregate the fregs
-  val fs_reg_num = new ArrayBuffer[Int]
-  val fd_reg_num = new ArrayBuffer[Int]
-
-  for (n <- 0 to num_fregs-1)
-    if(rand_range(0, 1) == 0) fs_reg_num += n
-    else fd_reg_num += n
-
-  // Ensure each pool has at least 4 members
-  while(fs_reg_num.length < 4)
-  {
-    val mv_n = rand_pick(fd_reg_num)
-    fd_reg_num -= mv_n
-    fs_reg_num += mv_n
-  }
-  
-  while(fd_reg_num.length < 4)
-  {
-    val mv_n = rand_pick(fs_reg_num)
-    fs_reg_num -= mv_n
-    fd_reg_num += mv_n
-  }
-
-  val x_reg_num = (1 to (num_xregs-1)) // reg 0 will always be setup since special
+  val x_reg_num = (0 to (num_xregs-1))
+  val p_reg_num = (0 to (num_pregs-1))
   
   val x_regpool  = new VXRegsPool(x_reg_num.toArray)
-  val fs_regpool = new VFRegsPool(fs_reg_num.toArray)
-  val fd_regpool = new VFRegsPool(fd_reg_num.toArray)
-  val regpools = ArrayBuffer(x_regpool.asInstanceOf[HWRegPool], 
-      fs_regpool.asInstanceOf[HWRegPool], fd_regpool.asInstanceOf[HWRegPool])  
+  val p_regpool  = new VPRegsPool(p_reg_num.toArray)
+  val s_regpool  = new VSRegsPool()
+  val a_regpool  = new VARegsPool()
+  val regpools = 
+    ArrayBuffer(x_regpool.asInstanceOf[HWRegPool], p_regpool.asInstanceOf[HWRegPool],
+    s_regpool.asInstanceOf[HWRegPool], a_regpool.asInstanceOf[HWRegPool])  
   override val hwregs = regpools.map(_.hwregs).flatten
 }
 
-class VXRegsPool(reg_nums: Array[Int] = (1 to 31).toArray) extends HWRegPool
+class VXRegsPool(reg_nums: Array[Int] = (0 to 255).toArray) extends HWRegPool
 {
-  hwregs += new HWReg("vx0", true, false)
   for (i <- reg_nums)
-    hwregs += new HWReg("vx" + i.toString(), true, true)
+    hwregs += new HWReg("vv" + i.toString(), true, true)
 }
 
-class VFRegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool
+class VPRegsPool(reg_nums: Array[Int] = (0 to 15).toArray) extends HWRegPool
 {
   for (i <- reg_nums)
-    hwregs += new HWReg("vf" + i.toString(), true, true)
+    hwregs += new HWReg("vp" + i.toString(), true, true)
+}
+
+class VSRegsPool(reg_nums: Array[Int] = (0 to 255).toArray) extends HWRegPool
+{
+  hwregs += new HWReg("vs0", true, false)
+  for (i <- reg_nums)
+    hwregs += new HWReg("vs" + i.toString(), true, true)
+}
+
+class VARegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool
+{
+  for (i <- reg_nums)
+    hwregs += new HWReg("va" + i.toString(), true, true)
 }

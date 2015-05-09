@@ -31,19 +31,19 @@ class Prog(memsize: Int)
   val core_memory = new Mem("test_memory", memsize)
 
   // Setup register pools
-  val num_vxregs = rand_range(5, 24)
-  val num_vfregs = rand_range(8, 32-num_vxregs)
-  val max_vl = (Math.floor(256/(num_vxregs-1 + num_vfregs))).toInt * 8
+  val num_vxregs = rand_range(5, 256)
+  val num_vpregs = rand_range(1, 16)
+  val max_vl = (Math.floor(256/(num_vxregs-1))).toInt * 8
   val used_vl = Math.min(max_vl, rand_range(1, max_vl))
 
   val xregs = new XRegsPool()
   val fregs = new FRegsMaster()
-  val vregs = new VRegsMaster(num_vxregs, num_vfregs)
+  val vregs = new VRegsMaster(num_vxregs, num_vpregs)
 
   val fregpools = fregs.extract_pools()
   val vregpools = vregs.extract_pools()
   val (fregs_s, fregs_d) = (fregpools(0), fregpools(1))
-  val (vxregs, vfregs_s, vfregs_d) = (vregpools(0), vregpools(1), vregpools(2))
+  val (vxregs, vpregs, vsregs, varegs) = (vregpools(0), vregpools(1), vregpools(2), vregpools(3))
 
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
@@ -72,7 +72,7 @@ class Prog(memsize: Int)
   def is_seqs_empty = seqs_not_allocated.length == 0
   def is_seqs_active_empty = seqs_active.length == 0
 
-  def are_pools_fully_unallocated = List(xregs, fregs_s, fregs_d, vxregs, vfregs_s, vfregs_d).forall(_.is_fully_unallocated)
+  def are_pools_fully_unallocated = List(xregs, fregs_s, fregs_d, vxregs, vpregs, vsregs, varegs).forall(_.is_fully_unallocated)
 
   def seqs_find_active(): Unit =
   {
@@ -167,7 +167,7 @@ class Prog(memsize: Int)
     def seq_lt(seq1: (String, Int), seq2: (String, Int)): Boolean =
     {
       val seqhash = HashMap("xmem"->1,"xbranch"->2,"xalu"->3,"vmem"->4, 
-      "fgen"->5,"fpmem"->6,"fax"->7, "vec"->8,"vonly"->9,"Generic"->10).withDefaultValue(100)
+      "fgen"->5,"fpmem"->6,"fax"->7, "vec"->8,"vonly"->9,"valu"->10,"Generic"->11).withDefaultValue(100)
       if (seqhash(seq1._1) == 100 && seqhash(seq2._1) == 100) return (seq1._1 < seq2._1)
       return seqhash(seq1._1) < seqhash(seq2._1)
     }
@@ -258,31 +258,6 @@ class Prog(memsize: Int)
         vseqstats(seqname) += seqcnt
       }
     }
-/*  xregs.backup()    //Killing of sequences at generation is buggy.
-    fregs_s.backup()
-    fregs_d.backup()
-    vxregs.backup()
-    vfregs_s.backup()
-    vfregs_d.backup()
-    if (!nxtseq.allocate_regs())
-    {
-      seqs -= nxtseq
-      killed_seqs += 1
-      seqstats(nxtseq.seqname) == 1
-      if (nxtseq.seqname == "vec")
-      {
-        for ((seqname, seqcnt) <- seq.asInstanceOf[SeqVec])
-          vseqstats(seqname) -= seqcnt
-      }
-      if (killed_seqs < (nseqs*5)) //TODO: Get a good metric
-        gen_seq()
-    }
-    xregs.restore()
-    fregs_s.restore()
-    fregs_d.restore()
-    vxregs.restore()
-    vfregs_s.restore()
-    vfregs_d.restore() */
   }
 
   def add_inst(inst: Inst) =
@@ -344,7 +319,7 @@ class Prog(memsize: Int)
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
       "fpmem" -> (() => new SeqFPMem(xregs, fregs_s, fregs_d, core_memory)),
       "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
-      "vec" -> (() => new SeqVec(xregs, vxregs, vfregs_s, vfregs_d, used_vl, veccfg)))
+      "vec" -> (() => new SeqVec(xregs, vxregs, vpregs, vsregs, varegs, used_vl, veccfg)))
 
     prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
     nseqs = seqnum
@@ -356,10 +331,12 @@ class Prog(memsize: Int)
 
     while (!is_seqs_empty)
     {
+    System.out.println("prog!is_seqs_empty")
       seqs_find_active()
 
       while (!is_seqs_active_empty)
       {
+      System.out.println("prog!is_seqs_active_empty")
         val seq = rand_pick(seqs_active)
         add_inst(seq.next_inst())
 
@@ -380,7 +357,7 @@ class Prog(memsize: Int)
  
     if (killed_seqs >= (nseqs*5))
     {
-      println("Warning: Prog killed an excessive number of sequences. (#X=%d, #Fs=%d, #Fd=%d, #VX=%d, #VFs=%d, #VFd=%d)" format (xregs.size, fregs_s.size, fregs_d.size, vxregs.size, vfregs_s.size, vfregs_d.size))
+    println("Warning: Prog killed an excessive number of sequences. (#X=%d, #Fs=%d, #Fd=%d, #VX=%d, #VP=%d, #VS=%d, #VA=%d)" format (xregs.size, fregs_s.size, fregs_d.size, vxregs.size, vpregs.size, vsregs.size, varegs.size))
     }
 
     ("" /: progsegs)(_ + _) + "\n"
@@ -422,7 +399,8 @@ class Prog(memsize: Int)
   {
     "\n" +
     "\tli x1, " + used_vl + "\n" +
-    "\tvvcfgivl x1, x1, " + num_vxregs + ", " + num_vfregs + "\n" 
+    "\tvsetcfg " + num_vxregs + ", " + num_vpregs + "\n" +
+    "\tvsetvl x1,x1\n"
   }
 
   def code_footer(using_fpu: Boolean) =
@@ -444,7 +422,8 @@ class Prog(memsize: Int)
     for(seq <- seqs.filter(_.is_done))
     {
       val ns = seq.extra_code.mkString("\n")
-      if(ns.nonEmpty) s += "// extra code for " + seq + "\n" + ns + "\n"
+      if(ns.nonEmpty) s += "// extra code for " + seq + "\n" +
+      "\t.align 3\n" + ns + "\n"
     }
     s += "\n"
     s
