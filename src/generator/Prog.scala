@@ -60,7 +60,7 @@ class Prog(memsize: Int)
   val regstats = new HashMap[String,Int].withDefaultValue(0)
   for (cat <- List(("alu"),("cmp"),("branch"),("jalr"),
     ("jmp"),("la"),("mem"),("amo"),("misc"),("fpalu"),("fpcmp"),
-    ("fpfma"),("fpmem"),("fpcvt"),("fpmisc"),("vmem"),
+    ("fpfma"),("fpmem"),("fpcvt"),("fpmisc"),("vmem"),("valu"),
     ("vmisc"),("unknown")))
     {
       catstats(cat)=0
@@ -132,7 +132,7 @@ class Prog(memsize: Int)
   {
     def register_lt(reg1: (String, Int), reg2: (String, Int)): Boolean =
     {
-      val reghash = HashMap('x'->1,'f'->2,'v'->3)
+      val reghash = HashMap('x'->1,'f'->2,'v'->3,'p'->4,'s'->5,'a'->6)
       val regname1 = reg1._1
       val regname2 = reg2._1
       if (reghash(regname1(0)) == reghash(regname2(0)))
@@ -217,7 +217,7 @@ class Prog(memsize: Int)
     {
       val cathash = HashMap("alu"->1,"cmp"->2,"branch"->3,"jmp"->4,"jalr"->5,
         "la"->6,"mem"->7,"amo"->8,"misc"->9,"fpalu"->10,"fpcmp"->11,"fpfma"->12,
-        "fpmem"->13,"fpcvt"->14,"fpmisc"->15,"vmem"->16,"vmisc"->17,"unknown"->18)
+        "fpmem"->13,"fpcvt"->14,"fpmisc"->15,"vmem"->16,"valu"->17,"vmisc"->18,"unknown"->19)
       return cathash(cat1._1) < cathash(cat2._1)
     }
 
@@ -342,9 +342,12 @@ class Prog(memsize: Int)
         {
           seq.free_regs()
           seqs_active -= seq
+          if (seq.isInstanceOf[SeqVec]) 
+            for (vinst <- seq.asInstanceOf[SeqVec].vinsts)
+              update_stats(vinst)
         }
 
-        if(rand_range(0,99) < 10) seqs_find_active()
+        if (rand_range(0,99) < 10) seqs_find_active()
       }
     }
 

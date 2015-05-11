@@ -20,6 +20,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   val use_amo = cfg.getOrElse("amo", "true")
   val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
   val vseqstats = new HashMap[String,Int].withDefaultValue(0)
+  val vinsts = new ArrayBuffer[Inst]
 
   val name = "seqvec_" + SeqVec.cnt
   SeqVec.cnt += 1
@@ -70,6 +71,8 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     val vf_init_block = new ProgSeg(name+"_"+i+"_vf_init")
     vf_init_block.insts += VLD(vreg, vareg_helper)
     vf_init_block.insts += VSTOP()
+    vinsts += VLD(vreg, vareg_helper)
+    vinsts += VSTOP()
     extra_code += ProgSegDump(vf_init_block)
     insts += LUI(xreg_helper, Label("%hi("+vf_init_block.name+")"))
     insts += VF(RegStrImm(xreg_helper, "%lo("+vf_init_block.name+")"))
@@ -89,9 +92,12 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     val vf_block = new ProgSeg(name+"_vf_"+i)
     while(!vf_instseq.is_done)
     {
-      vf_block.insts += vf_instseq.next_inst()
+      val inst = vf_instseq.next_inst()
+      vf_block.insts += inst
+      vinsts += inst
     }
     vf_block.insts += VSTOP()
+    vinsts += VSTOP()
     extra_code += ProgSegDump(vf_block)
 
     insts += LUI(xreg_helper, Label("%hi("+vf_block.name+")"))
@@ -109,6 +115,8 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
       val vf_init_block = new ProgSeg(name+"_"+i+"_vf_dump")
       vf_init_block.insts += VSD(vreg, vareg_helper)
       vf_init_block.insts += VSTOP()
+      vinsts += VSD(vreg, vareg_helper)
+      vinsts += VSTOP()
       extra_code += ProgSegDump(vf_init_block)
       insts += LUI(xreg_helper, Label("%hi("+vf_init_block.name+")"))
       insts += VF(RegStrImm(xreg_helper, "%lo("+vf_init_block.name+")"))
