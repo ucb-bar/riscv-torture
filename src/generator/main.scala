@@ -36,18 +36,18 @@ object Generator extends Application
     val use_mul = (config.getProperty("torture.generator.mul", "true").toLowerCase == "true")
     val use_div = (config.getProperty("torture.generator.divider", "true").toLowerCase == "true")
     val mix     = config.filterKeys(_ contains "torture.generator.mix").map { case (k,v) => (k.split('.')(3), v.toInt) }.asInstanceOf[Map[String,Int]]
-    val vec     = config.filterKeys(_ contains "torture.generator.vec").map { case (k,v) => (k.split('.').drop(3).reduce(_+"."+_), v.toInt) }.asInstanceOf[Map[String,Int]]
+    val vec     = config.filterKeys(_ contains "torture.generator.vec").map { case (k,v) => (k.split('.').drop(3).reduce(_+"."+_), v) }.asInstanceOf[Map[String,String]]
     generate(nseqs, memsize, fprnd, mix, vec, use_amo, use_mul, use_div, outFileName)
   }
 
-  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String): String = {
+  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String): String = {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
     assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fpmem","fax","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name")) 
 
-    val vmemsize = veccfg.getOrElse("memsize", 32)
-    val vnseq = veccfg.getOrElse("seq", 100)
-    val vfnum = veccfg.getOrElse("vf", 10)
-    val vecmix = veccfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
+    val vmemsize = veccfg.getOrElse("memsize", "32").toInt
+    val vnseq = veccfg.getOrElse("seq", "100").toInt
+    val vfnum = veccfg.getOrElse("vf", "10").toInt
+    val vecmix = veccfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v.toInt) }.asInstanceOf[Map[String,Int]]
     assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
     assert (vecmix.keys.forall(List("vmem","valu","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
 

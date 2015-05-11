@@ -44,6 +44,9 @@ $(asm_tests_hex): %.hex: % $(extra_files)
 $(asm_tests_sig): %.sig: %
 	$(RISCV_SIM) +signature=$@ $<
 
+new:
+	cd ..; make gen
+
 run: $(asm_tests_sig)
 	echo; perl -ne 'print "  [$$1] $$ARGV \t$$2\n" if /\*{3}(.{8})\*{3}(.*)/' \
 	       $(asm_tests_sig); echo;

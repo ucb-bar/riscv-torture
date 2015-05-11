@@ -3,37 +3,93 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean) extends InstSeq //TODO: better configuration
+class SeqVALU(vregs: HWRegPool, sregs: HWRegPool, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean) extends InstSeq //TODO: better configuration
 {
   override val seqname = "valu"
-  def seq_src1(op: Opcode) = () =>
+  def seq_src1(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool) = () =>
   {
-    val src1 = reg_read_any(xregs)
-    val dest = reg_write(xregs, src1)
-    insts += op(dest, src1, src1)
+    val src1 = reg_read_any(s1reg)
+    val dest = reg_write(dreg, src1)
+    insts += op(dest, src1)
   }
 
-  def seq_src2(op: Opcode) = () =>
+  def seq_src2(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool, s2reg: HWRegPool) = () =>
   {
-    val src1 = reg_read_any(xregs)
-    val src2 = reg_read_any(xregs)
-    val dest = reg_write(xregs, src1, src2)
+    val src1 = reg_read_any(s1reg)
+    val src2 = reg_read_any(s2reg)
+    val dest = reg_write(dreg, src1, src2)
     insts += op(dest, src1, src2)
+  }
+
+  def seq_src3(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool, s2reg: HWRegPool, s3reg: HWRegPool) = () =>
+  {
+    val src1 = reg_read_any(s1reg)
+    val src2 = reg_read_any(s2reg)
+    val src3 = reg_read_any(s3reg)
+    val dest = reg_write(dreg, src1, src2, src3)
+    insts += op(dest, src1, src2, src3)
   }
 
   val candidates = new ArrayBuffer[() => insts.type]
 
-  val oplist = new ArrayBuffer[Opcode]
+  val oplist1 = new ArrayBuffer[Opcode]
+  val oplist2 = new ArrayBuffer[Opcode]
+  val oplist3 = new ArrayBuffer[Opcode]
 
-  oplist += (VADD, VSUB, VSLL, VXOR, VSRL, VSRA, VOR, VAND)
-  oplist += (VADDW, VSUBW, VSLLW, VSRLW, VSRAW)
-  if (use_mul) oplist += (VMUL, VMULH, VMULHSU, VMULHU, VMULW)
-  if (use_div) oplist += (VDIV, VDIVU, VREM, VREMU, VDIVW, VDIVUW, VREMW, VREMUW)
+  oplist2 += (VADD, VSUB, VSLL, VXOR, VSRL, VSRA, VOR, VAND)
+  oplist2 += (VADDW, VSUBW, VSLLW, VSRLW, VSRAW)
+  if (use_mul) oplist2 += (VMUL, VMULH, VMULHSU, VMULHU, VMULW)
+  if (use_div) oplist2 += (VDIV, VDIVU, VREM, VREMU, VDIVW, VDIVUW, VREMW, VREMUW)
+  if (use_fpu)
+  { 
+    oplist2 += (VFADD_S, VFSUB_S, VFMUL_S, VFDIV_S, VFMIN_S, VFMAX_S,
+    VFADD_D, VFSUB_D, VFMUL_D, VFDIV_D, VFMIN_D, VFMAX_D,
+    VFSGNJ_S, VFSGNJN_S, VFSGNJX_S, VFSGNJ_D, VFSGNJN_D, VFSGNJX_D)
+    oplist1 += (VFSQRT_S, VFSQRT_D)
+  }
+  if (use_fma) oplist3 += (VFMADD_S, VFMSUB_S, VFNMSUB_S, VFNMADD_S,
+    VFMADD_D, VFMSUB_D, VFNMSUB_D, VFNMADD_D)
+  if (use_fcvt) oplist1 += (VFCVT_S_D, VFCVT_D_S, VFCVT_S_L, VFCVT_S_LU, VFCVT_S_W,
+    VFCVT_S_WU, VFCVT_D_L, VFCVT_D_LU, VFCVT_D_W, VFCVT_D_WU, VFCVT_L_S,
+    VFCVT_LU_S, VFCVT_W_S, VFCVT_WU_S, VFCVT_L_D, VFCVT_LU_D,
+    VFCVT_W_D, VFCVT_WU_D)
 
-  for (op <- oplist)
+  for (op <- oplist1)
   {
-    candidates += seq_src1(op)
-    candidates += seq_src2(op)
+    candidates += seq_src1(op,vregs,vregs)
+    candidates += seq_src1(op,sregs,sregs)
+
+    if (use_mix)
+    {
+      candidates += seq_src1(op,vregs,sregs)
+    }
+  }
+  for (op <- oplist2)
+  {
+    candidates += seq_src2(op,vregs,vregs,vregs)
+    candidates += seq_src2(op,sregs,sregs,sregs)
+
+    if (use_mix)
+    {
+      candidates += seq_src2(op,vregs,vregs,sregs)
+      candidates += seq_src2(op,vregs,sregs,vregs)
+      candidates += seq_src2(op,vregs,sregs,sregs)
+    }
+  }
+  for (op <- oplist3)
+  {
+    candidates += seq_src3(op,vregs,vregs,vregs,vregs)
+    candidates += seq_src3(op,sregs,sregs,sregs,sregs)
+
+    if (use_mix)
+    {
+      candidates += seq_src3(op,vregs,vregs,vregs,sregs)
+      candidates += seq_src3(op,vregs,vregs,sregs,vregs)
+      candidates += seq_src3(op,vregs,vregs,sregs,sregs)
+      candidates += seq_src3(op,vregs,sregs,vregs,sregs)
+      candidates += seq_src3(op,vregs,sregs,sregs,vregs)
+      candidates += seq_src3(op,vregs,sregs,sregs,sregs)
+    }
   }
 
   rand_pick(candidates)()

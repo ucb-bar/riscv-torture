@@ -11,14 +11,19 @@ object SeqVec
 }
 
 
-class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWRegPool, varegs: HWRegPool, vl: Int, cfg: Map[String, Int]) extends InstSeq
+class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWRegPool, varegs: HWRegPool, vl: Int, cfg: Map[String, String]) extends InstSeq
 {
   override val seqname = "vec"
-  val memsize = cfg.getOrElse("memsize", 32)
-  val vfnum   = cfg.getOrElse("vf", 10)
-  val seqnum  = cfg.getOrElse("seq", 100)
-  val use_amo = cfg.getOrElse("amo", "true")
-  val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v) }.asInstanceOf[Map[String,Int]]
+  val memsize = cfg.getOrElse("memsize", "32").toInt
+  val vfnum   = cfg.getOrElse("vf", "10").toInt
+  val seqnum  = cfg.getOrElse("seq", "100").toInt
+  val use_mul = cfg.getOrElse("mul", "true") == "true"
+  val use_div = cfg.getOrElse("div", "true") == "true"
+  val use_mix = cfg.getOrElse("mix", "true") == "true"
+  val use_fpu = cfg.getOrElse("fpu", "true") == "true"
+  val use_fma = cfg.getOrElse("fma", "true") == "true"
+  val use_fcvt = cfg.getOrElse("fcvt", "true") == "true"
+  val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v.toInt) }.asInstanceOf[Map[String,Int]]
   val vseqstats = new HashMap[String,Int].withDefaultValue(0)
   val vinsts = new ArrayBuffer[Inst]
 
@@ -81,8 +86,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(vxregs, vpregs, vsregs, vec_mem, seqnum, mixcfg, true, true, false) //TODO: Enable configuration of enabling amo,mul,div ops
-    //val vf_instseq = new SeqVALU(vxregs, true, false) //TODO: Enable configuration of enabling amo,mul,div ops
+    val vf_instseq = new SeqSeq(vxregs, vpregs, vsregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt) //TODO: Enable configuration of enabling amo,mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt

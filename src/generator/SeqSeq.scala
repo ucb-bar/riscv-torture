@@ -4,7 +4,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import Rand._
 
-class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) extends InstSeq
+class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean) extends InstSeq
 {
   val seqs = new ArrayBuffer[InstSeq]
   val seqs_active = new ArrayBuffer[InstSeq]
@@ -15,16 +15,12 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
   def is_seqs_empty = seqs_not_allocated.length == 0
   def is_seqs_active_empty = seqs_active.length == 0
 
-  def are_pools_fully_unallocated = List(xregs, fregs_s, fregs_d).forall(_.is_fully_unallocated)
+  def are_pools_fully_unallocated = List(vregs, pregs, sregs).forall(_.is_fully_unallocated)
 
   val name_to_seq = Map(
-    "xmem" -> (() => new SeqMem(xregs, mem, use_amo)),
-    "vmem" -> (() => new SeqVMem(xregs, mem.asInstanceOf[VMem])), // TODO: Clean up
-    "valu" -> (() => new SeqVALU(xregs, use_mul, use_div)), // TODO: Clean up
-    "xalu" -> (() => new SeqALU(xregs, use_mul, use_div)),
-    "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
-    "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
-    "vonly" -> (() => new SeqVOnly(xregs, fregs_s, fregs_d)))
+    "vmem" -> (() => new SeqVMem(vregs, mem.asInstanceOf[VMem])), // TODO: Clean up
+    "valu" -> (() => new SeqVALU(vregs, sregs, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt)), // TODO: Clean up
+    "vonly" -> (() => new SeqVOnly(vregs, pregs, sregs)))
 
   val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
   mixcfg foreach {case(name, prob) => (prob_tbl += ((prob, name_to_seq(name))))}
@@ -40,9 +36,9 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
   {
     for (seq <- seqs_not_allocated)
     {
-      xregs.backup()
-      fregs_s.backup()
-      fregs_d.backup()
+      vregs.backup()
+      pregs.backup()
+      sregs.backup()
 
       if (seq.allocate_regs())
       {
@@ -50,9 +46,9 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
       }
       else
       {
-        xregs.restore()
-        fregs_s.restore()
-        fregs_d.restore()
+        vregs.restore()
+        pregs.restore()
+        sregs.restore()
 
         return
       }
@@ -79,5 +75,5 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
   }
 
   if(killed_seqs >= (nseqs*5))
-    println("warning: a SeqSeq killed an excessive number of sequences. (#X=%d, #Fs=%d, #Fd=%d)" format (xregs.size, fregs_s.size, fregs_d.size))
+  println("warning: a SeqSeq killed an excessive number of sequences. (#V=%d, #P=%d, #S=%d)" format (vregs.size, pregs.size, sregs.size))
 }

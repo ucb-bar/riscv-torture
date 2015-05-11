@@ -61,7 +61,7 @@ class Prog(memsize: Int)
   for (cat <- List(("alu"),("cmp"),("branch"),("jalr"),
     ("jmp"),("la"),("mem"),("amo"),("misc"),("fpalu"),("fpcmp"),
     ("fpfma"),("fpmem"),("fpcvt"),("fpmisc"),("vmem"),("valu"),
-    ("vmisc"),("unknown")))
+    ("vmisc"),("vfpalu"),("vfpfma"),("vfpcvt"),("vsmem"),("vshared"),("unknown")))
     {
       catstats(cat)=0
       opstats(cat) = new HashMap[String,Int].withDefaultValue(0)
@@ -217,7 +217,8 @@ class Prog(memsize: Int)
     {
       val cathash = HashMap("alu"->1,"cmp"->2,"branch"->3,"jmp"->4,"jalr"->5,
         "la"->6,"mem"->7,"amo"->8,"misc"->9,"fpalu"->10,"fpcmp"->11,"fpfma"->12,
-        "fpmem"->13,"fpcvt"->14,"fpmisc"->15,"vmem"->16,"valu"->17,"vmisc"->18,"unknown"->19)
+        "fpmem"->13,"fpcvt"->14,"fpmisc"->15,"vmem"->16,"valu"->17,"vfpalu"->18,
+        "vfpfma"->19,"vfpcvt"->20,"vsmem"->21,"vshared"->22,"vmisc"->23,"unknown"->24)
       return cathash(cat1._1) < cathash(cat2._1)
     }
 
@@ -310,7 +311,7 @@ class Prog(memsize: Int)
 
   def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","vec")
 
-  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
+  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
   {
     val name_to_seq = Map(
       "xmem" -> (() => new SeqMem(xregs, core_memory, use_amo)),
@@ -474,7 +475,7 @@ class Prog(memsize: Int)
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, Int], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
