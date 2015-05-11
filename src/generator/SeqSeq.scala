@@ -38,7 +38,6 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
  
   def seqs_find_active(): Unit =
   {
-    System.out.println("seqseq.seq_find_active")
     for (seq <- seqs_not_allocated)
     {
       xregs.backup()
@@ -62,15 +61,12 @@ class SeqSeq(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem,
 
   for(i <- 1 to nseqs) gen_seq()
   
-  System.out.println("finished seqseq.gen_seq")
   while(!is_seqs_empty)
   {
-    System.out.println("!is_seqs_empty")
     seqs_find_active()
 
     while(!is_seqs_active_empty)
     {
-      System.out.println("seqseq.rand pick and add inst")
       val seq = rand_pick(seqs_active)
       insts += seq.next_inst()
 

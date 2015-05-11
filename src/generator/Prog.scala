@@ -331,12 +331,10 @@ class Prog(memsize: Int)
 
     while (!is_seqs_empty)
     {
-    System.out.println("prog!is_seqs_empty")
       seqs_find_active()
 
       while (!is_seqs_active_empty)
       {
-      System.out.println("prog!is_seqs_active_empty")
         val seq = rand_pick(seqs_active)
         add_inst(seq.next_inst())
 

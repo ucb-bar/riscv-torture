@@ -78,7 +78,6 @@ class HWRegAllocator
       regna.hwreg = hwreg
     }
 
-    System.out.println("allocated_regs")
     allocated = true
 
     return true

@@ -36,6 +36,5 @@ class SeqVALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean) extends Inst
     candidates += seq_src2(op)
   }
 
-  System.out.println("valu")
   rand_pick(candidates)()
 }
