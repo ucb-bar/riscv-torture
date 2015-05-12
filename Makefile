@@ -1,8 +1,9 @@
 # Convenience Makefile
 
 SBT := ./sbt
-C_SIM := ../riscv-rocket/emulator/emulator
-R_SIM := ../riscv-rocket/vlsi-generic/build/vcs-sim-rtl/simv
+RTL_CONFIG := DefaultConfig
+C_SIM := ../reference-chip/emulator/emulator-$(RTL_CONFIG)
+R_SIM := ../reference-chip/vsim/simv-$(RTL_CONFIG)
 TEST := output/test.S
 OPTIONS := $(empty)
 EC2OPTIONS := $(empty)

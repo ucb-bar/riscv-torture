@@ -16,12 +16,12 @@ torture.generator.mix.vec     5
 torture.generator.vec.vf 4
 torture.generator.vec.seq 20
 torture.generator.vec.memsize 32
-torture.generator.vec.mul true
-torture.generator.vec.div true
-torture.generator.vec.mix true
-torture.generator.vec.fpu true
-torture.generator.vec.fma true
-torture.generator.vec.fcvt true
+torture.generator.vec.mul false
+torture.generator.vec.div false
+torture.generator.vec.mix false
+torture.generator.vec.fpu false
+torture.generator.vec.fma false
+torture.generator.vec.fcvt false
 
 torture.generator.vec.mix.valu  100
 torture.generator.vec.mix.vmem  0
@@ -31,6 +31,7 @@ torture.testrun.maxcycles 10000000
 torture.testrun.virtual   false
 torture.testrun.seek      true
 torture.testrun.dump      false
+torture.testrun.vec       true
 
 torture.overnight.errors  1
 torture.overnight.minutes 1

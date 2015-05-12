@@ -11,7 +11,7 @@ object SeqVec
 }
 
 
-class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWRegPool, varegs: HWRegPool, vl: Int, cfg: Map[String, String]) extends InstSeq
+class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWRegPool, varegs: HWRegPool, vl: Int, cfg: Map[String, String]) extends InstSeq
 {
   override val seqname = "vec"
   val memsize = cfg.getOrElse("memsize", "32").toInt
@@ -49,14 +49,19 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
         rand_range(3, max/2)
     Math.min(max, attempt)
   }
-  val num_vxreg   = get_rand_reg_num(vxregs.size)
+  val num_vvreg   = get_rand_reg_num(vvregs.size)
   val num_vpreg   = get_rand_reg_num(vpregs.size) 
 
-  val vxregs_checkout = new ArrayBuffer[Reg]
-  for(i <- 1 to num_vxreg)
+  // Create shadow register pools to mimic those registers
+  val shadow_vvregs   = new ShadowRegPool
+  val shadow_vpregs   = new ShadowRegPool
+
+  val vvregs_checkout = new ArrayBuffer[Reg]
+  for(i <- 1 to num_vvreg)
   {
-    val vreg_adding = reg_write_visible(vxregs)
-    vxregs_checkout += vreg_adding
+    val vreg_adding = reg_write_visible(vvregs)
+    vvregs_checkout += vreg_adding
+    shadow_vvregs.hwregs += new HWShadowReg(vreg_adding, "v_shadow", true, true)
   }
 
   val vpregs_checkout = new ArrayBuffer[Reg]
@@ -64,10 +69,11 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   {
     val vreg_adding = reg_write_visible(vpregs)
     vpregs_checkout += vreg_adding
+    shadow_vpregs.hwregs += new HWShadowReg(vreg_adding, "p_shadow", true, true)
   }
 
   // Handle initialization of vreg from memories
-  for((vreg,i) <- vxregs_checkout.zipWithIndex)
+  for((vreg,i) <- vvregs_checkout.zipWithIndex)
   {
     val init_mem = new Mem(Array(Label(name+"_"), vreg, Label("_init"))  , 8*vl)
     extra_hidden_data  += MemDump(init_mem)
@@ -86,7 +92,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(vxregs, vpregs, vsregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt) //TODO: Enable configuration of enabling amo,mul,div ops
+    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vsregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt) //TODO: Enable configuration of enabling amo,mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt
@@ -109,7 +115,7 @@ class SeqVec(xregs: HWRegPool, vxregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   }
 
   // Handling dumping of vreg to output memories 
-  for((vreg,i) <- vxregs_checkout.zipWithIndex)
+  for((vreg,i) <- vvregs_checkout.zipWithIndex)
   {
     if(vreg.hwreg.is_visible) {
       val out_mem = new Mem(Array(Label(name+"_"), vreg, Label("_output"))  , 8*vl)

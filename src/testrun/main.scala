@@ -46,6 +46,7 @@ object TestRunner extends Application
   var maxcycles = 10000000
   var dump = true
   var seek = true
+  var hwacha = true
 
   def testrun(testAsmName:  Option[String], 
               cSimPath:     Option[String], 
@@ -64,6 +65,7 @@ object TestRunner extends Application
     virtualMode = (config.getProperty("torture.testrun.virtual", "false").toLowerCase == "true")
     dump = (config.getProperty("torture.testrun.dump", "false").toLowerCase == "true")
     seek = (config.getProperty("torture.testrun.seek", "true").toLowerCase == "true")
+    hwacha = (config.getProperty("torture.testrun.vec", "true").toLowerCase == "true")
 
     // Figure out which binary file to test
     val finalBinName = testAsmName match {
@@ -147,7 +149,7 @@ object TestRunner extends Application
 
   def dumpFromBin(binFileName: String): Option[String] = {
     val dumpFileName = binFileName + ".dump"
-    val pd = Process("riscv-objdump --disassemble-all --section=.text --section=.data --section=.bss " + binFileName)
+    val pd = Process("riscv64-unknown-elf-objdump --disassemble-all --section=.text --section=.data --section=.bss " + binFileName)
     val dump = pd.!!
     val fw = new FileWriter(dumpFileName)
     fw.write(dump)
@@ -172,23 +174,24 @@ object TestRunner extends Application
     hexFileName
   }
 
-  def runSim(sim: String, signature: String, args: Seq[String], invokebin: String): String = {
-    val cmd = Seq(sim, "+signature="+signature) ++ args ++ Seq(invokebin)
+  def runSim(sim: String, simargs: Seq[String], signature: String, args: Seq[String], invokebin: String): String = {
+    val cmd = Seq(sim) ++ simargs ++ Seq("+signature="+signature) ++ args ++ Seq(invokebin)
     cmd!!
 
     new Scanner(new File(signature)).useDelimiter("\\Z").next()
   }
 
   def runCSim(sim: String)(bin: String): String = {
-    runSim(sim, bin+".csim.sig", Seq("+max-cycles="+maxcycles),bin)
+    runSim(sim, Seq(), bin+".csim.sig", Seq("+max-cycles="+maxcycles),bin)
   }
 
   def runRtlSim(sim: String)(bin: String): String = {
-    runSim(sim, bin+".rtlsim.sig", Seq("+max-cycles="+maxcycles),bin)
+    runSim(sim, Seq(), bin+".rtlsim.sig", Seq("+max-cycles="+maxcycles),bin)
   }
 
   def runIsaSim(bin: String): String = {
-    runSim("spike", bin+".spike.sig", Seq(), bin)
+    val simargs = if (hwacha) Seq("--extension=hwacha") else Seq()
+    runSim("spike", simargs, bin+".spike.sig", Seq(), bin)
   }
 
   def runSimulators(bin: String, simulators: Seq[(String, (String) => String)], dumpSigs: Boolean): Seq[(String, (String, (String) => String), Result)] = { 
