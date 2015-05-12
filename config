@@ -16,6 +16,7 @@ torture.generator.mix.vec     5
 torture.generator.vec.vf 4
 torture.generator.vec.seq 20
 torture.generator.vec.memsize 32
+torture.generator.vec.numsregs 64
 torture.generator.vec.mul false
 torture.generator.vec.div false
 torture.generator.vec.mix false

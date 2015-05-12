@@ -67,7 +67,7 @@ class SeqVALU(vregs: HWRegPool, sregs: HWRegPool, use_mul: Boolean, use_div: Boo
   for (op <- oplist2)
   {
     candidates += seq_src2(op,vregs,vregs,vregs)
-    //candidates += seq_src2(op,sregs,sregs,sregs)
+    candidates += seq_src2(op,sregs,sregs,sregs)
 
     if (use_mix)
     {

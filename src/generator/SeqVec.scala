@@ -44,7 +44,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
       if(randtype < 5)          //  5% use a lot of registers
         rand_range(max/2, max)  
       else if(randtype < 10)    //  5% use very little registers
-        rand_range(0, 3)
+        rand_range(1, 3)
       else                      // 90% use moderate number
         rand_range(3, max/2)
     Math.min(max, attempt)

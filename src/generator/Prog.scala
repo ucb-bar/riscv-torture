@@ -25,7 +25,7 @@ object ProgSeg
   }
 }
 
-class Prog(memsize: Int)
+class Prog(memsize: Int, veccfg: Map[String,String])
 {
   // Setup scalar core memory
   val core_memory = new Mem("test_memory", memsize)
@@ -33,12 +33,13 @@ class Prog(memsize: Int)
   // Setup register pools
   val num_vxregs = rand_range(5, 256)
   val num_vpregs = rand_range(1, 16)
+  val num_vsregs = veccfg.getOrElse("numsregs","64").toInt
   val max_vl = (Math.floor(256/(num_vxregs-1))).toInt * 8
   val used_vl = Math.min(max_vl, rand_range(1, max_vl))
 
   val xregs = new XRegsPool()
   val fregs = new FRegsMaster()
-  val vregs = new VRegsMaster(num_vxregs, num_vpregs)
+  val vregs = new VRegsMaster(num_vxregs, num_vpregs, num_vsregs)
 
   val fregpools = fregs.extract_pools()
   val vregpools = vregs.extract_pools()
@@ -392,6 +393,7 @@ class Prog(memsize: Int)
     "\n" +
     // fregs must be initialized before xregs!
     (if (using_fpu) fregs.init_regs() else "") +
+    (if (using_vec) vregs.init_regs() else "") +
     xregs.init_regs() +
     "\tj pseg_0\n" +
     "\n"
@@ -405,12 +407,13 @@ class Prog(memsize: Int)
     "\tvsetvl x1,x1\n"
   }
 
-  def code_footer(using_fpu: Boolean) =
+  def code_footer(using_fpu: Boolean, using_vec: Boolean) =
   {
     var s = "reg_dump:\n" +
     // fregs must be saved after xregs
     xregs.save_regs() +
     (if(using_fpu) fregs.save_regs() else "") +
+    (if(using_vec) vregs.save_regs() else "") +
     "\tj test_end\n" +
     "\n" +
     "crash_forward:\n" +
@@ -450,7 +453,7 @@ class Prog(memsize: Int)
     s
   }
 
-  def data_input(using_fpu: Boolean) =
+  def data_input(using_fpu: Boolean, using_vec: Boolean) =
   {
     var s = "hidden_data:\n"
     for(seq <- seqs.filter(_.is_done))
@@ -460,15 +463,17 @@ class Prog(memsize: Int)
     }
     s += xregs.init_regs_data()
     s += (if(using_fpu) fregs.init_regs_data() else "")
+    s += (if(using_vec) vregs.init_regs_data() else "")
     s
   }
 
-  def data_output(using_fpu: Boolean) =
+  def data_output(using_fpu: Boolean, using_vec: Boolean) =
   {
     "RVTEST_DATA_BEGIN\n" +
     "\n" +
     xregs.output_regs_data() +
     (if(using_fpu) fregs.output_regs_data() else "") +
+    (if(using_vec) vregs.output_regs_data() else "") +
     output_mem_data() +
     "RVTEST_DATA_END\n"
   }
@@ -485,10 +490,10 @@ class Prog(memsize: Int)
     header(nseqs) +
     code_header(using_fpu, using_vec, fprnd) +
     code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div) +
-    code_footer(using_fpu) +
+    code_footer(using_fpu, using_vec) +
     data_header() +
-    data_input(using_fpu) +
-    data_output(using_fpu) +
+    data_input(using_fpu, using_vec) +
+    data_output(using_fpu, using_vec) +
     data_footer()
   }
 

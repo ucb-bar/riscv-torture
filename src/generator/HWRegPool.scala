@@ -162,22 +162,48 @@ class FRegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool
     hwregs += new HWReg("f" + i.toString(), true, true)
 }
 
-class VRegsMaster(num_xregs: Int, num_pregs: Int) extends PoolsMaster
+class VRegsMaster(num_xregs: Int, num_pregs: Int, num_sregs: Int) extends PoolsMaster
 {
   assert(num_xregs >= 5, "For VRegMaster, num_xregs >=5 enforced")
   assert(num_pregs >= 1, "For VRegMaster, num_pregs >=1 enforced")
 
   val x_reg_num = (0 to (num_xregs-1))
   val p_reg_num = (0 to (num_pregs-1))
+  val s_reg_num = (0 to (num_sregs-1))
   
   val x_regpool  = new VXRegsPool(x_reg_num.toArray)
   val p_regpool  = new VPRegsPool(p_reg_num.toArray)
-  val s_regpool  = new VSRegsPool()
+  val s_regpool  = new VSRegsPool(s_reg_num.toArray)
   val a_regpool  = new VARegsPool()
   val regpools = 
     ArrayBuffer(x_regpool.asInstanceOf[HWRegPool], p_regpool.asInstanceOf[HWRegPool],
     s_regpool.asInstanceOf[HWRegPool], a_regpool.asInstanceOf[HWRegPool])  
   override val hwregs = regpools.map(_.hwregs).flatten
+
+  def init_regs() =
+  { 
+    var s = "vreg_init:\n"
+    s += s_regpool.init_regs()
+    s
+  }
+  def save_regs() =
+  { 
+    var s = "vreg_save:\n"
+    s += s_regpool.save_regs()
+    s
+  }
+  def init_regs_data() =
+  { 
+    var s = "vreg_init_data:\n"
+    s += s_regpool.init_regs_data()
+    s
+  }
+  def output_regs_data() =
+  { 
+    var s = "vreg_output_data:\n"
+    s += s_regpool.output_regs_data()
+    s
+  }
 }
 
 class VXRegsPool(reg_nums: Array[Int] = (0 to 255).toArray) extends HWRegPool
@@ -195,8 +221,58 @@ class VPRegsPool(reg_nums: Array[Int] = (0 to 15).toArray) extends HWRegPool
 class VSRegsPool(reg_nums: Array[Int] = (0 to 255).toArray) extends HWRegPool
 {
   hwregs += new HWReg("vs0", true, false)
-  for (i <- reg_nums)
+  for (i <- reg_nums.drop(1))
     hwregs += new HWReg("vs" + i.toString(), true, true)
+  def init_regs() = 
+  {
+    var s = "vsreg_init:\n"+"\tla x1, vsreg_init_data\n"
+    for ((i, curreg) <- reg_nums.zip(hwregs)) 
+    {
+      s += "\tld" + " x2, " + 8*i + "(x1)\n"
+      s += "\tvmss"+ " " + curreg + ", x2\n"
+    }
+    s += "\n\n"
+    s
+  } 
+  def save_regs() =
+  {
+    hwregs(1).state = HID
+    var s = "vsreg_save:\n"+"\tla x1, vsreg_output_data\n"
+    s += "\tvmss vs1, x1\n"
+    s += "\tlui x1, %hi(vsreg_save_vf)\n"
+    s += "\tvf %lo(vsreg_save_vf)(x1)\n"
+    s += "\tj vsreg_save_end\n"
+    s += ".align 3\n"
+    s += "vsreg_save_vf:\n"
+    for (curreg <- hwregs.drop(2))
+      if (curreg.is_visible) 
+      {
+        s += "\tvssd vs1, " + curreg + "\n"
+        s += "\tvaddi vs1, vs1, 8\n"
+      }
+      s += "\tvstop\n"
+      s += "vsreg_save_end:\n\n"
+    s
+  }
+  def init_regs_data() = 
+  {
+    var s = "\t.align 8\n"
+    s += "vsreg_init_data:\n"
+    for (i <- 0 to hwregs.length-1)
+      s += ("vs" + i + "_init:\t.dword " + "0x%016x\n" format rand_biased)
+    s += "\n"
+    s
+  }
+  
+  def output_regs_data() =
+  {
+    var s = "\t.align 8\n"
+    s += "vsreg_output_data:\n"
+    for (i <- 0 to hwregs.length-1)
+      s += ("vs" + i + "_output:\t.dword 0x%016x\n" format rand_dword)
+    s += "\n"
+    s
+  }
 }
 
 class VARegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool

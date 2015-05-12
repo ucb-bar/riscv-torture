@@ -51,7 +51,7 @@ object Generator extends Application
     assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
     assert (vecmix.keys.forall(List("vmem","valu","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
 
-    val prog = new Prog(memsize)
+    val prog = new Prog(memsize, veccfg)
     ProgSeg.cnt = 0
     SeqVec.cnt = 0
     val s = prog.generate(nseqs, fprnd, mix, veccfg, use_amo, use_mul, use_div)
