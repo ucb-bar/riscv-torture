@@ -75,8 +75,8 @@ object Overnight extends Application
             val statFile: Path = Path(t.init:_*) / (baseName+".stats")
             println(permFiles.mkString)
             println(statFile)
-            permFiles.foreach( f => f.copyTo( permDir / f.name))
-            statFile.copyTo(permDir / statFile.name, replaceExisting=true)
+            permFiles.foreach( f => f.copyTo( permDir / f.name, copyAttributes=false))
+            statFile.copyTo(permDir / statFile.name, replaceExisting=true, copyAttributes=false)
           }
         } 
         test foreach { t =>
