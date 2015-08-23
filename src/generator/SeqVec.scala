@@ -37,7 +37,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   extra_visible_data += MemDump(vec_mem)
 
   // Determine how many per type of vector register need to checkout for writing
-  def get_rand_reg_num(max: Int) =  // TODO: discuss this
+  def get_rand_reg_num(max: Int, min: Int) =  // TODO: discuss this
   {
     val randtype = rand_range(0, 99)
     val attempt =
@@ -47,10 +47,10 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
         rand_range(1, 3)
       else                      // 90% use moderate number
         rand_range(3, max/2)
-    Math.min(max, attempt)
+    Math.max(Math.min(max, attempt),min)
   }
-  val num_vvreg   = get_rand_reg_num(vvregs.size)
-  val num_vpreg   = get_rand_reg_num(vpregs.size) 
+  val num_vvreg   = get_rand_reg_num(vvregs.size, 5)
+  val num_vpreg   = get_rand_reg_num(vpregs.size, 1)
 
   // Create shadow register pools to mimic those registers
   val shadow_vvregs   = new ShadowRegPool
