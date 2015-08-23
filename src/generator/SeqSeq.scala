@@ -4,10 +4,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import Rand._
 
-class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean) extends InstSeq
+class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, aregs: HWRegPool, xregs: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean) extends VFInstSeq
 {
-  val seqs = new ArrayBuffer[InstSeq]
-  val seqs_active = new ArrayBuffer[InstSeq]
+  val seqs = new ArrayBuffer[VFInstSeq]
+  val seqs_active = new ArrayBuffer[VFInstSeq]
   var killed_seqs = 0
   val seqstats = new HashMap[String,Int].withDefaultValue(0)
 
@@ -18,16 +18,16 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, mem: Mem, nse
   def are_pools_fully_unallocated = List(vregs, pregs, sregs).forall(_.is_fully_unallocated)
 
   val name_to_seq = Map(
-    "vmem" -> (() => new SeqVMem(vregs, mem.asInstanceOf[VMem])), // TODO: Clean up
+    "vmem" -> (() => new SeqVMem(xregs, vregs, aregs, mem.asInstanceOf[VMem])), // TODO: Clean up
     "valu" -> (() => new SeqVALU(vregs, sregs, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt)), // TODO: Clean up
     "vonly" -> (() => new SeqVOnly(vregs, pregs, sregs)))
 
-  val prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
+  val prob_tbl = new ArrayBuffer[(Int, () => VFInstSeq)]
   mixcfg foreach {case(name, prob) => (prob_tbl += ((prob, name_to_seq(name))))}
 
   def gen_seq(): Unit =
   {
-    val nxtseq = InstSeq(prob_tbl)
+    val nxtseq = VFInstSeq(prob_tbl)
     seqs += nxtseq
     seqstats(nxtseq.seqname) += 1
   }
@@ -39,6 +39,8 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, mem: Mem, nse
       vregs.backup()
       pregs.backup()
       sregs.backup()
+      aregs.backup()
+      xregs.backup()
 
       if (seq.allocate_regs())
       {
@@ -49,6 +51,8 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, mem: Mem, nse
         vregs.restore()
         pregs.restore()
         sregs.restore()
+        aregs.restore()
+        xregs.restore()
 
         return
       }
@@ -64,7 +68,8 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, mem: Mem, nse
     while(!is_seqs_active_empty)
     {
       val seq = rand_pick(seqs_active)
-      insts += seq.next_inst()
+      if(seq.inst_left) insts += seq.next_inst()
+      if(seq.vinst_left) vinsts += seq.next_vinst()
 
       if(seq.is_done)
       {

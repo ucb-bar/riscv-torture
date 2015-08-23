@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVOnly(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
+class SeqVOnly(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool) extends VFInstSeq
 {
   override val seqname = "vonly"
   def seq_xdest(op: Opcode) = () =>

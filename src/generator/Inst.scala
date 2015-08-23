@@ -27,6 +27,7 @@ class Inst(opcode: String, val operands: Array[Operand])
     if (is_vshared) return "vshared"
     if (is_vvec) return "vvec"
     if (is_vmem) return "vmem"
+    if (is_vamo) return "vamo"
     if (is_vmisc) return "vmisc"
     return "unknown" //Shouldn't return this.
   }
@@ -103,6 +104,10 @@ class Inst(opcode: String, val operands: Array[Operand])
 
   def is_vmem = List("vlb", "vlh", "vlw", "vld", "vlbu", "vlhu", "vlwu", "vsb", "vsh", "vsw", "vsd", 
     "vlxb", "vlxh", "vlxw", "vlxd", "vlxbu", "vlxhu", "vlxwu", "vsxb", "vsxh", "vsxw", "vsxd").contains(opcode)
+
+  def is_vamo = List("vamoadd.w", "vamoswap.w", "vamoand.w", "vamoor.w", "vamomin.w", "vamominu.w",
+    "vamomax.w", "vamomaxu.w", "vamoxor.w", "vamoadd.d", "vamoswap.d", "vamoand.d", "vamoor.d",
+    "vamomin.d", "vamominu.d", "vamomax.d", "vamomaxu.d", "vamoxor.d").contains(opcode)
 
   def is_vmisc = List("vsetcfg", "vstop", "vsetvl", "veidx", "vf",
     "vmss", "vmsa", "fence").contains(opcode)
@@ -428,6 +433,25 @@ object VSXB extends Opcode("vsxb")
 object VSXH extends Opcode("vsxh")
 object VSXW extends Opcode("vsxw")
 object VSXD extends Opcode("vsxd")
+
+object VAMOADD_W extends Opcode("vamoadd.w")
+object VAMOSWAP_W extends Opcode("vamoswap.w")
+object VAMOAND_W extends Opcode("vamoand.w")
+object VAMOOR_W extends Opcode("vamoor.w")
+object VAMOMIN_W extends Opcode("vamomin.w")
+object VAMOMINU_W extends Opcode("vamominu.w")
+object VAMOMAX_W extends Opcode("vamomax.w")
+object VAMOMAXU_W extends Opcode("vamomaxu.w")
+object VAMOXOR_W extends Opcode("vamoxor.w")
+object VAMOADD_D extends Opcode("vamoadd.d")
+object VAMOSWAP_D extends Opcode("vamoswap.d")
+object VAMOAND_D extends Opcode("vamoand.d")
+object VAMOOR_D extends Opcode("vamoor.d")
+object VAMOMIN_D extends Opcode("vamomin.d")
+object VAMOMINU_D extends Opcode("vamominu.d")
+object VAMOMAX_D extends Opcode("vamomax.d")
+object VAMOMAXU_D extends Opcode("vamomaxu.d")
+object VAMOXOR_D extends Opcode("vamoxor.d")
 
 object MOVZ extends Opcode("movz")
 object MOVN extends Opcode("movn")

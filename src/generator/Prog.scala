@@ -61,7 +61,7 @@ class Prog(memsize: Int, veccfg: Map[String,String])
   val regstats = new HashMap[String,Int].withDefaultValue(0)
   for (cat <- List(("alu"),("cmp"),("branch"),("jalr"),
     ("jmp"),("la"),("mem"),("amo"),("misc"),("fpalu"),("fpcmp"),
-    ("fpfma"),("fpmem"),("fpcvt"),("fpmisc"),("vmem"),("valu"),
+    ("fpfma"),("fpmem"),("fpcvt"),("fpmisc"),("vmem"),("vamo"),("valu"),
     ("vmisc"),("vfpalu"),("vfpfma"),("vfpcvt"),("vsmem"),("vshared"),("unknown")))
     {
       catstats(cat)=0
@@ -218,8 +218,8 @@ class Prog(memsize: Int, veccfg: Map[String,String])
     {
       val cathash = HashMap("alu"->1,"cmp"->2,"branch"->3,"jmp"->4,"jalr"->5,
         "la"->6,"mem"->7,"amo"->8,"misc"->9,"fpalu"->10,"fpcmp"->11,"fpfma"->12,
-        "fpmem"->13,"fpcvt"->14,"fpmisc"->15,"vmem"->16,"valu"->17,"vfpalu"->18,
-        "vfpfma"->19,"vfpcvt"->20,"vsmem"->21,"vshared"->22,"vmisc"->23,"unknown"->24)
+        "fpmem"->13,"fpcvt"->14,"fpmisc"->15,"vmem"->16,"vamo"->17,"valu"->18,"vfpalu"->19,
+        "vfpfma"->20,"vfpcvt"->21,"vsmem"->22,"vshared"->23,"vmisc"->24,"unknown"->25)
       return cathash(cat1._1) < cathash(cat2._1)
     }
 

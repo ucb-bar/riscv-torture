@@ -92,7 +92,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vsregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt) //TODO: Enable configuration of enabling amo,mul,div ops
+    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vsregs, varegs, xregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt) //TODO: Enable configuration of enabling amo,mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt
@@ -102,9 +102,13 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     val vf_block = new ProgSeg(name+"_vf_"+i)
     while(!vf_instseq.is_done)
     {
-      val inst = vf_instseq.next_inst()
-      vf_block.insts += inst
-      vinsts += inst
+      if(vf_instseq.vinst_left)
+      {
+        val vinst = vf_instseq.next_vinst()
+        vf_block.insts += vinst
+        vinsts += vinst
+      }
+      if(vf_instseq.inst_left) insts += vf_instseq.next_inst()
     }
     vf_block.insts += VSTOP()
     vinsts += VSTOP()
