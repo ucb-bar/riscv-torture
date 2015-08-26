@@ -102,8 +102,12 @@ class Inst(opcode: String, val operands: Array[Operand])
   def is_vsmem = List("vlsb", "vlsh", "vlsw", "vlsd", "vlsbu", "vlshu", "vlswu", "vssb", "vssh", "vssw", "vssd",
     "vlab", "vlah", "vlaw", "vlad", "vlabu", "vlahu", "vlawu", "vsab", "vsah", "vsaw", "vsad").contains(opcode)
 
-  def is_vmem = List("vlb", "vlh", "vlw", "vld", "vlbu", "vlhu", "vlwu", "vsb", "vsh", "vsw", "vsd", 
-    "vlxb", "vlxh", "vlxw", "vlxd", "vlxbu", "vlxhu", "vlxwu", "vsxb", "vsxh", "vsxw", "vsxd").contains(opcode)
+  def is_vmem = List("vlb", "vlh", "vlw", "vld", "vlbu", "vlhu", "vlwu", "vsb", "vsh", "vsw", "vsd",
+  "vlsegb", "vlsegh", "vlsegw", "vlsegd", "vlsegbu", "vlseghu", "vlsegwu", "vssegb", "vssegh", "vssegw", "vssegd",
+  "vlstb", "vlsth", "vlstw", "vlstd", "vlstbu", "vlsthu", "vlstwu", "vsstb", "vssth", "vsstw", "vsstd",
+  "vlsegstb", "vlsegsth", "vlsegstw", "vlsegstd", "vlsegstbu", "vlsegsthu", "vlsegstwu", "vssegstb", "vssegsth", "vssegstw", "vssegstd",
+    "vlxb", "vlxh", "vlxw", "vlxd", "vlxbu", "vlxhu", "vlxwu", "vsxb", "vsxh", "vsxw", "vsxd",
+    "vlsegxb", "vlsegxh", "vlsegxw", "vlsegxd", "vlsegxbu", "vlsegxhu", "vlsegxwu", "vssegxb", "vssegxh", "vssegxw", "vssegxd").contains(opcode)
 
   def is_vamo = List("vamoadd.w", "vamoswap.w", "vamoand.w", "vamoor.w", "vamomin.w", "vamominu.w",
     "vamomax.w", "vamomaxu.w", "vamoxor.w", "vamoadd.d", "vamoswap.d", "vamoand.d", "vamoor.d",
@@ -422,6 +426,43 @@ object VSB extends Opcode("vsb")
 object VSH extends Opcode("vsh")
 object VSW extends Opcode("vsw")
 object VSD extends Opcode("vsd")
+
+object VLSEGB extends Opcode("vlsegb")
+object VLSEGH extends Opcode("vlsegh")
+object VLSEGW extends Opcode("vlsegw")
+object VLSEGD extends Opcode("vlsegd")
+object VLSEGBU extends Opcode("vlsegbu")
+object VLSEGHU extends Opcode("vlseghu")
+object VLSEGWU extends Opcode("vlsegwu")
+object VSSEGB extends Opcode("vssegb")
+object VSSEGH extends Opcode("vssegh")
+object VSSEGW extends Opcode("vssegw")
+object VSSEGD extends Opcode("vssegd")
+
+object VLSTB extends Opcode("vlstb")
+object VLSTH extends Opcode("vlsth")
+object VLSTW extends Opcode("vlstw")
+object VLSTD extends Opcode("vlstd")
+object VLSTBU extends Opcode("vlstbu")
+object VLSTHU extends Opcode("vlsthu")
+object VLSTWU extends Opcode("vlstwu")
+object VSSTB extends Opcode("vsstb")
+object VSSTH extends Opcode("vssth")
+object VSSTW extends Opcode("vsstw")
+object VSSTD extends Opcode("vsstd")
+
+object VLSEGSTB extends Opcode("vlsegstb")
+object VLSEGSTH extends Opcode("vlsegsth")
+object VLSEGSTW extends Opcode("vlsegstw")
+object VLSEGSTD extends Opcode("vlsegstd")
+object VLSEGSTBU extends Opcode("vlsegstbu")
+object VLSEGSTHU extends Opcode("vlsegsthu")
+object VLSEGSTWU extends Opcode("vlsegstwu")
+object VSSEGSTB extends Opcode("vssegstb")
+object VSSEGSTH extends Opcode("vssegsth")
+object VSSEGSTW extends Opcode("vssegstw")
+object VSSEGSTD extends Opcode("vssegstd")
+
 object VLXB extends Opcode("vlxb")
 object VLXH extends Opcode("vlxh")
 object VLXW extends Opcode("vlxw")
@@ -433,6 +474,18 @@ object VSXB extends Opcode("vsxb")
 object VSXH extends Opcode("vsxh")
 object VSXW extends Opcode("vsxw")
 object VSXD extends Opcode("vsxd")
+
+object VLSEGXB extends Opcode("vlsegxb")
+object VLSEGXH extends Opcode("vlsegxh")
+object VLSEGXW extends Opcode("vlsegxw")
+object VLSEGXD extends Opcode("vlsegxd")
+object VLSEGXBU extends Opcode("vlsegxbu")
+object VLSEGXHU extends Opcode("vlsegxhu")
+object VLSEGXWU extends Opcode("vlsegxwu")
+object VSSEGXB extends Opcode("vssegxb")
+object VSSEGXH extends Opcode("vssegxh")
+object VSSEGXW extends Opcode("vssegxw")
+object VSSEGXD extends Opcode("vssegxd")
 
 object VAMOADD_W extends Opcode("vamoadd.w")
 object VAMOSWAP_W extends Opcode("vamoswap.w")

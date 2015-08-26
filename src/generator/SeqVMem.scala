@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean) extends VFInstSeq
+class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean) extends VFInstSeq
 {
   override val seqname = "vmem"
   def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int) =
@@ -23,6 +23,25 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
     vinsts += op(reg_dest, reg_vaddr)
   }
 
+  def seq_load_seg_addrfn(op: Opcode, addrfn: (Int) => Int, bytes :Int) = () =>
+  {
+    val seglen = rand_seglen
+    assert(bytes*seglen <= mem.ut_size,
+      "Per uthread memory must be larger than seglen*bytes")
+    val reg_addr   = reg_write_hidden(xregs)
+    val reg_vaddr  = reg_write_hidden(aregs)
+    //reserve seglen+1 registers
+    val reg_dest   = reg_write_visible(vregs)
+    for(i <- 1 to seglen+1)
+    {
+      reg_write_visible(vregs)
+    }
+    val addr = addrfn(mem.ut_size)
+
+    helper_setup_address(reg_addr, reg_vaddr, addr)
+    vinsts += op(reg_dest, reg_vaddr, Imm(seglen))
+  }
+
   def seq_store_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
   {
     val reg_addr   = reg_write_hidden(xregs)
@@ -32,6 +51,25 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
 
     helper_setup_address(reg_addr, reg_vaddr, addr)
     vinsts += op(reg_src, reg_vaddr)
+  }
+
+  def seq_store_seg_addrfn(op: Opcode, addrfn: (Int) => Int, bytes: Int) = () =>
+  {
+    val seglen = rand_seglen
+    assert(bytes*seglen <= mem.ut_size,
+      "Per uthread memory must be larger than seglen*bytes")
+    val reg_addr   = reg_write_hidden(xregs)
+    val reg_vaddr  = reg_write_hidden(aregs)
+    //reserve seglen+1 registers
+    val reg_src    = reg_read_visible(vregs)
+    for(i <- 1 to seglen+1)
+    {
+      reg_read_visible(vregs)
+    }
+    val addr = addrfn(mem.ut_size)
+
+    helper_setup_address(reg_addr, reg_vaddr, addr)
+    vinsts += op(reg_src, reg_vaddr, Imm(seglen))
   }
 
   def seq_amo_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
@@ -60,6 +98,22 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
   candidates += seq_store_addrfn(VSH, rand_addr_h)
   candidates += seq_store_addrfn(VSW, rand_addr_w)
   candidates += seq_store_addrfn(VSD, rand_addr_d)
+
+  if(use_seg)
+  {
+    candidates += seq_load_seg_addrfn(VLSEGB, rand_addr_b, 1)
+    candidates += seq_load_seg_addrfn(VLSEGBU, rand_addr_b, 1)
+    candidates += seq_load_seg_addrfn(VLSEGH, rand_addr_h, 2)
+    candidates += seq_load_seg_addrfn(VLSEGHU, rand_addr_h, 2)
+    candidates += seq_load_seg_addrfn(VLSEGW, rand_addr_w, 4)
+    candidates += seq_load_seg_addrfn(VLSEGWU, rand_addr_w, 4)
+    candidates += seq_load_seg_addrfn(VLSEGD, rand_addr_d, 8)
+
+    candidates += seq_store_seg_addrfn(VSSEGB, rand_addr_b, 1)
+    candidates += seq_store_seg_addrfn(VSSEGH, rand_addr_h, 2)
+    candidates += seq_store_seg_addrfn(VSSEGW, rand_addr_w, 4)
+    candidates += seq_store_seg_addrfn(VSSEGD, rand_addr_d, 8)
+  }
 
   if(use_amo)
   {

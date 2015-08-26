@@ -17,6 +17,7 @@ object Rand
 
   def rand_shamt() = rand_range(0, 63)
   def rand_shamtw() = rand_range(0, 31)
+  def rand_seglen() = rand_range(0, 7)
   def rand_imm() = rand_range(-2048, 2047)
   def rand_bigimm() = rand_range(0, 1048575)
 
