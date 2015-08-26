@@ -23,6 +23,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   val use_fpu = cfg.getOrElse("fpu", "true") == "true"
   val use_fma = cfg.getOrElse("fma", "true") == "true"
   val use_fcvt = cfg.getOrElse("fcvt", "true") == "true"
+  val use_amo = cfg.getOrElse("amo", "true") == "true"
   val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v.toInt) }.asInstanceOf[Map[String,Int]]
   val vseqstats = new HashMap[String,Int].withDefaultValue(0)
   val vinsts = new ArrayBuffer[Inst]
@@ -92,7 +93,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vsregs, varegs, xregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt) //TODO: Enable configuration of enabling amo,mul,div ops
+    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vsregs, varegs, xregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, use_amo) //TODO: Enable configuration of enabling amo,mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt

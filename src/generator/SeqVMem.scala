@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem) extends VFInstSeq
+class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean) extends VFInstSeq
 {
   override val seqname = "vmem"
   def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int) =
@@ -61,23 +61,26 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem) 
   candidates += seq_store_addrfn(VSW, rand_addr_w)
   candidates += seq_store_addrfn(VSD, rand_addr_d)
 
-  candidates += seq_amo_addrfn(VAMOADD_W, rand_addr_w)
-  candidates += seq_amo_addrfn(VAMOSWAP_W, rand_addr_w)
-  candidates += seq_amo_addrfn(VAMOAND_W, rand_addr_w)
-  candidates += seq_amo_addrfn(VAMOOR_W, rand_addr_w)
-  candidates += seq_amo_addrfn(VAMOMIN_W, rand_addr_w)
-  candidates += seq_amo_addrfn(VAMOMINU_W, rand_addr_w)
-  candidates += seq_amo_addrfn(VAMOMAX_W, rand_addr_w)
-  candidates += seq_amo_addrfn(VAMOMAXU_W, rand_addr_w)
+  if(use_amo)
+  {
+    candidates += seq_amo_addrfn(VAMOADD_W, rand_addr_w)
+    candidates += seq_amo_addrfn(VAMOSWAP_W, rand_addr_w)
+    candidates += seq_amo_addrfn(VAMOAND_W, rand_addr_w)
+    candidates += seq_amo_addrfn(VAMOOR_W, rand_addr_w)
+    candidates += seq_amo_addrfn(VAMOMIN_W, rand_addr_w)
+    candidates += seq_amo_addrfn(VAMOMINU_W, rand_addr_w)
+    candidates += seq_amo_addrfn(VAMOMAX_W, rand_addr_w)
+    candidates += seq_amo_addrfn(VAMOMAXU_W, rand_addr_w)
 
-  candidates += seq_amo_addrfn(VAMOADD_D, rand_addr_d)
-  candidates += seq_amo_addrfn(VAMOSWAP_D, rand_addr_d)
-  candidates += seq_amo_addrfn(VAMOAND_D, rand_addr_d)
-  candidates += seq_amo_addrfn(VAMOOR_D, rand_addr_d)
-  candidates += seq_amo_addrfn(VAMOMIN_D, rand_addr_d)
-  candidates += seq_amo_addrfn(VAMOMINU_D, rand_addr_d)
-  candidates += seq_amo_addrfn(VAMOMAX_D, rand_addr_d)
-  candidates += seq_amo_addrfn(VAMOMAXU_D, rand_addr_d)
+    candidates += seq_amo_addrfn(VAMOADD_D, rand_addr_d)
+    candidates += seq_amo_addrfn(VAMOSWAP_D, rand_addr_d)
+    candidates += seq_amo_addrfn(VAMOAND_D, rand_addr_d)
+    candidates += seq_amo_addrfn(VAMOOR_D, rand_addr_d)
+    candidates += seq_amo_addrfn(VAMOMIN_D, rand_addr_d)
+    candidates += seq_amo_addrfn(VAMOMINU_D, rand_addr_d)
+    candidates += seq_amo_addrfn(VAMOMAX_D, rand_addr_d)
+    candidates += seq_amo_addrfn(VAMOMAXU_D, rand_addr_d)
+  }
 
   rand_pick(candidates)()
 }
