@@ -4,7 +4,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import Rand._
 
-class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, aregs: HWRegPool, xregs: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean, use_amo: Boolean, use_seg: Boolean) extends VFInstSeq
+class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, aregs: HWRegPool, xregs: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean) extends VFInstSeq
 {
   val seqs = new ArrayBuffer[VFInstSeq]
   val seqs_active = new ArrayBuffer[VFInstSeq]
@@ -18,7 +18,7 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, aregs: HWRegP
   def are_pools_fully_unallocated = List(vregs, pregs, sregs).forall(_.is_fully_unallocated)
 
   val name_to_seq = Map(
-    "vmem" -> (() => new SeqVMem(xregs, vregs, aregs, mem.asInstanceOf[VMem], use_amo,use_seg)),
+    "vmem" -> (() => new SeqVMem(xregs, vregs, aregs, mem.asInstanceOf[VMem], use_amo,use_seg, use_stride)),
     "valu" -> (() => new SeqVALU(vregs, sregs, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt)), // TODO: Clean up
     "vonly" -> (() => new SeqVOnly(vregs, pregs, sregs)))
 

@@ -3,73 +3,111 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean) extends VFInstSeq
+class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean) extends VFInstSeq
 {
   override val seqname = "vmem"
-  def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int) =
+  def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
   {
     insts += LA(reg_addr, BaseImm(mem.toString, baseaddr))
     insts += VMSA(reg_vaddr, reg_addr)
+    reg_vstride match {
+      case Some(reg) => 
+      {
+        insts += LI(reg_addr, Imm(stride))
+        insts += VMSA(reg, reg_addr)
+      }
+      case None => {}
+    }
   }
 
-  def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
+  def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int, seg: Option[Imm] = None, stride: Option[Reg] = None) = () =>
   {
     val reg_addr   = reg_write_hidden(xregs)
     val reg_vaddr  = reg_write_hidden(aregs)
     val reg_dest   = reg_write_visible(vregs)
     val addr = addrfn(mem.ut_size)
 
-    helper_setup_address(reg_addr, reg_vaddr, addr)
-    vinsts += op(reg_dest, reg_vaddr)
+    helper_setup_address(reg_addr, reg_vaddr, addr, stride, addrfn(mem.ut_size))
+    (seg, stride) match {
+      case (Some(imm), Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg, imm)
+      case (Some(imm), None) => vinsts += op(reg_dest, reg_vaddr, imm)
+      case (None, Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg)
+      case (None, None) => vinsts += op(reg_dest, reg_vaddr)
+    }
   }
 
-  def seq_load_seg_addrfn(op: Opcode, addrfn: (Int) => Int, bytes :Int) = () =>
+  def seq_load_seg_addrfn(op: Opcode, addrfn: (Int) => Int, bytes :Int) =
   {
     val seglen = rand_seglen
     assert(bytes*seglen <= mem.ut_size,
       "Per uthread memory must be larger than seglen*bytes")
-    val reg_addr   = reg_write_hidden(xregs)
-    val reg_vaddr  = reg_write_hidden(aregs)
-    //reserve seglen+1 registers
-    val reg_dest   = reg_write_visible(vregs)
-    for(i <- 1 to seglen+1)
-    {
+    //reserve seglen registers
+    for(i <- 0 to seglen) 
       reg_write_visible(vregs)
-    }
-    val addr = addrfn(mem.ut_size)
-
-    helper_setup_address(reg_addr, reg_vaddr, addr)
-    vinsts += op(reg_dest, reg_vaddr, Imm(seglen))
+    seq_load_addrfn(op, addrfn, Some(Imm(seglen)), None)
   }
 
-  def seq_store_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
+  def seq_load_stride_addrfn(op: Opcode, addrfn: (Int) => Int) =
   {
-    val reg_addr   = reg_write_hidden(xregs)
-    val reg_vaddr  = reg_write_hidden(aregs)
-    val reg_src    = reg_read_visible(vregs)
-    val addr = addrfn(mem.ut_size)
-
-    helper_setup_address(reg_addr, reg_vaddr, addr)
-    vinsts += op(reg_src, reg_vaddr)
+    val reg_vstride= reg_write_hidden(aregs)
+    seq_load_addrfn(op, addrfn, None, Some(reg_vstride))
   }
 
-  def seq_store_seg_addrfn(op: Opcode, addrfn: (Int) => Int, bytes: Int) = () =>
+  def seq_load_seg_stride_addrfn(op: Opcode, addrfn: (Int) => Int, bytes :Int) =
   {
     val seglen = rand_seglen
     assert(bytes*seglen <= mem.ut_size,
       "Per uthread memory must be larger than seglen*bytes")
+    //reserve seglen registers
+    for(i <- 0 to seglen) 
+      reg_write_visible(vregs)
+    val reg_vstride= reg_write_hidden(aregs)
+    seq_load_addrfn(op, addrfn, Some(Imm(seglen)), Some(reg_vstride))
+  }
+
+  def seq_store_addrfn(op: Opcode, addrfn: (Int) => Int, seg: Option[Imm] = None, stride: Option[Reg] = None) = () =>
+  {
     val reg_addr   = reg_write_hidden(xregs)
     val reg_vaddr  = reg_write_hidden(aregs)
-    //reserve seglen+1 registers
     val reg_src    = reg_read_visible(vregs)
-    for(i <- 1 to seglen+1)
-    {
-      reg_read_visible(vregs)
-    }
     val addr = addrfn(mem.ut_size)
 
-    helper_setup_address(reg_addr, reg_vaddr, addr)
-    vinsts += op(reg_src, reg_vaddr, Imm(seglen))
+    helper_setup_address(reg_addr, reg_vaddr, addr, stride, addrfn(mem.ut_size))
+    (seg, stride) match {
+      case (Some(imm), Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg, imm)
+      case (Some(imm), None) => vinsts += op(reg_src, reg_vaddr, imm)
+      case (None, Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg)
+      case (None, None) => vinsts += op(reg_src, reg_vaddr)
+    }
+  }
+
+  def seq_store_seg_addrfn(op: Opcode, addrfn: (Int) => Int, bytes: Int) =
+  {
+    val seglen = rand_seglen
+    assert(bytes*seglen <= mem.ut_size,
+      "Per uthread memory must be larger than seglen*bytes")
+    //reserve seglen registers
+    for(i <- 0 to seglen)
+      reg_read_visible(vregs)
+    seq_store_addrfn(op, addrfn, Some(Imm(seglen)), None)
+  }
+
+  def seq_store_stride_addrfn(op: Opcode, addrfn: (Int) => Int) =
+  {
+    val reg_vstride= reg_write_hidden(aregs)
+    seq_store_addrfn(op, addrfn, None, Some(reg_vstride))
+  }
+
+  def seq_store_seg_stride_addrfn(op: Opcode, addrfn: (Int) => Int, bytes: Int) =
+  {
+    val seglen = rand_seglen
+    assert(bytes*seglen <= mem.ut_size,
+      "Per uthread memory must be larger than seglen*bytes")
+    //reserve seglen registers
+    for(i <- 0 to seglen)
+      reg_read_visible(vregs)
+    val reg_vstride= reg_write_hidden(aregs)
+    seq_store_addrfn(op, addrfn, Some(Imm(seglen)), Some(reg_vstride))
   }
 
   def seq_amo_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
@@ -113,6 +151,37 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
     candidates += seq_store_seg_addrfn(VSSEGH, rand_addr_h, 2)
     candidates += seq_store_seg_addrfn(VSSEGW, rand_addr_w, 4)
     candidates += seq_store_seg_addrfn(VSSEGD, rand_addr_d, 8)
+  }
+
+  if(use_stride)
+  {
+    candidates += seq_load_stride_addrfn(VLSTB, rand_addr_b)
+    candidates += seq_load_stride_addrfn(VLSTBU, rand_addr_b)
+    candidates += seq_load_stride_addrfn(VLSTH, rand_addr_h)
+    candidates += seq_load_stride_addrfn(VLSTHU, rand_addr_h)
+    candidates += seq_load_stride_addrfn(VLSTW, rand_addr_w)
+    candidates += seq_load_stride_addrfn(VLSTWU, rand_addr_w)
+    candidates += seq_load_stride_addrfn(VLSTD, rand_addr_d)
+
+    candidates += seq_store_stride_addrfn(VSSTB, rand_addr_b)
+    candidates += seq_store_stride_addrfn(VSSTH, rand_addr_h)
+    candidates += seq_store_stride_addrfn(VSSTW, rand_addr_w)
+    candidates += seq_store_stride_addrfn(VSSTD, rand_addr_d)
+    if(use_seg)
+    {
+      candidates += seq_load_seg_stride_addrfn(VLSEGSTB, rand_addr_b, 1)
+      candidates += seq_load_seg_stride_addrfn(VLSEGSTBU, rand_addr_b, 1)
+      candidates += seq_load_seg_stride_addrfn(VLSEGSTH, rand_addr_h, 2)
+      candidates += seq_load_seg_stride_addrfn(VLSEGSTHU, rand_addr_h, 2)
+      candidates += seq_load_seg_stride_addrfn(VLSEGSTW, rand_addr_w, 4)
+      candidates += seq_load_seg_stride_addrfn(VLSEGSTWU, rand_addr_w, 4)
+      candidates += seq_load_seg_stride_addrfn(VLSEGSTD, rand_addr_d, 8)
+
+      candidates += seq_store_seg_stride_addrfn(VSSEGSTB, rand_addr_b, 1)
+      candidates += seq_store_seg_stride_addrfn(VSSEGSTH, rand_addr_h, 2)
+      candidates += seq_store_seg_stride_addrfn(VSSEGSTW, rand_addr_w, 4)
+      candidates += seq_store_seg_stride_addrfn(VSSEGSTD, rand_addr_d, 8)
+    }
   }
 
   if(use_amo)
