@@ -20,17 +20,20 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
     }
   }
 
-  def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int, seg: Option[Imm] = None, stride: Option[Reg] = None) = () =>
+  def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int, seg: Option[Int] = None, stride: Option[Reg] = None) = () =>
   {
     val reg_addr   = reg_write_hidden(xregs)
     val reg_vaddr  = reg_write_hidden(aregs)
-    val reg_dest   = reg_write_visible(vregs)
+    val reg_dest   = seg match {
+      case Some(segs) => reg_write_visible_consec(vregs, segs+1)//resever seglen+1 regs
+      case None => reg_write_visible(vregs)
+    }
     val addr = addrfn(mem.ut_size)
 
     helper_setup_address(reg_addr, reg_vaddr, addr, stride, addrfn(mem.ut_size))
     (seg, stride) match {
-      case (Some(imm), Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg, imm)
-      case (Some(imm), None) => vinsts += op(reg_dest, reg_vaddr, imm)
+      case (Some(segs), Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg, Imm(segs))
+      case (Some(segs), None) => vinsts += op(reg_dest, reg_vaddr, Imm(segs))
       case (None, Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg)
       case (None, None) => vinsts += op(reg_dest, reg_vaddr)
     }
@@ -41,10 +44,7 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
     val seglen = rand_seglen
     assert(bytes*seglen <= mem.ut_size,
       "Per uthread memory must be larger than seglen*bytes")
-    //reserve seglen registers
-    for(i <- 0 to seglen) 
-      reg_write_visible(vregs)
-    seq_load_addrfn(op, addrfn, Some(Imm(seglen)), None)
+    seq_load_addrfn(op, addrfn, Some(seglen), None)
   }
 
   def seq_load_stride_addrfn(op: Opcode, addrfn: (Int) => Int) =
@@ -58,24 +58,24 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
     val seglen = rand_seglen
     assert(bytes*seglen <= mem.ut_size,
       "Per uthread memory must be larger than seglen*bytes")
-    //reserve seglen registers
-    for(i <- 0 to seglen) 
-      reg_write_visible(vregs)
     val reg_vstride= reg_write_hidden(aregs)
-    seq_load_addrfn(op, addrfn, Some(Imm(seglen)), Some(reg_vstride))
+    seq_load_addrfn(op, addrfn, Some(seglen), Some(reg_vstride))
   }
 
-  def seq_store_addrfn(op: Opcode, addrfn: (Int) => Int, seg: Option[Imm] = None, stride: Option[Reg] = None) = () =>
+  def seq_store_addrfn(op: Opcode, addrfn: (Int) => Int, seg: Option[Int] = None, stride: Option[Reg] = None) = () =>
   {
     val reg_addr   = reg_write_hidden(xregs)
     val reg_vaddr  = reg_write_hidden(aregs)
-    val reg_src    = reg_read_visible(vregs)
+    val reg_src   = seg match {
+      case Some(segs) => reg_read_visible_consec(vregs, segs+1) //reserve seglen+1 regs
+      case None => reg_read_visible(vregs)
+    }
     val addr = addrfn(mem.ut_size)
 
     helper_setup_address(reg_addr, reg_vaddr, addr, stride, addrfn(mem.ut_size))
     (seg, stride) match {
-      case (Some(imm), Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg, imm)
-      case (Some(imm), None) => vinsts += op(reg_src, reg_vaddr, imm)
+      case (Some(segs), Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg, Imm(segs))
+      case (Some(segs), None) => vinsts += op(reg_src, reg_vaddr, Imm(segs))
       case (None, Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg)
       case (None, None) => vinsts += op(reg_src, reg_vaddr)
     }
@@ -86,10 +86,7 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
     val seglen = rand_seglen
     assert(bytes*seglen <= mem.ut_size,
       "Per uthread memory must be larger than seglen*bytes")
-    //reserve seglen registers
-    for(i <- 0 to seglen)
-      reg_read_visible(vregs)
-    seq_store_addrfn(op, addrfn, Some(Imm(seglen)), None)
+    seq_store_addrfn(op, addrfn, Some(seglen), None)
   }
 
   def seq_store_stride_addrfn(op: Opcode, addrfn: (Int) => Int) =
@@ -103,11 +100,8 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
     val seglen = rand_seglen
     assert(bytes*seglen <= mem.ut_size,
       "Per uthread memory must be larger than seglen*bytes")
-    //reserve seglen registers
-    for(i <- 0 to seglen)
-      reg_read_visible(vregs)
     val reg_vstride= reg_write_hidden(aregs)
-    seq_store_addrfn(op, addrfn, Some(Imm(seglen)), Some(reg_vstride))
+    seq_store_addrfn(op, addrfn, Some(seglen), Some(reg_vstride))
   }
 
   def seq_amo_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>

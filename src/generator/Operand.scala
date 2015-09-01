@@ -1,5 +1,7 @@
 package torture
 
+import scala.collection.mutable.ArrayBuffer
+
 abstract class Operand
 
 class Reg extends Operand
@@ -14,7 +16,11 @@ class RegNeedsAlloc(
   val hwrp: HWRegPool,
   val filter: (HWReg) => Boolean,
   val alloc: (HWReg) => Unit,
-  val free: (HWReg) => Unit) extends Reg
+  val free: (HWReg) => Unit,
+  val consec_regs: Int = 1) extends Reg
+{
+  val regs = new ArrayBuffer[Reg]
+}
 
 class Imm(imm: Int) extends Operand
 {

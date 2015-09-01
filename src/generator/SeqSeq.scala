@@ -48,19 +48,17 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, aregs: HWRegP
       }
       else
       {
-      // TODO: letting other seqs drain doesn't solve interaction between 
-      // a regs which can only be set once per vf block
         vregs.restore()
         pregs.restore()
         sregs.restore()
         aregs.restore()
         xregs.restore()
-        if (are_pools_fully_unallocated)
-        {
-          seqs -= seq
-          killed_seqs += 1
-          seqstats(seq.seqname) -= 1
-        }
+        // because the setup instructions for a vf seq are only run once we
+        // cannot free va or vs regs to be reused so we kill seqs that can be
+        // allocated
+        seqs -= seq
+        killed_seqs += 1
+        seqstats(seq.seqname) -= 1
 
         return
       }
@@ -80,12 +78,10 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, sregs: HWRegPool, aregs: HWRegP
       if(seq.vinst_left) vinsts += seq.next_vinst()
 
       if(seq.is_done)
-      {
-        seq.free_regs()
         seqs_active -= seq
-      }
     }
   }
+  for(seq <- seqs) seq.free_regs()
 
   if(killed_seqs >= (nseqs*5))
   println("warning: a SeqSeq killed an excessive number of sequences. (#V=%d, #P=%d, #S=%d)" format (vregs.size, pregs.size, sregs.size))

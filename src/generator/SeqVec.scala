@@ -60,20 +60,18 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   val shadow_vpregs   = new ShadowRegPool
 
   val vvregs_checkout = new ArrayBuffer[Reg]
-  for(i <- 1 to num_vvreg)
-  {
-    val vreg_adding = reg_write_visible(vvregs)
-    vvregs_checkout += vreg_adding
-    shadow_vvregs.hwregs += new HWShadowReg(vreg_adding, "v_shadow", true, true)
-  }
+  val vregs_adding = reg_write_visible_consec(vvregs, num_vvreg)
+  vregs_adding.asInstanceOf[RegNeedsAlloc].regs.map(hr => {
+    vvregs_checkout += hr
+    shadow_vvregs.hwregs += new HWShadowReg(hr, "v_shadow", true, true)
+  })
 
   val vpregs_checkout = new ArrayBuffer[Reg]
-  for(i <- 1 to num_vpreg)
-  {
-    val vreg_adding = reg_write_visible(vpregs)
-    vpregs_checkout += vreg_adding
-    shadow_vpregs.hwregs += new HWShadowReg(vreg_adding, "p_shadow", true, true)
-  }
+  val vpregs_adding = reg_write_visible_consec(vpregs, num_vpreg)
+  vpregs_adding.asInstanceOf[RegNeedsAlloc].regs.map(hr => {
+    vpregs_checkout += hr
+    shadow_vpregs.hwregs += new HWShadowReg(hr, "p_shadow", true, true)
+  })
 
   // Handle initialization of vreg from memories
   for((vreg,i) <- vvregs_checkout.zipWithIndex)
