@@ -176,9 +176,12 @@ object TestRunner extends Application
 
   def runSim(sim: String, simargs: Seq[String], signature: String, args: Seq[String], invokebin: String): String = {
     val cmd = Seq(sim) ++ simargs ++ Seq("+signature="+signature) ++ args ++ Seq(invokebin)
+    println("running:"+cmd)
     cmd!!
 
-    new Scanner(new File(signature)).useDelimiter("\\Z").next()
+    val sigFile = new File(signature)
+    if(!sigFile.exists()) ""
+    else new Scanner(sigFile).useDelimiter("\\Z").next()
   }
 
   def runCSim(sim: String)(bin: String): String = {
