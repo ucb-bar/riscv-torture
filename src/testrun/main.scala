@@ -174,10 +174,18 @@ object TestRunner extends Application
     hexFileName
   }
 
-  def runSim(sim: String, simargs: Seq[String], signature: String, args: Seq[String], invokebin: String): String = {
+  def runSim(sim: String, simargs: Seq[String], signature: String, output: String, args: Seq[String], invokebin: String): String = {
     val cmd = Seq(sim) ++ simargs ++ Seq("+signature="+signature) ++ args ++ Seq(invokebin)
     println("running:"+cmd)
-    cmd!!
+    val out = new StringBuilder
+    cmd ! ProcessLogger(out append _+"\n", out append _+"\n")
+    val fw = new FileWriter(output)
+    fw.write(out.mkString)
+    fw.close()
+    val out_dasm = Process(Seq("cat",output)) #| Process("spike-dasm extension hwacha") !!
+    val fwd = new FileWriter(output)
+    fwd.write(out_dasm)
+    fwd.close()
 
     val sigFile = new File(signature)
     if(!sigFile.exists()) ""
@@ -185,16 +193,16 @@ object TestRunner extends Application
   }
 
   def runCSim(sim: String)(bin: String): String = {
-    runSim(sim, Seq(), bin+".csim.sig", Seq("+max-cycles="+maxcycles),bin)
+  runSim(sim, Seq(), bin+".csim.sig", bin+".csim.out", Seq("+max-cycles="+maxcycles,"+verbose","-v"+bin+".vcd"),bin)
   }
 
   def runRtlSim(sim: String)(bin: String): String = {
-    runSim(sim, Seq(), bin+".rtlsim.sig", Seq("+max-cycles="+maxcycles),bin)
+  runSim(sim, Seq(), bin+".rtlsim.sig", bin+".rtlsim.out", Seq("+max-cycles="+maxcycles,"+verbose","+vcdplusfile="+bin+".vpd"),bin)
   }
 
   def runIsaSim(bin: String): String = {
-    val simargs = if (hwacha) Seq("--extension=hwacha") else Seq()
-    runSim("spike", simargs, bin+".spike.sig", Seq(), bin)
+    val simargs = if (hwacha) Seq("-d", "--extension=hwacha") else Seq("-d")
+    runSim("spike", simargs, bin+".spike.sig", bin+".spike.out", Seq(), bin)
   }
 
   def runSimulators(bin: String, simulators: Seq[(String, (String) => String)], dumpSigs: Boolean): Seq[(String, (String, (String) => String), Result)] = { 
