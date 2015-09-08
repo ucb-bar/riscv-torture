@@ -420,6 +420,12 @@ class Prog(memsize: Int, veccfg: Map[String,String])
     "\tRVTEST_FAIL\n" +
     "\n" +
     "test_end:\n" +
+    // run the test twice (first is to warm the caches)
+    "\tla x1, execution_count\n" +
+    "\tlw x2, 0(x1)\n" +
+    "\taddi x3, x2, 1\n" +
+    "\tsw x3, 0(x1)\n" +
+    "\tbeqz x2, test_start\n" +
     "\tRVTEST_PASS\n" +
     "\n" +
     "RVTEST_CODE_END\n" +
@@ -445,6 +451,8 @@ class Prog(memsize: Int, veccfg: Map[String,String])
     var s = "// Memory Blocks\n"
     s += MemDump(core_memory)
     s += "\n"
+    s += ".align 8\n"
+    s += "execution_count: .word 0x0000000000000000\n\n"
     for(seq <- seqs.filter(_.is_done))
     {
       val ns = seq.extra_visible_data.mkString("\n")
