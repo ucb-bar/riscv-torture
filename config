@@ -1,9 +1,10 @@
-torture.generator.nseqs   1000
-torture.generator.memsize 1024
-torture.generator.fprnd   0
-torture.generator.amo     true
-torture.generator.mul     true
-torture.generator.divider true
+torture.generator.nseqs     1000
+torture.generator.memsize   1024
+torture.generator.fprnd     0
+torture.generator.amo       true
+torture.generator.mul       true
+torture.generator.divider   true
+torture.generator.run_twice true
 
 torture.generator.mix.xmem    10
 torture.generator.mix.xbranch 25

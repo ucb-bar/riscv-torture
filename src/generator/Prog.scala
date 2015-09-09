@@ -25,7 +25,7 @@ object ProgSeg
   }
 }
 
-class Prog(memsize: Int, veccfg: Map[String,String])
+class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
 {
   // Setup scalar core memory
   val core_memory = new Mem("test_memory", memsize)
@@ -407,7 +407,7 @@ class Prog(memsize: Int, veccfg: Map[String,String])
     "\tvsetvl x1,x1\n"
   }
 
-  def code_footer(using_fpu: Boolean, using_vec: Boolean) =
+  def code_footer(using_fpu: Boolean, using_vec: Boolean, run_twice: Boolean) =
   {
     var s = "reg_dump:\n" +
     // fregs must be saved after xregs
@@ -423,9 +423,9 @@ class Prog(memsize: Int, veccfg: Map[String,String])
     // run the test twice (first is to warm the caches)
     "\tla x1, execution_count\n" +
     "\tlw x2, 0(x1)\n" +
-    "\taddi x3, x2, 1\n" +
+    "\taddi x3, x2, -1\n" +
     "\tsw x3, 0(x1)\n" +
-    "\tbeqz x2, test_start\n" +
+    (if(run_twice) "\tbnez x2, test_start\n" else "\t#only run once")  +
     "\tRVTEST_PASS\n" +
     "\n" +
     "RVTEST_CODE_END\n" +
@@ -452,7 +452,7 @@ class Prog(memsize: Int, veccfg: Map[String,String])
     s += MemDump(core_memory)
     s += "\n"
     s += ".align 8\n"
-    s += "execution_count: .word 0x0000000000000000\n\n"
+    s += "execution_count: .word 0x0000000000000001\n\n"
     for(seq <- seqs.filter(_.is_done))
     {
       val ns = seq.extra_visible_data.mkString("\n")
@@ -488,7 +488,7 @@ class Prog(memsize: Int, veccfg: Map[String,String])
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, run_twice: Boolean) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -498,7 +498,7 @@ class Prog(memsize: Int, veccfg: Map[String,String])
     header(nseqs) +
     code_header(using_fpu, using_vec, fprnd) +
     code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div) +
-    code_footer(using_fpu, using_vec) +
+    code_footer(using_fpu, using_vec, run_twice) +
     data_header() +
     data_input(using_fpu, using_vec) +
     data_output(using_fpu, using_vec) +
