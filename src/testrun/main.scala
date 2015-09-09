@@ -9,6 +9,7 @@ import java.util.Properties
 import java.io.FileInputStream
 import java.util.Scanner
 import java.io.File
+import scala.util.Random
 
 case class Options(var testAsmName: Option[String] = None,
   var testBinName: Option[String] = None,
@@ -135,7 +136,9 @@ object TestRunner extends Application
     if (virtualMode)
     {
       println("Virtual mode")
-      process = "riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -std=gnu99 -O2 -I./env/v -T./env/v/link.ld ./env/v/entry.S ./env/v/vm.c " + asmFileName + " -lc -o " + binFileName
+      val entropy = (new Random()).nextLong()
+      println("entropy: " + entropy)
+      process = "riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -DENTROPY=" + entropy + " -std=gnu99 -O2 -I./env/v -T./env/v/link.ld ./env/v/entry.S ./env/v/vm.c " + asmFileName + " -lc -o " + binFileName
     }
     else
     {
