@@ -17,55 +17,87 @@ import java.util.Properties
 import java.io.FileInputStream
 import torture.fileop._
 
-case class Options(var timeToRun: Option[Int] = None,
-  var emailAddress: Option[String] = None,
-  var errorThreshold: Option[Int] = None,
-  var cSimPath: Option[String] = None,
-  var rtlSimPath: Option[String] = None,
-  var permDir: Option[String] = None,
-  var gitCommit: Option[String] = None,
-  var confFileName: Option[String] = None)
+
+case class Options(var timeToRun: Int = Overnight.DefTime,
+  var emailAddress: String = Overnight.DefEmail,
+  var errorThreshold: Int = Overnight.DefThresh,
+  var cSimPath: String = Overnight.DefCSim,
+  var rtlSimPath: String = Overnight.DefRtlSim,
+  var permDir: String = Overnight.DefPermDir,
+  var gitCommit: String = Overnight.DefGitCommit,
+  var confFileName: String = Overnight.DefConfig,
+  var output: Boolean = false,
+  var dumpCSim: Boolean = false,
+  var dumpVSim: Boolean = false)
 
 object Overnight extends Application
 {
-  var opts = new Options()
+  val DefTime = 1
+  val DefEmail = "your@email.address"
+  val DefThresh = 1
+  val DefCSim = ""
+  val DefRtlSim = ""
+  val DefPermDir = "output/failedtests"
+  val DefGitCommit = ""
+  val DefConfig = "config"
   override def main(args: Array[String]) =
   {
-    val parser = new OptionParser("overnight/run") {
-      opt("C", "config", "<file>", "config file", {s: String => opts.confFileName = Some(s)})
-      opt("p", "permdir", "<dir>", "dir to store failing tests", {s: String => opts.permDir = Some(s)})
-      opt("c", "csim", "<file>", "C simulator", {s: String => opts.cSimPath = Some(s)})
-      opt("r", "rtlsim", "<file>", "RTL simulator", {s: String => opts.rtlSimPath = Some(s)})
-      opt("e", "email", "<address>", "email to report to", {s: String => opts.emailAddress = Some(s)})
-      opt("g", "gitcommit", "<git commit>", "Git commit to check out", {s: String => opts.gitCommit = Some(s)})
-      opt("t", "threshold", "<count>", "number of failures to trigger email", {i: String => opts.errorThreshold = Some(i.toInt)})
-      opt("m", "minutes", "<int>", "number of minutes to run tests", {i: String => opts.timeToRun = Some(i.toInt)})
+    val parser = new OptionParser[Options]("overnight/run") {
+      opt[String]('C', "config") valueName("<file>") text("config file") action {(s: String, c) => c.copy(confFileName = s)}
+      opt[String]('p', "permdir") valueName("<dir>") text("dir to store failing tests") action {(s: String, c) => c.copy(permDir = s)}
+      opt[String]('c', "csim") valueName("<file>") text("C simulator") action {(s: String, c) => c.copy(cSimPath = s)}
+      opt[String]('r', "rtlsim") valueName("<file>") text("RTL simulator") action {(s: String, c) => c.copy(rtlSimPath = s)}
+      opt[String]('e', "email") valueName("<address>") text("email to report to") action {(s: String, c) => c.copy(emailAddress = s)}
+      opt[String]('g', "gitcommit") valueName("<git commit>") text("Git commit to check out") action {(s: String, c) => c.copy(gitCommit = s)}
+      opt[Int]('t', "threshold") valueName("<count>") text("number of failures to trigger email") action {(i: Int, c) => c.copy(errorThreshold = i)}
+      opt[Int]('m', "minutes") valueName("<minutes>") text("number of minutes to run tests") action {(i: Int, c) => c.copy(timeToRun = i)}
+      opt[Unit]("output") abbr("o") text("Write verbose output of simulators to file") action {(_, c) => c.copy(output = true)}
+      opt[Unit]("dumpcsim") abbr("dc") text("Create a vcd from csim") action {(_, c) => c.copy(dumpCSim = true)}
+      opt[Unit]("dumpvsim") abbr("dv") text("Create a vpd from vsim") action {(_, c) => c.copy(dumpVSim = true)}
     }
-    if (parser.parse(args)) {
-      val confFileName = opts.confFileName.getOrElse("config")
+    parser.parse(args, Options()) match {
+      case Some(opts) =>
+        overnight(opts.confFileName, opts.permDir, opts.cSimPath, opts.rtlSimPath,
+          opts.emailAddress, opts.gitCommit, opts.errorThreshold, opts.timeToRun, opts.output, opts.dumpCSim, opts.dumpVSim)
+      case None =>
+        System.exit(1) // error message printed by parser
+    }
+  }
+    def overnight(configFileName: String,
+                  outputDir: String,
+                  cSimPath: String,
+                  rtlSimPath: String,
+                  emailAddress: String,
+                  gitCommit: String,
+                  errorThreshold: Int,
+                  timeToRun: Int,
+                  output: Boolean,
+                  dumpCSim: Boolean,
+                  dumpVSim: Boolean)
+    {
       val config = new Properties()
-      val configin = new FileInputStream(confFileName)
+      val configin = new FileInputStream(configFileName)
       config.load(configin)
       configin.close()
 
-      val errors  = config.getProperty("torture.overnight.errors","1").toInt
-      val runtime = config.getProperty("torture.overnight.minutes","1").toInt
-      val outdir  = config.getProperty("torture.overnight.outdir","output/failedtests")
-      val email   = config.getProperty("torture.overnight.email","your@email.address")
+      val errors  = Option(config.getProperty("torture.overnight.errors")) map ( _.toInt )
+      val thresh  = if(errorThreshold == DefThresh) errors.getOrElse(DefThresh) else errorThreshold
+      val runtime = Option(config.getProperty("torture.overnight.minutes")) map ( _.toInt )
+      val minutes = if(timeToRun == DefTime) runtime.getOrElse(DefTime) else timeToRun
+      val outdir  = Option(config.getProperty("torture.overnight.outdir"))
+      val permDir = if(outputDir == DefPermDir) outdir.getOrElse(DefPermDir) else outputDir
+      val email   = Option(config.getProperty("torture.overnight.email"))
+      val address = if(emailAddress == DefEmail) email.getOrElse(DefEmail) else emailAddress
 
-      val permDir      = opts.permDir.getOrElse(outdir)
-      val thresh       = opts.errorThreshold.getOrElse(errors)
-      val minutes      = opts.timeToRun.getOrElse(runtime)
-      val address = opts.emailAddress.getOrElse(email)
       val startTime = System.currentTimeMillis
       var endTime = startTime + minutes*60*1000
       var errCount = 0
 
-      val (cSim, rtlSim) = checkoutRocket(opts.cSimPath.getOrElse(""), opts.rtlSimPath.getOrElse(""), opts.gitCommit.getOrElse("none"))
+      val (cSim, rtlSim) = checkoutRocket(cSimPath, rtlSimPath, gitCommit)
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
-        val newAsmName = generator.Generator.generate(confFileName, baseName)
-        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, Some(true), Some(true), Some(confFileName)) 
+        val newAsmName = generator.Generator.generate(configFileName, baseName)
+        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, true, output, dumpCSim, dumpVSim, configFileName) 
         if(failed) {
           errCount += 1
           test foreach { t =>
@@ -91,7 +123,7 @@ object Overnight extends Application
         }
       }
       val permPath: Path = permDir
-      if (address != "your@email.address")
+      if (address != DefEmail)
       {
         Some(address) foreach { addr =>
           val properties = System.getProperties
@@ -112,8 +144,7 @@ object Overnight extends Application
         println("//  Testing complete with " + errCount + " errors.")
         println("//  Failing tests put in " +  permPath.toAbsolute.path)
         println("////////////////////////////////////////////////////////////////")
-      }
-    }
+     }
   }
 
   def checkoutRocket(cPath: String, rPath: String, commit: String): (Option[String],Option[String]) =
@@ -121,13 +152,13 @@ object Overnight extends Application
     var cSim: Option[String] = None
     var rSim: Option[String] = None
     val cmmt = commit.toUpperCase
-    if (cPath != "") cSim = Some(cPath)
-    if (rPath != "") rSim = Some(rPath)
+    if (cPath != DefCSim) cSim = Some(cPath)
+    if (rPath != DefRtlSim) rSim = Some(rPath)
     if (cmmt == "NONE") return (cSim, rSim)
 
     var rocketDir = ""
-    if (cPath != "") rocketDir = cPath.substring(0,cPath.length-18)
-    if (rPath != "") rocketDir = rPath.substring(0,rPath.length-36)
+    if (cPath != DefCSim) rocketDir = cPath.substring(0,cPath.length-18)
+    if (rPath != DefRtlSim) rocketDir = rPath.substring(0,rPath.length-36)
     val rocketPath: Path = rocketDir
     val destPath: Path = (rocketPath / Path("..") / Path("rocket_"+cmmt))
     val emPath: Path = destPath / Path("emulator")
@@ -143,11 +174,11 @@ object Overnight extends Application
       FileOperations.clean(vcsPath)
     }
 
-    if (cPath != "") FileOperations.compile(emPath, emPath / Path("emulator"))
-    if (rPath != "") FileOperations.compile(vcsPath, vcsPath / Path("simv"))
+    if (cPath != DefCSim) FileOperations.compile(emPath, emPath / Path("emulator"))
+    if (rPath != DefRtlSim) FileOperations.compile(vcsPath, vcsPath / Path("simv"))
 
-    if (cPath != "") cSim = Some(emPath.toAbsolute.normalize.path + "/emulator")
-    if (rPath != "") rSim = Some(vcsPath.toAbsolute.normalize.path + "/simv")
+    if (cPath != DefCSim) cSim = Some(emPath.toAbsolute.normalize.path + "/emulator")
+    if (rPath != DefRtlSim) rSim = Some(vcsPath.toAbsolute.normalize.path + "/simv")
     (cSim, rSim)
   }
 }

@@ -25,7 +25,7 @@ object TortureBuild extends Build
   lazy val schadenfreude = Project(id = "schadenfreude", base = file("schadenfreude"), settings = buildSettings ++ Seq(libraryDependencies ++= Seq(scopt, iocore, iofile))) dependsOn(overnight)
   lazy val fileop = Project(id = "fileop", base = file("fileop"), settings = buildSettings ++ Seq(libraryDependencies ++= Seq(scopt, iocore, iofile)))
 
-  val scopt  = "com.github.scopt" %% "scopt" % "1.1.3"
+  val scopt  = "com.github.scopt" %% "scopt" % "3.3.0"
   val iocore = "com.github.scala-incubator.io" %% "scala-io-core" % "0.3.0"
   val iofile = "com.github.scala-incubator.io" %% "scala-io-file" % "0.3.0"
 }

@@ -2,8 +2,8 @@
 
 SBT := ./sbt
 RTL_CONFIG := DefaultConfig
-C_SIM := ../emulator/emulator-Top-$(RTL_CONFIG)-debug
-R_SIM := ../vsim/simv-Top-$(RTL_CONFIG)-debug
+C_SIM := ../emulator/emulator-Top-$(RTL_CONFIG)
+R_SIM := ../vsim/simv-Top-$(RTL_CONFIG)
 TEST := output/test.S
 OPTIONS := $(empty)
 EC2OPTIONS := $(empty)

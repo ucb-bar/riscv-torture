@@ -7,20 +7,22 @@ import java.io.FileInputStream
 import java.util.Properties
 import scala.collection.JavaConversions._
 
-case class Options(var outFileName: Option[String] = None,
-  var confFileName: Option[String] = None)
+case class Options(var outFileName: String = "test",
+  var confFileName: String = "config")
 
 object Generator extends Application
 {
-  var opts = new Options()
   override def main(args: Array[String]) =
   {
-    val parser = new OptionParser("generator/run") {
-      opt("o", "output", "<filename>", "output filename", {s: String => opts.outFileName = Some(s)})
-      opt("C", "config", "<file>", "config file", {s: String => opts.confFileName = Some(s)})
+    val parser = new OptionParser[Options]("generator/run") {
+      opt[String]('C', "config") valueName("<file>") text("config file") action {(s: String, c) => c.copy(confFileName = s)}
+      opt[String]('o', "output") valueName("<filename>") text("output filename") action {(s: String, c) => c.copy(outFileName = s)}
     }
-    if (parser.parse(args)) {
-      generate(opts.confFileName.getOrElse("config"), opts.outFileName.getOrElse("test"))
+    parser.parse(args, Options()) match {
+      case Some(opts) =>
+        generate(opts.confFileName, opts.outFileName)
+      case None =>
+        System.exit(1) //error message printed by parser
     }
   }
 

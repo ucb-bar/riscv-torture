@@ -10,65 +10,71 @@ import java.io.FileWriter
 import java.util.Properties
 import java.io.FileInputStream
 
-case class Options(var timeToRun: Option[Int] = None,
-  var cfgFile: Option[String] = None,
-  var emailAddress: Option[String] = None,
-  var errorThreshold: Option[Int] = None,
-  var cSimPath: Option[String] = None,
-  var rtlSimPath: Option[String] = None,
-  var permDir: Option[String] = None,
-  var tempDir: Option[String] = None,
-  var confFileList: Option[List[String]] = Some(List()),
-  var gitCommitList: Option[List[String]] = Some(List()),
-  var instanceType: Option[String] = None,
-  var instanceCnt: Option[Int] = None,
-  var ec2Instance: Option[Boolean] = None)
+val DefInstType = "local"
+
+val DefInstCnt = 1
+val DefTemp = ".."
+
+case class Options(var timeToRun: Int = -1,
+  var cfgFile: String = "config",
+  var emailAddress: String = "",
+  var errorThreshold: Int = -1,
+  var cSimPath: String = "",
+  var rtlSimPath: String = "",
+  var permDir: String = "",
+  var tempDir: String = DefTemp,
+  var confFileList: List[String] = List(),
+  var gitCommitList: List[String] = List(),
+  var instanceType: String = DefInstType,
+  var instanceCnt: Int = DefInstCnt,
+  var ec2Instance: Boolean = false)
 
 object Schadenfreude extends Application
 {
   var opts = new Options()
   override def main(args: Array[String]) =
   {
-    val parser = new OptionParser("schadenfreude/run") {
-      opt("C", "config", "<file>", "config file", {s: String => opts.cfgFile=Some(s)})
-      opt("f", "configfiles", "<config files>", "Config files for instances",{s:String =>opts.confFileList = Some(opts.confFileList.get ++ List(s))})
-      opt("g", "gitcommit", "<git commit>", "git commits to check out", {s: String => opts.gitCommitList = Some(opts.gitCommitList.get ++ List(s))})
-      opt("p", "permdir", "<dir>", "dir to store failing tests", {s: String => opts.permDir = Some(s)})
-      opt("d", "instdir", "<dir>", "dir to create instance dirs in", {s: String => opts.tempDir = Some(s)})
-      opt("c", "csim", "<file>", "C simulator", {s: String => opts.cSimPath = Some(s)})
-      opt("r", "rtlsim", "<file>", "RTL simulator", {s: String => opts.rtlSimPath = Some(s)})
-      opt("e", "email", "<address>", "email to report to", {s: String => opts.emailAddress = Some(s)})
-      opt("i", "insttype", "<type>", "Type of instance to run", {s: String => opts.instanceType = Some(s)})
-      opt("t", "threshold", "<count>", "number of failures to trigger email", {i: String => opts.errorThreshold = Some(i.toInt)})
-      opt("m", "minutes", "<int>", "number of minutes to run tests", {i: String => opts.timeToRun = Some(i.toInt)})
-      opt("n", "instcnt", "<int>", "number of instances to run", {i: String => opts.instanceCnt = Some(i.toInt)})
-      booleanOpt("ec2", "ec2instance", "<boolean>", "Running on EC2", {b: Boolean => opts.ec2Instance = Some(b)})
+    val parser = new OptionParser[Options]("schadenfreude/run") {
+      opt[String]('C', "config") valueName("<file>") text("config file") action {(s: String, c) => c.copy(confFileName = s)}
+      opt[Seq[String]]('f', "configfiles") valueName("<config1>,<config2>,...") text("Config files for instances") action {(s:Seq[String], c) =>c.copy(confFileList = s)}
+      opt[Seq[String]]('g', "gitcommit") valueName("<commit1>,<commit2>,...") text("git commits to check out") action {(s: Seq[String], c) => c.copy(gitCommitList = s)}
+      opt[String]('p', "permdir") valueName("<dir>") text("dir to store failing tests") action {(s: String, c) => c.copy(permDir = s)}
+      opt[String]('d', "instdir") valueName("<dir>") text("dir to create instance dirs in") aciton {(s: String, c) => c.copy(tempDir = s}
+      opt[String]('c', "csim") valueName("<file>") text("C simulator") action {(s: String, c) => c.copy(cSimPath = s)}
+      opt[String]('r', "rtlsim") valueName("<file>") text("RTL simulator") action {(s: String, c) => c.copy(rtlSimPath = s)}
+      opt[String]('e', "email") valueName("<address>") text("email to report to") action {(s: String, c) => c.copy(emailAddress = s)}
+      opt[String]('i', "insttype") valueName("<type>") text("Type of instance to run") action {(s: String, c) => c.copy(instanceType = s}
+      opt[Int]('t', "threshold") valueName("<count>") text("number of failures to trigger email") action {(i: Int, c) => c.copy(errorThreshold = i)}
+      opt[Int]('m', "minutes") valueName("<minutes>") text("number of minutes to run tests") action {(i: Int, c) => c.copy(timeToRun = i)}
+      opt[Int]('n', "instcnt") valueName("<int>") text("number of instances to run") action {(i: Int, c) => c.copy(instanceCnt = i)}
+      opt[Unit]("ec2instance")abbr("ec2") text("Running on EC2") action {(_, c) => c.copy(ec2Instance = true)}
     }
-    if (parser.parse(args))
+    parser.parse(args, Options()) match {
+    case Some(opts) =>
     {
-      val cfgFile = opts.cfgFile.getOrElse("config")
-      val confFileList = opts.confFileList.get
-      val gitCommitList = opts.gitCommitList.get
+      val cfgFile = opts.cfgFile
+      val confFileList = opts.confFileList
+      val gitCommitList = opts.gitCommitList
       val config = new Properties()
       val configin = new FileInputStream(cfgFile)
       config.load(configin)
       configin.close()
 
-      val typeinst = config.getProperty("torture.schadenfreude.insttype","local")
-      val numinst  = config.getProperty("torture.schadenfreude.instcnt","1").toInt
-      val tmpdir   = config.getProperty("torture.schadenfreude.instdir","..")
+      val typeinst = Option(config.getProperty("torture.schadenfreude.insttype"))
+      val numinst  = Option(config.getProperty("torture.schadenfreude.instcnt")) map ( toInt )
+      val tmpdir   = Option(config.getProperty("torture.schadenfreude.instdir"))
 
-      val instdir       = opts.tempDir.getOrElse(tmpdir)
-      val insttype     = opts.instanceType.getOrElse(typeinst)
-      val instcnt      = opts.instanceCnt.getOrElse(numinst)
+      val instdir      = if(opts.tempDir == DefTemp) tmpdir.getOrElse(DefTemp) else opts.tempDir
+      val insttype     = if(opts.instanceType == DefInstType) typeinst.getOrElse(DefInstType) else opts.instanceType
+      val instcnt      = if(opts.instanceCnt == DefInstCnt) numinst.getOrElse(DefInstCnt) else opts.instanceCnt
 
-      val permDir      = opts.permDir.getOrElse("")
-      val cPath        = opts.cSimPath.getOrElse("")
-      val rPath        = opts.rtlSimPath.getOrElse("")
-      val email        = opts.emailAddress.getOrElse("")
-      val thresh       = opts.errorThreshold.getOrElse(-1)
-      val minutes      = opts.timeToRun.getOrElse(-1)
-      val ec2inst      = opts.ec2Instance.getOrElse(false)
+      val permDir      = opts.permDir
+      val cPath        = opts.cSimPath
+      val rPath        = opts.rtlSimPath
+      val email        = opts.emailAddress
+      val thresh       = opts.errorThreshold
+      val minutes      = opts.timeToRun
+      val ec2inst      = opts.ec2Instance
 
       val instmgr = InstanceManager(confFileList, gitCommitList, permDir, instdir, cPath, rPath, email, thresh, minutes, instcnt, insttype, ec2inst)
       instmgr.createInstances()
@@ -76,6 +82,8 @@ object Schadenfreude extends Application
       instmgr.waitOnInstances()
       instmgr.collectFiles()
     }
+    case None =>
+      System.exit(1) // error message printed by parser
   }
 
 }
