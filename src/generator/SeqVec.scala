@@ -53,12 +53,12 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     Math.max(Math.min(max, attempt),min)
   }
 
-  val num_xreg = get_rand_reg_num(xregs.size, 1)
+  val num_xreg = get_rand_reg_num(xregs.size-2, 1) //can't use x0 or xreg_helper
 
   val num_vvreg   = get_rand_reg_num(vvregs.size, 5)
   val num_vpreg   = get_rand_reg_num(vpregs.size, 1)
 
-  val num_vareg   = get_rand_reg_num(varegs.size, 1)
+  val num_vareg   = get_rand_reg_num(varegs.size-1, 1) //can't use va0
   val num_vsreg   = get_rand_reg_num(vsregs.size, 1)
 
   // Create shadow register pools to mimic those registers
