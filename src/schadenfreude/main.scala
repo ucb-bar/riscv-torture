@@ -29,7 +29,7 @@ case class Options(var timeToRun: Int = -1,
   var instanceCnt: Int = DefInstCnt,
   var ec2Instance: Boolean = false)
 
-object Schadenfreude extends Application
+object Schadenfreude extends App
 {
   var opts = new Options()
   override def main(args: Array[String]) =

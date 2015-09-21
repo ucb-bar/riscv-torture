@@ -30,7 +30,7 @@ case class Options(var timeToRun: Int = Overnight.DefTime,
   var dumpCSim: Boolean = false,
   var dumpVSim: Boolean = false)
 
-object Overnight extends Application
+object Overnight extends App
 {
   val DefTime = 1
   val DefEmail = "your@email.address"

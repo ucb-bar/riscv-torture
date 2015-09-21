@@ -26,7 +26,7 @@ case object Failed extends Result
 case object Mismatched extends Result
 case object Matched extends Result
 
-object TestRunner extends Application
+object TestRunner extends App
 {
   var opts = new Options()
   override def main(args: Array[String]) =
@@ -195,16 +195,17 @@ object TestRunner extends Application
   def runSim(sim: String, simargs: Seq[String], signature: String, output: String, args: Seq[String], invokebin: String): String = {
     val cmd = Seq(sim) ++ simargs ++ Seq("+signature="+signature) ++ args ++ Seq(invokebin)
     println("running:"+cmd)
-    val out = new StringBuilder
-    cmd ! ProcessLogger(out append _+"\n", out append _+"\n")
-    val fw = new FileWriter(output)
-    fw.write(out.mkString)
+    var fw = new FileWriter(output+".raw")
+    cmd ! ProcessLogger(
+       {s => fw.write(s+"\n") },
+       {s => fw.write(s+"\n") })
     fw.close()
-    val out_dasm = Process(Seq("cat",output)) #| Process("spike-dasm extension hwacha") !!
     val fwd = new FileWriter(output)
-    fwd.write(out_dasm)
+    Process(Seq("cat",output+".raw")) #| Process("spike-dasm extension hwacha") ! ProcessLogger(
+       {s => fwd.write(s+"\n") },
+       {s => fwd.write(s+"\n") })
     fwd.close()
-
+    new File(output+".raw").delete()
     val sigFile = new File(signature)
     if(!sigFile.exists()) ""
     else new Scanner(sigFile).useDelimiter("\\Z").next()

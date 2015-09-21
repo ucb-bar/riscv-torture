@@ -10,7 +10,7 @@ import scala.collection.JavaConversions._
 case class Options(var outFileName: String = "test",
   var confFileName: String = "config")
 
-object Generator extends Application
+object Generator extends App
 {
   override def main(args: Array[String]) =
   {

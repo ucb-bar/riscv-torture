@@ -6,7 +6,7 @@ import scalax.file.Path
 import scalax.file.FileSystem
 import java.io.File
 
-object FileOperations extends Application
+object FileOperations extends App
 {
   override def main(args: Array[String]) = { System.exit(0) }
 
