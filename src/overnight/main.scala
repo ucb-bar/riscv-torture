@@ -107,8 +107,8 @@ object Overnight extends App
             val statFile: Path = Path(t.init:_*) / (baseName+".stats")
             println(permFiles.mkString)
             println(statFile)
-            permFiles.foreach( f => f.copyTo( permDir / f.name, copyAttributes=false))
-            statFile.copyTo(permDir / statFile.name, replaceExisting=true, copyAttributes=false)
+            permFiles.foreach( f => f.copyTo( Path(permDir) / f.name, copyAttributes=false))
+            statFile.copyTo(Path(permDir) / statFile.name, replaceExisting=true, copyAttributes=false)
           }
         } 
         test foreach { t =>
@@ -122,7 +122,7 @@ object Overnight extends App
           endTime = 0
         }
       }
-      val permPath: Path = permDir
+      val permPath: Path = Path(permDir)
       if (address != DefEmail)
       {
         Some(address) foreach { addr =>
@@ -159,10 +159,10 @@ object Overnight extends App
     var rocketDir = ""
     if (cPath != DefCSim) rocketDir = cPath.substring(0,cPath.length-18)
     if (rPath != DefRtlSim) rocketDir = rPath.substring(0,rPath.length-36)
-    val rocketPath: Path = rocketDir
+    val rocketPath: Path = Path(rocketDir)
     val destPath: Path = (rocketPath / Path("..") / Path("rocket_"+cmmt))
     val emPath: Path = destPath / Path("emulator")
-    val vcsrelPath: Path = "vlsi-generic/build/vcs-sim-rtl"
+    val vcsrelPath: Path = Path("vlsi-generic/build/vcs-sim-rtl")
     val vcsPath: Path = destPath / vcsrelPath
     
     if (!destPath.exists)

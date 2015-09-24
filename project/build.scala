@@ -26,6 +26,6 @@ object TortureBuild extends Build
   lazy val fileop = Project(id = "fileop", base = file("fileop"), settings = buildSettings ++ Seq(libraryDependencies ++= Seq(scopt, iocore, iofile)))
 
   val scopt  = "com.github.scopt" %% "scopt" % "3.3.0"
-  val iocore = "com.github.scala-incubator.io" %% "scala-io-core" % "0.3.0"
-  val iofile = "com.github.scala-incubator.io" %% "scala-io-file" % "0.3.0"
+  val iocore = "com.github.scala-incubator.io" %% "scala-io-core" % "0.4.3"
+  val iofile = "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3"
 }
