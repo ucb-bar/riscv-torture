@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean) extends VFInstSeq
+class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, sregs:HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean) extends VFInstSeq
 {
   override val seqname = "vmem"
   def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
@@ -15,6 +15,19 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
       {
         insts += LI(reg_addr, Imm(stride))
         insts += VMSA(reg, reg_addr)
+      }
+      case None => {}
+    }
+  }
+  def helper_setup_scalar(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
+  {
+    insts += LA(reg_addr, BaseImm(mem.toString, baseaddr))
+    insts += VMSS(reg_vaddr, reg_addr)
+    reg_vstride match {
+      case Some(reg) =>
+      {
+        insts += LI(reg_addr, Imm(stride))
+        insts += VMSS(reg, reg_addr)
       }
       case None => {}
     }
@@ -107,13 +120,13 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, aregs: HWRegPool,  mem: VMem, 
   def seq_amo_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
   {
     val reg_addr = reg_write_hidden(xregs)
-    val reg_vaddr  = reg_write_hidden(aregs)
+    val reg_vaddr  = reg_write_hidden(sregs)
     val reg_dest = reg_write_visible(vregs)
     val reg_src = reg_read_visible(vregs)
     val addr = addrfn(mem.ut_size)
 
-    helper_setup_address(reg_addr, reg_vaddr, addr)
-    vinsts += op(reg_dest, reg_src, reg_vaddr)
+    helper_setup_scalar(reg_addr, reg_vaddr, addr)
+    vinsts += op(reg_dest, RegImm(reg_vaddr, 0), reg_src)
   }
 
   val candidates = new ArrayBuffer[() => vinsts.type]
