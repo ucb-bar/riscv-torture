@@ -32,14 +32,15 @@ case class Options(var timeToRun: Int = Overnight.DefTime,
 
 object Overnight extends App
 {
-  val DefTime = 1
-  val DefEmail = "your@email.address"
-  val DefThresh = 1
-  val DefCSim = ""
-  val DefRtlSim = ""
-  val DefPermDir = "output/failedtests"
-  val DefGitCommit = ""
-  val DefConfig = "config"
+  def DefTime = 1
+  def DefEmail = "your@email.address"
+  def DefThresh = 1
+  def DefCSim = ""
+  def DefRtlSim = ""
+  def DefPermDir = "output/failedtests"
+  def DefGitCommit = ""
+  def DefConfig = "config"
+
   override def main(args: Array[String]) =
   {
     val parser = new OptionParser[Options]("overnight/run") {
@@ -107,8 +108,8 @@ object Overnight extends App
             val statFile: Path = Path(t.init:_*) / (baseName+".stats")
             println(permFiles.mkString)
             println(statFile)
-            permFiles.foreach( f => f.copyTo( Path(permDir) / f.name, copyAttributes=false))
-            statFile.copyTo(Path(permDir) / statFile.name, replaceExisting=true, copyAttributes=false)
+            permFiles.foreach( f => f.copyTo( Path.fromString(permDir) / f.name, copyAttributes=false))
+            statFile.copyTo(Path.fromString(permDir) / statFile.name, replaceExisting=true, copyAttributes=false)
           }
         } 
         test foreach { t =>
@@ -122,8 +123,8 @@ object Overnight extends App
           endTime = 0
         }
       }
-      val permPath: Path = Path(permDir)
-      if (address != DefEmail)
+      val permPath: Path = Path.fromString(permDir)
+      if (!address.equalsIgnoreCase(DefEmail))
       {
         Some(address) foreach { addr =>
           val properties = System.getProperties
@@ -159,10 +160,10 @@ object Overnight extends App
     var rocketDir = ""
     if (cPath != DefCSim) rocketDir = cPath.substring(0,cPath.length-18)
     if (rPath != DefRtlSim) rocketDir = rPath.substring(0,rPath.length-36)
-    val rocketPath: Path = Path(rocketDir)
+    val rocketPath: Path = Path.fromString(rocketDir)
     val destPath: Path = (rocketPath / Path("..") / Path("rocket_"+cmmt))
     val emPath: Path = destPath / Path("emulator")
-    val vcsrelPath: Path = Path("vlsi-generic/build/vcs-sim-rtl")
+    val vcsrelPath: Path = Path.fromString("vlsi-generic/build/vcs-sim-rtl")
     val vcsPath: Path = destPath / vcsrelPath
     
     if (!destPath.exists)

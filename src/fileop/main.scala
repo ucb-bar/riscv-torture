@@ -137,9 +137,8 @@ object FileOperations extends App
       val canonPath: Path = localPath.toAbsolute.normalize
       val remoteParentPath = remotePath.parent.get
       val tgzName = canonPath.name + ".tgz"
-      val tgzPath: Path = Path("../" + tgzName)
-      //val tgzPath: Path = Path(tgzPathName)
-      val remoteTgzPath: Path = (remoteParentPath / Path(tgzName))
+      val tgzPath: Path = Path.fromString("../" + tgzName)
+      val remoteTgzPath: Path = (remoteParentPath / Path.fromString(tgzName))
 
       val cmd = ("ssh "+options+" "+host+" ls " + remoteParentPath.path)
       val output = (cmd.!!).split("\n")
