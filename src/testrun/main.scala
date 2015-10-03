@@ -192,20 +192,24 @@ object TestRunner extends App
     hexFileName
   }
 
-  def runSim(sim: String, simargs: Seq[String], signature: String, output: String, args: Seq[String], invokebin: String): String = {
+  def runSim(sim: String, simargs: Seq[String], signature: String, output: Boolean, outName: String, args: Seq[String], invokebin: String): String = {
     val cmd = Seq(sim) ++ simargs ++ Seq("+signature="+signature) ++ args ++ Seq(invokebin)
     println("running:"+cmd)
-    var fw = new FileWriter(output+".raw")
-    cmd ! ProcessLogger(
-       {s => fw.write(s+"\n") },
-       {s => fw.write(s+"\n") })
-    fw.close()
-    val fwd = new FileWriter(output)
-    Process(Seq("cat",output+".raw")) #| Process("spike-dasm --extension=hwacha") ! ProcessLogger(
-       {s => fwd.write(s+"\n") },
-       {s => fwd.write(s+"\n") })
-    fwd.close()
-    new File(output+".raw").delete()
+    if(output) {
+      var fw = new FileWriter(outName+".raw")
+      cmd ! ProcessLogger(
+         {s => fw.write(s+"\n") },
+         {s => fw.write(s+"\n") })
+      fw.close()
+      val fwd = new FileWriter(outName)
+      Process(Seq("cat",outName+".raw")) #| Process("spike-dasm --extension=hwacha") ! ProcessLogger(
+         {s => fwd.write(s+"\n") },
+         {s => fwd.write(s+"\n") })
+      fwd.close()
+      new File(outName+".raw").delete()
+    } else {
+      cmd !!
+    }
     val sigFile = new File(signature)
     if(!sigFile.exists()) ""
     else new Scanner(sigFile).useDelimiter("\\Z").next()
@@ -217,7 +221,7 @@ object TestRunner extends App
     val debugArgs = if(debug) outputArgs ++ dumpArgs else Seq()
     val simArgs = Seq("+max-cycles="+maxcycles) ++ debugArgs
     val simName = if(debug) sim+"-debug" else sim
-    runSim(simName, Seq(), bin+".csim.sig", bin+".csim.out", simArgs, bin)
+    runSim(simName, Seq(), bin+".csim.sig", output, bin+".csim.out", simArgs, bin)
   }
 
   def runRtlSim(sim: String)(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
@@ -226,13 +230,13 @@ object TestRunner extends App
     val debugArgs = if(debug) outputArgs ++ dumpArgs else Seq()
     val simArgs = Seq("+max-cycles="+maxcycles) ++ debugArgs
     val simName = if(debug) sim+"-debug" else sim
-    runSim(simName, Seq(), bin+".rtlsim.sig", bin+".rtlsim.out", simArgs, bin)
+    runSim(simName, Seq(), bin+".rtlsim.sig", output, bin+".rtlsim.out", simArgs, bin)
   }
 
   def runIsaSim(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
     val debugArgs = if(debug && output) Seq("-d") else Seq()
     val simArgs = if (hwacha) Seq("--extension=hwacha") else Seq()
-    runSim("spike", simArgs ++ debugArgs, bin+".spike.sig", bin+".spike.out", Seq(), bin)
+    runSim("spike", simArgs ++ debugArgs, bin+".spike.sig", output, bin+".spike.out", Seq(), bin)
   }
 
   def runSimulators(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpCSim: Boolean, dumpVSim: Boolean): Seq[(String, (String, (String, Boolean, Boolean, Boolean) => String), Result)] = {
