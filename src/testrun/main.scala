@@ -201,7 +201,7 @@ object TestRunner extends App
        {s => fw.write(s+"\n") })
     fw.close()
     val fwd = new FileWriter(output)
-    Process(Seq("cat",output+".raw")) #| Process("spike-dasm extension hwacha") ! ProcessLogger(
+    Process(Seq("cat",output+".raw")) #| Process("spike-dasm --extension=hwacha") ! ProcessLogger(
        {s => fwd.write(s+"\n") },
        {s => fwd.write(s+"\n") })
     fwd.close()
