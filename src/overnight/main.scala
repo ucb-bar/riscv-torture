@@ -146,6 +146,7 @@ object Overnight extends App
         println("//  Failing tests put in " +  permPath.toAbsolute.path)
         println("////////////////////////////////////////////////////////////////")
      }
+     if(errCount != 0) System.exit(2)
   }
 
   def checkoutRocket(cPath: String, rPath: String, commit: String): (Option[String],Option[String]) =
