@@ -32,7 +32,11 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
 
   // Setup register pools
   val num_vxregs = rand_range(5, 256)
-  val num_vpregs = rand_range(1, 16)
+  val use_pop = veccfg.getOrElse("pop", "true") == "true"
+  val pred_alu = veccfg.getOrElse("pred_alu", "true") == "true"
+  val pred_mem = veccfg.getOrElse("pred_mem", "true") == "true"
+  val min_pregs   = if(pred_alu || pred_mem || use_pop) 2 else 1
+  val num_vpregs = rand_range(min_pregs, 16)
   val num_vsregs = veccfg.getOrElse("numsregs","64").toInt
   val max_vl = (Math.floor(256/(num_vxregs-1))).toInt * 8
   val used_vl = Math.min(max_vl, rand_range(1, max_vl))
@@ -62,7 +66,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
   for (cat <- List(("alu"),("cmp"),("branch"),("jalr"),
     ("jmp"),("la"),("mem"),("amo"),("misc"),("fpalu"),("fpcmp"),
     ("fpfma"),("fpmem"),("fpcvt"),("fpmisc"),("vmem"),("vamo"),("valu"),
-    ("vmisc"),("vfpalu"),("vfpfma"),("vfpcvt"),("vsmem"),("vshared"),("unknown")))
+    ("vmisc"),("vfpalu"),("vfpfma"),("vfpcvt"),("vsmem"),("vshared"),("vpred"),("unknown")))
     {
       catstats(cat)=0
       opstats(cat) = new HashMap[String,Int].withDefaultValue(0)
@@ -219,7 +223,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
       val cathash = HashMap("alu"->1,"cmp"->2,"branch"->3,"jmp"->4,"jalr"->5,
         "la"->6,"mem"->7,"amo"->8,"misc"->9,"fpalu"->10,"fpcmp"->11,"fpfma"->12,
         "fpmem"->13,"fpcvt"->14,"fpmisc"->15,"vmem"->16,"vamo"->17,"valu"->18,"vfpalu"->19,
-        "vfpfma"->20,"vfpcvt"->21,"vsmem"->22,"vshared"->23,"vmisc"->24,"unknown"->25)
+        "vfpfma"->20,"vfpcvt"->21,"vsmem"->22,"vshared"->23,"vpred"->24,"vmisc"->25,"unknown"->26)
       return cathash(cat1._1) < cathash(cat2._1)
     }
 

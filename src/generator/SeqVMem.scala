@@ -3,9 +3,11 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, sregs:HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean) extends VFInstSeq
+class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, def_preg: Reg, sregs:HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean) extends VFInstSeq
 {
   override val seqname = "vmem"
+  val pred = PredReg(def_preg, false)
+
   def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
   {
     insts += LA(reg_addr, BaseImm(mem.toString, baseaddr))
@@ -45,10 +47,10 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, sregs:HWRegPool, aregs: HWRegP
 
     helper_setup_address(reg_addr, reg_vaddr, addr, stride, addrfn(mem.ut_size))
     (seg, stride) match {
-      case (Some(segs), Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg, Imm(segs))
-      case (Some(segs), None) => vinsts += op(reg_dest, reg_vaddr, Imm(segs))
-      case (None, Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg)
-      case (None, None) => vinsts += op(reg_dest, reg_vaddr)
+      case (Some(segs), Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg, Imm(segs), pred)
+      case (Some(segs), None) => vinsts += op(reg_dest, reg_vaddr, Imm(segs), pred)
+      case (None, Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg, pred)
+      case (None, None) => vinsts += op(reg_dest, reg_vaddr, pred)
     }
   }
 
@@ -87,10 +89,10 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, sregs:HWRegPool, aregs: HWRegP
 
     helper_setup_address(reg_addr, reg_vaddr, addr, stride, addrfn(mem.ut_size))
     (seg, stride) match {
-      case (Some(segs), Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg, Imm(segs))
-      case (Some(segs), None) => vinsts += op(reg_src, reg_vaddr, Imm(segs))
-      case (None, Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg)
-      case (None, None) => vinsts += op(reg_src, reg_vaddr)
+      case (Some(segs), Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg, Imm(segs), pred)
+      case (Some(segs), None) => vinsts += op(reg_src, reg_vaddr, Imm(segs), pred)
+      case (None, Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg, pred)
+      case (None, None) => vinsts += op(reg_src, reg_vaddr, pred)
     }
   }
 
@@ -126,7 +128,7 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, sregs:HWRegPool, aregs: HWRegP
     val addr = addrfn(mem.ut_size)
 
     helper_setup_scalar(reg_addr, reg_vaddr, addr)
-    vinsts += op(reg_dest, RegImm(reg_vaddr, 0), reg_src)
+    vinsts += op(reg_dest, RegImm(reg_vaddr, 0), reg_src, pred)
   }
 
   val candidates = new ArrayBuffer[() => vinsts.type]

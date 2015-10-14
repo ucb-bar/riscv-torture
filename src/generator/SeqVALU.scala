@@ -3,14 +3,16 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVALU(vregs: HWRegPool, sregs: HWRegPool, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean) extends VFInstSeq //TODO: better configuration
+class SeqVALU(vregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean) extends VFInstSeq //TODO: better configuration
 {
   override val seqname = "valu"
+  val pred = PredReg(def_preg, false)
+
   def seq_src1(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool) = () =>
   {
     val src1 = reg_read_any(s1reg)
     val dest = reg_write(dreg, src1)
-    vinsts += op(dest, src1)
+    vinsts += op(dest, src1, pred)
   }
 
   def seq_src2(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool, s2reg: HWRegPool) = () =>
@@ -18,7 +20,7 @@ class SeqVALU(vregs: HWRegPool, sregs: HWRegPool, use_mul: Boolean, use_div: Boo
     val src1 = reg_read_any(s1reg)
     val src2 = reg_read_any(s2reg)
     val dest = reg_write(dreg, src1, src2)
-    vinsts += op(dest, src1, src2)
+    vinsts += op(dest, src1, src2, pred)
   }
 
   def seq_src3(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool, s2reg: HWRegPool, s3reg: HWRegPool) = () =>
@@ -27,7 +29,7 @@ class SeqVALU(vregs: HWRegPool, sregs: HWRegPool, use_mul: Boolean, use_div: Boo
     val src2 = reg_read_any(s2reg)
     val src3 = reg_read_any(s3reg)
     val dest = reg_write(dreg, src1, src2, src3)
-    vinsts += op(dest, src1, src2, src3)
+    vinsts += op(dest, src1, src2, src3, pred)
   }
 
   val candidates = new ArrayBuffer[() => vinsts.type]

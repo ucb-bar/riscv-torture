@@ -25,7 +25,7 @@ class Inst(opcode: String, val operands: Array[Operand])
     if (is_vfpcvt) return "vfpcvt"
     if (is_vsmem) return "vsmem"
     if (is_vshared) return "vshared"
-    if (is_vvec) return "vvec"
+    if (is_vpred) return "vpred"
     if (is_vmem) return "vmem"
     if (is_vamo) return "vamo"
     if (is_vmisc) return "vmisc"
@@ -85,7 +85,7 @@ class Inst(opcode: String, val operands: Array[Operand])
     "vmulhsu", "vmulhu", "vdiv", "vdivu", "vrem", "vremu", "vaddw", "vsubw", "vsllw",
     "vsrlw", "vsraw", "vmulw", "vdivw", "vdivuw", "vremw", "vremuw").contains(opcode)
 
-  def is_vvec = List("vpop").contains(opcode)
+  def is_vpred = List("vpop", "vpset", "vpclear").contains(opcode)
 
   def is_vfpalu = List("vfadd.s", "vfsub.s", "vfmul.s", "vfdiv.s", "vfsqrt.s", "vfmin.s", "vfmax.s",
     "vfadd.d", "vfsub.d", "vfmul.d", "vfdiv.d", "vfsqrt.d", "vfmin.d", "vfmax.d",
@@ -116,7 +116,14 @@ class Inst(opcode: String, val operands: Array[Operand])
   def is_vmisc = List("vsetcfg", "vstop", "vsetvl", "veidx", "vf",
     "vmss", "vmsa", "fence").contains(opcode)
 
-  override def toString = opcode + operands.mkString(" ", ", ", "")
+  override def toString =
+  {
+    operands.find(op => op.isInstanceOf[PredReg]) match {
+      case Some(pred) => pred + " " + opcode +
+        operands.filterNot(op => op.isInstanceOf[PredReg]).mkString(" ", ", ", "")
+      case None => opcode + operands.mkString(" ", ", ", "")
+    }
+  }
 }
 
 class Opcode(val name: String)
@@ -342,6 +349,8 @@ object VREMW extends Opcode("vremw")
 object VREMUW extends Opcode("vremuw")
 
 object VPOP extends Opcode("vpop")
+object VPSET extends Opcode("vpset")
+object VPCLEAR extends Opcode("vpclear")
 
 object VFADD_S extends Opcode("vfadd.s")
 object VFSUB_S extends Opcode("vfsub.s")

@@ -1,1 +1,4 @@
 .*.swp
+output/test*
+output/failedtests
+*target/
