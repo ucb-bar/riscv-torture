@@ -12,7 +12,8 @@ class SeqVALU(vregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, use_mul: Boolea
   {
     val src1 = reg_read_any(s1reg)
     val dest = reg_write(dreg, src1)
-    vinsts += op(dest, src1, pred)
+    if(dreg == sregs) vinsts += op(dest, src1)
+    else vinsts += op(dest, src1, pred)
   }
 
   def seq_src2(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool, s2reg: HWRegPool) = () =>
@@ -20,7 +21,8 @@ class SeqVALU(vregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, use_mul: Boolea
     val src1 = reg_read_any(s1reg)
     val src2 = reg_read_any(s2reg)
     val dest = reg_write(dreg, src1, src2)
-    vinsts += op(dest, src1, src2, pred)
+    if(dreg == sregs) vinsts += op(dest, src1, src2)
+    else vinsts += op(dest, src1, src2, pred)
   }
 
   def seq_src3(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool, s2reg: HWRegPool, s3reg: HWRegPool) = () =>
@@ -29,7 +31,8 @@ class SeqVALU(vregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, use_mul: Boolea
     val src2 = reg_read_any(s2reg)
     val src3 = reg_read_any(s3reg)
     val dest = reg_write(dreg, src1, src2, src3)
-    vinsts += op(dest, src1, src2, src3, pred)
+    if(dreg == sregs) vinsts += op(dest, src1, src2, src3)
+    else vinsts += op(dest, src1, src2, src3, pred)
   }
 
   val candidates = new ArrayBuffer[() => vinsts.type]
