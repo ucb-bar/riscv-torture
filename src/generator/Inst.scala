@@ -25,6 +25,7 @@ class Inst(opcode: String, val operands: Array[Operand])
     if (is_vfpcvt) return "vfpcvt"
     if (is_vsmem) return "vsmem"
     if (is_vshared) return "vshared"
+    if (is_vcmp) return "vcmp"
     if (is_vpred) return "vpred"
     if (is_vmem) return "vmem"
     if (is_vamo) return "vamo"
@@ -86,6 +87,8 @@ class Inst(opcode: String, val operands: Array[Operand])
     "vsrlw", "vsraw", "vmulw", "vdivw", "vdivuw", "vremw", "vremuw").contains(opcode)
 
   def is_vpred = List("vpop", "vpset", "vpclear").contains(opcode)
+
+  def is_vcmp = List("vcmpeq", "vcmplt", "vcmpltu", "vcmpfeq", "vcmpflt", "vcmfle").contains(opcode)
 
   def is_vfpalu = List("vfadd.s", "vfsub.s", "vfmul.s", "vfdiv.s", "vfsqrt.s", "vfmin.s", "vfmax.s",
     "vfadd.d", "vfsub.d", "vfmul.d", "vfdiv.d", "vfsqrt.d", "vfmin.d", "vfmax.d",
@@ -347,6 +350,13 @@ object VDIVW extends Opcode("vdivw")
 object VDIVUW extends Opcode("vdivuw")
 object VREMW extends Opcode("vremw")
 object VREMUW extends Opcode("vremuw")
+
+object VCMPEQ extends Opcode("vcmpeq")
+object VCMPLT extends Opcode("vcmplt")
+object VCMPLTU extends Opcode("vcmpltu")
+object VCMPFEQ extends Opcode("vcmpfeq")
+object VCMPFLT extends Opcode("vcmpflt")
+object VCMPFLE extends Opcode("vcmpfle")
 
 object VPOP extends Opcode("vpop")
 object VPSET extends Opcode("vpset")

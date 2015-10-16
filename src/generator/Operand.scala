@@ -27,6 +27,11 @@ class Imm(imm: Int) extends Operand
   override def toString = imm.toString
 }
 
+class HexImm(imm: Int) extends Operand
+{
+  override def toString = "0x"+Integer.toHexString(imm)
+}
+
 class BaseImm(base: String, imm: Int) extends Operand
 {
   override def toString =
@@ -62,6 +67,11 @@ class PredReg(pred: Reg, neg: Boolean) extends Operand
 object Imm
 {
   def apply(imm: Int) = new Imm(imm)
+}
+
+object HexImm
+{
+  def apply(imm: Int) = new HexImm(imm)
 }
 
 object BaseImm

@@ -3,10 +3,11 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVALU(vregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean) extends VFInstSeq //TODO: better configuration
+class SeqVALU(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean, use_pred: Boolean) extends VFInstSeq //TODO: better configuration
 {
   override val seqname = "valu"
-  val pred = PredReg(def_preg, false)
+  val pred = if(use_pred) PredReg(reg_read_any(pregs), false)
+    else PredReg(def_preg, false)
 
   def seq_src1(op: Opcode, dreg: HWRegPool, s1reg: HWRegPool) = () =>
   {

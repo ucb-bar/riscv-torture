@@ -26,7 +26,6 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   val use_amo = cfg.getOrElse("amo", "true") == "true"
   val use_seg = cfg.getOrElse("seg", "true") == "true"
   val use_stride = cfg.getOrElse("stride", "true") == "true"
-  val use_pop = cfg.getOrElse("pop", "true") == "true"
   val pred_alu = cfg.getOrElse("pred_alu", "true") == "true"
   val pred_mem = cfg.getOrElse("pred_mem", "true") == "true"
   val mixcfg = cfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v.toInt) }.asInstanceOf[Map[String,Int]]
@@ -60,7 +59,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   val num_xreg = get_rand_reg_num(xregs.size-2, 1) //can't use x0 or xreg_helper
 
   val num_vvreg   = get_rand_reg_num(vvregs.size, 5)
-  val min_pregs   = if(pred_alu || pred_mem || use_pop) 1 else 0
+  val min_pregs   = if(pred_alu || pred_mem || mixcfg.getOrElse("vpop",0) > 0) 1 else 0
   val num_vpreg   = get_rand_reg_num(vpregs.size-1, min_pregs) //can't use preg_helper
 
   val num_vareg   = get_rand_reg_num(varegs.size-1, 1) //can't use va0
@@ -81,7 +80,6 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     xregs_checkout += hr
     shadow_xregs.hwregs += new HWShadowReg(hr, "x_shadow", true, true)
   })
-
 
   val vvregs_checkout = new ArrayBuffer[Reg]
   val vregs_adding = reg_write_visible_consec(vvregs, num_vvreg)
@@ -131,11 +129,29 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     insts += LUI(xreg_helper, Label("%hi("+vf_init_block.name+")"))
     insts += VF(RegStrImm(xreg_helper, "%lo("+vf_init_block.name+")"))
   }
+
+  val vf_init_pred_block = new ProgSeg(name+"_vf_init_pred")
+  for((vpreg,i) <- vpregs_checkout.zipWithIndex)
+  {
+    //try to have different alternate settings
+    if(i % 2 == 0) {
+      vf_init_pred_block.insts += VCMPLT(vpreg,vvregs_checkout(0), vvregs_checkout(1),PredReg(vpreg_helper, false))
+      vinsts += VCMPLT(vpreg,vvregs_checkout(0), vvregs_checkout(1),PredReg(vpreg_helper, false))
+    } else {
+      vf_init_pred_block.insts += VCMPLT(vpreg,vvregs_checkout(2), vvregs_checkout(3),PredReg(vpreg_helper, false))
+      vinsts += VCMPLT(vpreg,vvregs_checkout(2), vvregs_checkout(3),PredReg(vpreg_helper, false))
+    }
+  }
+  vf_init_pred_block.insts += VSTOP()
+  vinsts += VSTOP()
+  extra_code += ProgSegDump(vf_init_pred_block)
+  insts += LUI(xreg_helper, Label("%hi("+vf_init_pred_block.name+")"))
+  insts += VF(RegStrImm(xreg_helper, "%lo("+vf_init_pred_block.name+")"))
   
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vpreg_helper, shadow_vsregs, shadow_varegs, shadow_xregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, use_amo, use_seg, use_stride) //TODO: Enable configuration of enabling mul,div ops
+    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vpreg_helper, shadow_vsregs, shadow_varegs, shadow_xregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, use_amo, use_seg, use_stride, pred_alu, pred_mem) //TODO: Enable configuration of enabling mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt
