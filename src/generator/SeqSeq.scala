@@ -18,7 +18,7 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPool
   def are_pools_fully_unallocated = List(vregs, pregs, sregs).forall(_.is_fully_unallocated)
 
   val name_to_seq = Map(
-    "vmem" -> (() => new SeqVMem(xregs, vregs, def_preg, sregs, aregs, mem.asInstanceOf[VMem], use_amo,use_seg, use_stride)),
+    "vmem" -> (() => new SeqVMem(xregs, vregs, pregs, def_preg, sregs, aregs, mem.asInstanceOf[VMem], use_amo,use_seg, use_stride, pred_mem)),
     "valu" -> (() => new SeqVALU(vregs, pregs, def_preg, sregs, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, pred_alu)), // TODO: Clean up
     "vpop" -> (() => new SeqVPop(vregs, pregs, def_preg, sregs)),
     "vonly" -> (() => new SeqVOnly(vregs, pregs, sregs)))

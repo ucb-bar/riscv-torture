@@ -3,10 +3,11 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, def_preg: Reg, sregs:HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean) extends VFInstSeq
+class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs:HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean, use_pred: Boolean) extends VFInstSeq
 {
   override val seqname = "vmem"
-  val pred = PredReg(def_preg, false)
+  val pred = if(use_pred) PredReg(reg_read_any(pregs), false)
+    else PredReg(def_preg, false)
 
   def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
   {
