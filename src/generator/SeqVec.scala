@@ -151,7 +151,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vpreg_helper, shadow_vsregs, shadow_varegs, shadow_xregs, vec_mem, seqnum, mixcfg, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, use_amo, use_seg, use_stride, pred_alu, pred_mem) //TODO: Enable configuration of enabling mul,div ops
+    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vpreg_helper, shadow_vsregs, shadow_varegs, shadow_xregs, vec_mem, seqnum, mixcfg, vl, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, use_amo, use_seg, use_stride, pred_alu, pred_mem) //TODO: Enable configuration of enabling mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt
@@ -175,6 +175,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     vf_block.insts += VSTOP()
     vinsts += VSTOP()
     extra_code += ProgSegDump(vf_block)
+    extra_hidden_data.appendAll(vf_instseq.extra_hidden_data)
 
     insts += LUI(xreg_helper, Label("%hi("+vf_block.name+")"))
     insts += VF(RegStrImm(xreg_helper, "%lo("+vf_block.name+")"))

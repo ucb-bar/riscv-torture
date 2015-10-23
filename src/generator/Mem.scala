@@ -31,6 +31,27 @@ class Mem(name: Array[Operand], val size: Int) extends Operand
     }
     s
   }
+
+  def dumpaddrs(addrfn: (Int) => Int, memsize: Int) =
+  {
+    var s = "\t.align 8\n"
+    s += this.toString + ":\n"
+    if(size % 16 == 0)
+    {
+      for (i <- 0 to (size/8/2 - 1))
+        s += "\t.dword 0x%016x, 0x%016x\n" format (addrfn(memsize), addrfn(memsize))
+    } else if(size % 8 == 0)
+    {
+      for (i <- 0 to (size/8 - 1))
+        s += "\t.dword 0x%016x\n" format (addrfn(memsize))
+    }
+    else
+    {
+      for (i <- 0 to (size/4 - 1))
+        s += "\t.word 0x%08x\n" format (addrfn(memsize))
+    }
+    s
+  }
 }
 
 class VMem(name: Array[Operand], val ut_size: Int, num_ut: Int) extends Mem(name, ut_size*num_ut)

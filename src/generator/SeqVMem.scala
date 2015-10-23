@@ -3,15 +3,21 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs:HWRegPool, aregs: HWRegPool,  mem: VMem, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean, use_pred: Boolean) extends VFInstSeq
+object SeqVMem
 {
-  override val seqname = "vmem"
+  var cnt = 0
+}
+
+class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs:HWRegPool, aregs: HWRegPool, mem: VMem, vl: Int, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean, use_pred: Boolean) extends VFInstSeq
+{
+  override val seqname = "vmem_" + SeqVMem.cnt
+  SeqVMem.cnt += 1
   val pred = if(use_pred) PredReg(reg_read_any(pregs), false)
     else PredReg(def_preg, false)
 
-  def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
+  def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, m: Mem, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
   {
-    insts += LA(reg_addr, BaseImm(mem.toString, baseaddr))
+    insts += LA(reg_addr, BaseImm(m.toString, baseaddr))
     insts += VMSA(reg_vaddr, reg_addr)
     reg_vstride match {
       case Some(reg) => 
@@ -22,9 +28,9 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
       case None => {}
     }
   }
-  def helper_setup_scalar(reg_addr: Reg, reg_vaddr: Reg, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
+  def helper_setup_scalar(reg_addr: Reg, reg_vaddr: Reg, m: Mem, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
   {
-    insts += LA(reg_addr, BaseImm(mem.toString, baseaddr))
+    insts += LA(reg_addr, BaseImm(m.toString, baseaddr))
     insts += VMSS(reg_vaddr, reg_addr)
     reg_vstride match {
       case Some(reg) =>
@@ -46,7 +52,7 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
     }
     val addr = addrfn(mem.ut_size)
 
-    helper_setup_address(reg_addr, reg_vaddr, addr, stride, addrfn(mem.ut_size))
+    helper_setup_address(reg_addr, reg_vaddr, mem, addr, stride, addrfn(mem.ut_size))
     (seg, stride) match {
       case (Some(segs), Some(reg)) => vinsts += op(reg_dest, reg_vaddr, reg, Imm(segs), pred)
       case (Some(segs), None) => vinsts += op(reg_dest, reg_vaddr, Imm(segs), pred)
@@ -88,7 +94,7 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
     }
     val addr = addrfn(mem.ut_size)
 
-    helper_setup_address(reg_addr, reg_vaddr, addr, stride, addrfn(mem.ut_size))
+    helper_setup_address(reg_addr, reg_vaddr, mem, addr, stride, addrfn(mem.ut_size))
     (seg, stride) match {
       case (Some(segs), Some(reg)) => vinsts += op(reg_src, reg_vaddr, reg, Imm(segs), pred)
       case (Some(segs), None) => vinsts += op(reg_src, reg_vaddr, Imm(segs), pred)
@@ -120,15 +126,31 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
     seq_store_addrfn(op, addrfn, Some(seglen), Some(reg_vstride))
   }
 
-  def seq_amo_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
+  def seq_amo_addrfn(op: Opcode, addrfn: (Int) => Int, addr_reg: HWRegPool, data_reg: HWRegPool) = () =>
   {
     val reg_addr = reg_write_hidden(xregs)
-    val reg_vaddr  = reg_write_hidden(sregs)
     val reg_dest = reg_write_visible(vregs)
-    val reg_src = reg_read_visible(vregs)
-    val addr = addrfn(mem.ut_size)
 
-    helper_setup_scalar(reg_addr, reg_vaddr, addr)
+    val reg_vaddr = reg_write_hidden(addr_reg)
+    val reg_src = reg_read_visible(data_reg)
+
+    if(addr_reg == vregs) { // Generate a vector's worth of addresses
+      val amo_addr_mem = new Mem(seqname+"_amo_addr_init", 8*vl)
+      extra_hidden_data += MemAddrDump(amo_addr_mem, addrfn, mem.size)
+
+      val reg_help = reg_write_hidden(aregs)
+      helper_setup_address(reg_addr, reg_help, amo_addr_mem, 0)
+
+      val reg_xhelp = reg_write_hidden(xregs)
+      val reg_scalar = reg_write_hidden(sregs)
+      helper_setup_scalar(reg_xhelp, reg_scalar, mem, 0)
+
+      vinsts += VLD(reg_vaddr, reg_help, PredReg(def_preg, false))
+      vinsts += VADD(reg_vaddr, reg_vaddr, reg_scalar, PredReg(def_preg, false))
+    } else { // Single address
+      helper_setup_scalar(reg_addr, reg_vaddr, mem, addrfn(mem.size))
+    }
+
     vinsts += op(reg_dest, RegImm(reg_vaddr, 0), reg_src, pred)
   }
 
@@ -196,23 +218,25 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
 
   if(use_amo)
   {
-    candidates += seq_amo_addrfn(VAMOADD_W, rand_addr_w)
-    candidates += seq_amo_addrfn(VAMOSWAP_W, rand_addr_w)
-    candidates += seq_amo_addrfn(VAMOAND_W, rand_addr_w)
-    candidates += seq_amo_addrfn(VAMOOR_W, rand_addr_w)
-    candidates += seq_amo_addrfn(VAMOMIN_W, rand_addr_w)
-    candidates += seq_amo_addrfn(VAMOMINU_W, rand_addr_w)
-    candidates += seq_amo_addrfn(VAMOMAX_W, rand_addr_w)
-    candidates += seq_amo_addrfn(VAMOMAXU_W, rand_addr_w)
+    val amowlist = List(VAMOADD_W, VAMOSWAP_W, VAMOAND_W, VAMOOR_W, VAMOMIN_W,
+      VAMOMINU_W, VAMOMAX_W, VAMOMAXU_W)
+    val amodlist = List(VAMOADD_D, VAMOSWAP_D, VAMOAND_D, 
+      VAMOOR_D, VAMOMIN_D, VAMOMINU_D, VAMOMAX_D, VAMOMAXU_D)
 
-    candidates += seq_amo_addrfn(VAMOADD_D, rand_addr_d)
-    candidates += seq_amo_addrfn(VAMOSWAP_D, rand_addr_d)
-    candidates += seq_amo_addrfn(VAMOAND_D, rand_addr_d)
-    candidates += seq_amo_addrfn(VAMOOR_D, rand_addr_d)
-    candidates += seq_amo_addrfn(VAMOMIN_D, rand_addr_d)
-    candidates += seq_amo_addrfn(VAMOMINU_D, rand_addr_d)
-    candidates += seq_amo_addrfn(VAMOMAX_D, rand_addr_d)
-    candidates += seq_amo_addrfn(VAMOMAXU_D, rand_addr_d)
+    for (amo <- amowlist)
+    {
+      candidates += seq_amo_addrfn(amo, rand_addr_w, sregs, sregs)
+      candidates += seq_amo_addrfn(amo, rand_addr_w, sregs, vregs)
+      candidates += seq_amo_addrfn(amo, rand_addr_w, vregs, sregs)
+      candidates += seq_amo_addrfn(amo, rand_addr_w, vregs, vregs)
+    }
+    for (amo <- amodlist)
+    {
+      candidates += seq_amo_addrfn(amo, rand_addr_d, sregs, sregs)
+      candidates += seq_amo_addrfn(amo, rand_addr_d, sregs, vregs)
+      candidates += seq_amo_addrfn(amo, rand_addr_d, vregs, sregs)
+      candidates += seq_amo_addrfn(amo, rand_addr_d, vregs, vregs)
+    }
   }
 
   rand_pick(candidates)()
