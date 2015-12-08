@@ -229,7 +229,7 @@ class VSRegsPool(reg_nums: Array[Int] = (0 to 255).toArray) extends HWRegPool
     for ((i, curreg) <- reg_nums.zip(hwregs)) 
     {
       s += "\tld" + " x2, " + 8*i + "(x1)\n"
-      s += "\tvmss"+ " " + curreg + ", x2\n"
+      s += "\tvmcs"+ " " + curreg + ", x2\n"
     }
     s += "\n\n"
     s
@@ -238,7 +238,7 @@ class VSRegsPool(reg_nums: Array[Int] = (0 to 255).toArray) extends HWRegPool
   {
     hwregs(1).state = HID
     var s = "vsreg_save:\n"+"\tla x1, vsreg_output_data\n"
-    s += "\tvmss vs1, x1\n"
+    s += "\tvmcs vs1, x1\n"
     s += "\tlui x1, %hi(vsreg_save_vf)\n"
     s += "\tvf %lo(vsreg_save_vf)(x1)\n"
     s += "\tj vsreg_save_end\n"

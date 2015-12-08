@@ -117,7 +117,7 @@ class Inst(opcode: String, val operands: Array[Operand])
     "vamomin.d", "vamominu.d", "vamomax.d", "vamomaxu.d", "vamoxor.d").contains(opcode)
 
   def is_vmisc = List("vsetcfg", "vstop", "vsetvl", "veidx", "vf",
-    "vmss", "vmsa", "fence").contains(opcode)
+    "vmcs", "vmca", "fence").contains(opcode)
 
   override def toString =
   {
@@ -308,8 +308,8 @@ object VSTOP extends Opcode("vstop")
 object VSETVL extends Opcode("vsetvl")
 object VEIDX extends Opcode("veidx")
 object VF extends Opcode("vf")
-object VMSS extends Opcode("vmss")
-object VMSA extends Opcode("vmsa")
+object VMCS extends Opcode("vmcs")
+object VMCA extends Opcode("vmca")
 
 object VADDI extends Opcode("vaddi")
 object VSLLI extends Opcode("vslli")

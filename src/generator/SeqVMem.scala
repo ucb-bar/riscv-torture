@@ -18,12 +18,12 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
   def helper_setup_address(reg_addr: Reg, reg_vaddr: Reg, m: Mem, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
   {
     insts += LA(reg_addr, BaseImm(m.toString, baseaddr))
-    insts += VMSA(reg_vaddr, reg_addr)
+    insts += VMCA(reg_vaddr, reg_addr)
     reg_vstride match {
       case Some(reg) => 
       {
         insts += LI(reg_addr, Imm(stride))
-        insts += VMSA(reg, reg_addr)
+        insts += VMCA(reg, reg_addr)
       }
       case None => {}
     }
@@ -31,12 +31,12 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
   def helper_setup_scalar(reg_addr: Reg, reg_vaddr: Reg, m: Mem, baseaddr: Int, reg_vstride: Option[Reg] = None, stride: Int = 0) =
   {
     insts += LA(reg_addr, BaseImm(m.toString, baseaddr))
-    insts += VMSS(reg_vaddr, reg_addr)
+    insts += VMCS(reg_vaddr, reg_addr)
     reg_vstride match {
       case Some(reg) =>
       {
         insts += LI(reg_addr, Imm(stride))
-        insts += VMSS(reg, reg_addr)
+        insts += VMCS(reg, reg_addr)
       }
       case None => {}
     }
