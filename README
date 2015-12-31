@@ -14,7 +14,65 @@ creating a derivative test subset that pinpoints the divergence. The third,
 [overnight], wraps testrun, allowing tests to be run repeatedly for a given
 duration or until a failure count.
 
-Some basic use cases are illustrated here.
+ 
+---------------------------------------------------------------------------
+Instructions
+---------------------------------------------------------------------------
+
+Modify "config/default.config" to set the parameters desired for building tests
+(e.g., setting which instructions to use and in which ratio).
+
+Modify "Makefile" as desired to execute the C simulator or RTL simulator of
+your choice, and to set the other parameters as you require.
+
+To build a single test and test it on Spike:
+
+$ make igentest
+
+To build single test and run it on the C simulator or RTL simulator, use 
+"make cgentest" or "make rgentest".
+
+To run overnight tests, you can use "make cnight" and "make rnight".
+   
+---------------------------------------------------------------------------
+Signatures
+---------------------------------------------------------------------------
+
+Torture works by dumping the register state out to memory at the end of the
+test program execution. This output is then compared against the output from
+the Spike ISA simulator.
+
+The torture program writes the register state to the memory address specified
+by "xreg_output_data", which is located in the memory section 
+".global begin_signature". The Spike ISA simulator will write out the data
+found in the "begin_signature" section on exit if provided with the
+"+signature=" argument:
+
+$ spike +signature=my_spike_signature.txt test_binary
+
+The Rocket-chip infrastructure uses the "riscv-fesvr" program to control the
+execution of the C and RTL simulators. The "riscv-fesvr" also accepts the
++signature argument too.
+
+$ ./csim-rocket-chip +signature=my_rocket_signature.txt test_binary
+
+A simple diff between the Spike and chip simulator signatures will tell you if
+any errors have occurred. 
+
+$ diff my_spike_signature.txt my_rocket_signature.txt
+
+
+**PORTING TORTURE TO YOUR OWN RISC-V PROCESSOR:**
+
+If you would like to use riscv-torture with your own RISC-V processor, you will
+need to provide a way to dump the "begin_signature" section to a file.
+
+---------------------------------------------------------------------------
+Low-level Usage
+---------------------------------------------------------------------------
+  
+Some basic use cases are illustrated here (note the Makefile abstracts this for
+you).
 
 Make a single test:
 % ./sbt generator/run
@@ -32,7 +90,7 @@ torture the RTL simulator ***
 
 Run tests for 30 minutes, email hcook when done, and save failures to dir:
 % ./sbt 'overnight/run -m 30 -e hcook@eecs.berkeley.edu -p dir'
- 
+
 ---------------------------------------------------------------------------
 Installing
 ---------------------------------------------------------------------------
@@ -181,6 +239,8 @@ SeqMem.scala, and SeqBranch.scala to get inspired.
 ---------------------------------------------------------------------------
 Future TODO
 ---------------------------------------------------------------------------
+
+ - provide support for loops
 
  - generate statistics of a test to get a sense of coverage
    + statistics should include instruction count of each type

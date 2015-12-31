@@ -6,7 +6,6 @@ C_SIM := ../emulator/emulator-Top-$(RTL_CONFIG)
 R_SIM := ../vsim/simv-Top-$(RTL_CONFIG)
 TEST := output/test.S
 OPTIONS := $(empty)
-EC2OPTIONS := $(empty)
 SUITE := output
 CONFIG := config/default.config
 COMMIT := none
