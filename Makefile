@@ -18,8 +18,7 @@ CFG := $(subst $(space),$(cfgopt),$(CONFIG))
 GITCMT := $(subst $(space),$(gitopt),$(COMMIT))
 
 .phony: gen ctest rtest itest igentest cgentest rgentest \
-cnight rnight crnight cschaden rschaden \
-crschaden csuite rsuite \
+cnight rnight crnight csuite rsuite \
 
 gen:
 	$(SBT) 'generator/run $(OPTIONS)'
@@ -75,11 +74,3 @@ rnight:
 crnight:
 	$(SBT) 'overnight/run -c $(C_SIM) -r $(R_SIM) -g $(COMMIT) $(OPTIONS)'
 
-cschaden:
-	$(SBT) 'schadenfreude/run -f $(CFG) -c $(C_SIM) -g $(GITCMT) $(EC2OPTIONS) $(OPTIONS)'
-
-rschaden:
-	$(SBT) 'schadenfreude/run -f $(CFG) -r $(R_SIM) -g $(GITCMT) $(EC2OPTIONS) $(OPTIONS)'
-
-crschaden:
-	$(SBT) 'schadenfreude/run -f $(CFG) -c $(C_SIM) -r $(R_SIM) -g $(GITCMT) $(EC2OPTIONS) $(OPTIONS)'
