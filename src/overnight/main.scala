@@ -39,7 +39,7 @@ object Overnight extends App
   def DefRtlSim = ""
   def DefPermDir = "output/failedtests"
   def DefGitCommit = ""
-  def DefConfig = "config"
+  def DefConfig = "config/default.config"
 
   override def main(args: Array[String]) =
   {
