@@ -19,7 +19,7 @@ case class Options(var testAsmName: Option[String] = None,
   var output: Boolean = false,
   var dumpCSim: Boolean = false,
   var dumpVSim: Boolean = false,
-  var confFileName: String = "config")
+  var confFileName: String = "config/default.config")
 
 abstract sealed class Result
 case object Failed extends Result
