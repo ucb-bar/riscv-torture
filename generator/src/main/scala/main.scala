@@ -8,7 +8,7 @@ import java.util.Properties
 import scala.collection.JavaConversions._
 
 case class Options(var outFileName: String = "test",
-  var confFileName: String = "config")
+  var confFileName: String = "config/default.config")
 
 object Generator extends App
 {
