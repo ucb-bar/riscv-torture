@@ -27,8 +27,7 @@ case class Options(var timeToRun: Int = Overnight.DefTime,
   var gitCommit: String = Overnight.DefGitCommit,
   var confFileName: String = Overnight.DefConfig,
   var output: Boolean = false,
-  var dumpCSim: Boolean = false,
-  var dumpVSim: Boolean = false)
+  var dumpWaveform: Boolean = false)
 
 object Overnight extends App
 {
@@ -53,13 +52,12 @@ object Overnight extends App
       opt[Int]('t', "threshold") valueName("<count>") text("number of failures to trigger email") action {(i: Int, c) => c.copy(errorThreshold = i)}
       opt[Int]('m', "minutes") valueName("<minutes>") text("number of minutes to run tests") action {(i: Int, c) => c.copy(timeToRun = i)}
       opt[Unit]("output") abbr("o") text("Write verbose output of simulators to file") action {(_, c) => c.copy(output = true)}
-      opt[Unit]("dumpcsim") abbr("dc") text("Create a vcd from csim") action {(_, c) => c.copy(dumpCSim = true)}
-      opt[Unit]("dumpvsim") abbr("dv") text("Create a vpd from vsim") action {(_, c) => c.copy(dumpVSim = true)}
+      opt[Unit]("dumpwaveform") abbr("dump") text("Create a vcd from a csim or a vpd from vsim") action {(_, c) => c.copy(dumpWaveform= true)}
     }
     parser.parse(args, Options()) match {
       case Some(opts) =>
         overnight(opts.confFileName, opts.permDir, opts.cSimPath, opts.rtlSimPath,
-          opts.emailAddress, opts.gitCommit, opts.errorThreshold, opts.timeToRun, opts.output, opts.dumpCSim, opts.dumpVSim)
+          opts.emailAddress, opts.gitCommit, opts.errorThreshold, opts.timeToRun, opts.output, opts.dumpWaveform)
       case None =>
         System.exit(1) // error message printed by parser
     }
@@ -73,8 +71,7 @@ object Overnight extends App
                   errorThreshold: Int,
                   timeToRun: Int,
                   output: Boolean,
-                  dumpCSim: Boolean,
-                  dumpVSim: Boolean)
+                  dumpWaveform: Boolean)
     {
       val config = new Properties()
       val configin = new FileInputStream(configFileName)
@@ -98,7 +95,7 @@ object Overnight extends App
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
         val newAsmName = generator.Generator.generate(configFileName, baseName)
-        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, true, output, dumpCSim, dumpVSim, configFileName) 
+        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, true, output, dumpWaveform, configFileName)
         if(failed) {
           errCount += 1
           test foreach { t =>

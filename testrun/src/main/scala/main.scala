@@ -17,8 +17,7 @@ case class Options(var testAsmName: Option[String] = None,
   var rtlSimPath: Option[String] = None,
   var seekOutFailure: Boolean = false,
   var output: Boolean = false,
-  var dumpCSim: Boolean = false,
-  var dumpVSim: Boolean = false,
+  var dumpWaveform: Boolean = false,
   var confFileName: String = "config/default.config")
 
 abstract sealed class Result
@@ -39,14 +38,13 @@ object TestRunner extends App
       opt[String]('r', "rtlsim") valueName("<file>") text("RTL simulator") action {(s: String, c) => c.copy(rtlSimPath = Some(s))}
       opt[Unit]("seek") abbr("s") text("Seek for failing pseg") action {(_, c) => c.copy(seekOutFailure = true)}
       opt[Unit]("output") abbr("o") text("Write verbose output of simulators to file") action {(_, c) => c.copy(output = true)}
-      opt[Unit]("dumpcsim") abbr("dc") text("Create a vcd from csim") action {(_, c) => c.copy(dumpCSim = true)}
-      opt[Unit]("dumpvsim") abbr("dv") text("Create a vpd from vsim") action {(_, c) => c.copy(dumpVSim = true)}
+      opt[Unit]("dumpwaveform") abbr("dump") text("Create a vcd from csim or a vpd from vsim") action {(_, c) => c.copy(dumpWaveform= true)}
     }
     parser.parse(args, Options()) match {
       case Some(options) =>
       {
         opts = options;
-        testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.output, opts.dumpCSim, opts.dumpVSim, opts.confFileName) 
+        testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.output, opts.dumpWaveform, opts.confFileName) 
       }
       case None =>
         System.exit(1) // error message printed by parser
@@ -55,8 +53,6 @@ object TestRunner extends App
 
   var virtualMode = false
   var maxcycles = 10000000
-  var dump = true
-  var seek = true
   var hwacha = true
 
   def testrun(testAsmName:  Option[String], 
@@ -64,8 +60,7 @@ object TestRunner extends App
               rtlSimPath:   Option[String], 
               doSeek:       Boolean,
               output:       Boolean,
-              dumpCSim:     Boolean,
-              dumpVSim:     Boolean,
+              dumpWaveform: Boolean,
               confFileName: String): (Boolean, Option[Seq[String]]) =
   {
 
@@ -76,8 +71,8 @@ object TestRunner extends App
 
     maxcycles = config.getProperty("torture.testrun.maxcycles", "10000000").toInt
     virtualMode = (config.getProperty("torture.testrun.virtual", "false").toLowerCase == "true")
-    dump = (config.getProperty("torture.testrun.dump", "false").toLowerCase == "true")
-    seek = (config.getProperty("torture.testrun.seek", "true").toLowerCase == "true")
+    val dump = (config.getProperty("torture.testrun.dump", "false").toLowerCase == "true")
+    val seek = (config.getProperty("torture.testrun.seek", "true").toLowerCase == "true")
     hwacha = (config.getProperty("torture.testrun.vec", "true").toLowerCase == "true")
 
     // Figure out which binary file to test
@@ -105,7 +100,7 @@ object TestRunner extends App
     // Test the simulators on the complete binary
     finalBinName match {
       case Some(binName) => {
-      val res = runSimulators(binName, simulators, false, output, dumpCSim, dumpVSim)
+      val res = runSimulators(binName, simulators, false, output, dumpWaveform || dump)
         val fail_names = res.filter(_._3 == Failed).map(_._1.toString)
         val mism_names = res.filter(_._3 == Mismatched).map(_._1.toString)
         val bad_sims  = res.filter(_._3 != Matched).map(_._2)
@@ -117,10 +112,10 @@ object TestRunner extends App
           mism_names.foreach(n => println("\t"+n))
           println("//  Rerunning in Debug mode")
           // run debug for failed/mismatched
-          val resDebug = runSimulators(binName, simulators, true, output, dumpCSim, dumpVSim)
+          val resDebug = runSimulators(binName, simulators, true, output, dumpWaveform || dump)
           println("///////////////////////////////////////////////////////")
           if(doSeek || seek) {
-            val failName = seekOutFailureBinary(binName, bad_sims, true, output, dumpCSim, dumpVSim)
+            val failName = seekOutFailureBinary(binName, bad_sims, true, output, dumpWaveform || dump)
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)
             println("///////////////////////////////////////////////////////")
@@ -217,19 +212,19 @@ object TestRunner extends App
 
   def runCSim(sim: String)(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
     val outputArgs = if(output) Seq("+verbose") else Seq()
-    val dumpArgs = if(dump) Seq("-v"+bin+".vcd") else Seq()
+    val dumpArgs = if(dump && debug) Seq("-v"+bin+".vcd") else Seq()
     val debugArgs = if(debug) outputArgs ++ dumpArgs else Seq()
     val simArgs = Seq("+max-cycles="+maxcycles) ++ debugArgs
-    val simName = if(debug) sim+"-debug" else sim
+    val simName = sim
     runSim(simName, Seq(), bin+".csim.sig", output, bin+".csim.out", simArgs, bin)
   }
 
   def runRtlSim(sim: String)(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
     val outputArgs = if(output) Seq("+verbose") else Seq()
-    val dumpArgs = if(dump) Seq("+vcdplusfile="+bin+".vpd") else Seq()
+    val dumpArgs = if(dump && debug) Seq("+vcdplusfile="+bin+".vpd") else Seq()
     val debugArgs = if(debug) outputArgs ++ dumpArgs else Seq()
     val simArgs = Seq("+max-cycles="+maxcycles) ++ debugArgs
-    val simName = if(debug) sim+"-debug" else sim
+    val simName = sim
     runSim(simName, Seq(), bin+".rtlsim.sig", output, bin+".rtlsim.out", simArgs, bin)
   }
 
@@ -239,13 +234,13 @@ object TestRunner extends App
     runSim("spike", simArgs ++ debugArgs, bin+".spike.sig", output, bin+".spike.out", Seq(), bin)
   }
 
-  def runSimulators(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpCSim: Boolean, dumpVSim: Boolean): Seq[(String, (String, (String, Boolean, Boolean, Boolean) => String), Result)] = {
+  def runSimulators(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpWaveform: Boolean): Seq[(String, (String, (String, Boolean, Boolean, Boolean) => String), Result)] = {
     if(simulators.length == 0) println("Warning: No simulators specified for comparison. Comparing ISA to ISA...")
     val isa_sig = runIsaSim(bin, debug, output, false)
     simulators.map { case (name, sim) => {
       val res =
         try {
-        if (isa_sig != sim(bin, debug, output, if(name == "csim") dumpCSim else dumpVSim)) Mismatched
+        if (isa_sig != sim(bin, debug, output, dumpWaveform)) Mismatched
           else Matched
         } catch {
           case e:RuntimeException => Failed
@@ -254,7 +249,7 @@ object TestRunner extends App
     } }
   }
 
-  def seekOutFailureBinary(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpCSim: Boolean, dumpVSim: Boolean): String =
+  def seekOutFailureBinary(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpWaveform: Boolean): String =
   {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
@@ -286,7 +281,7 @@ object TestRunner extends App
       val newBinName = compileAsmToBin(newAsmName)
       newBinName match {
         case Some(b) => {
-          val res = runSimulators(b, simulators, debug, output, dumpCSim, dumpVSim)
+          val res = runSimulators(b, simulators, debug, output, dumpWaveform)
           if (!res.forall(_._3 == Matched)) {
             lastfound = b
             high = p-1
@@ -305,7 +300,7 @@ object TestRunner extends App
     }
   }
 
-  def seekOutFailure(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpCSim: Boolean, dumpVSim: Boolean): String = {
+  def seekOutFailure(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpWaveform: Boolean): String = {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
     val lines = source.mkString
@@ -332,7 +327,7 @@ object TestRunner extends App
       val newBinName = compileAsmToBin(newAsmName)
       newBinName match {
         case Some(b) => {
-        val res = runSimulators(b, simulators, debug, output, dumpCSim, dumpVSim)
+        val res = runSimulators(b, simulators, debug, output, dumpWaveform)
           if (!res.forall(_._3 == Matched)) {
             return b
           }
