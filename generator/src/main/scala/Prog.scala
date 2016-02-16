@@ -172,7 +172,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     def seq_lt(seq1: (String, Int), seq2: (String, Int)): Boolean =
     {
       val seqhash = HashMap("xmem"->1,"xbranch"->2,"xalu"->3,"vmem"->4, 
-      "fgen"->5,"fpmem"->6,"fax"->7, "vec"->8,"vonly"->9,"valu"->10,"Generic"->11).withDefaultValue(100)
+      "fgen"->5,"fpmem"->6,"fax"->7,"fdiv"->8,"vec"->9,"vonly"->10,"valu"->11,"Generic"->12).withDefaultValue(100)
       if (seqhash(seq1._1) == 100 && seqhash(seq2._1) == 100) return (seq1._1 < seq2._1)
       return seqhash(seq1._1) < seqhash(seq2._1)
     }
@@ -314,7 +314,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     }
   }
 
-  def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","vec")
+  def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec")
 
   def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
   {
@@ -325,6 +325,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
       "fpmem" -> (() => new SeqFPMem(xregs, fregs_s, fregs_d, core_memory)),
       "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
+      "fdiv" -> (() => new SeqFDiv(fregs_s, fregs_d)),
       "vec" -> (() => new SeqVec(xregs, vxregs, vpregs, vsregs, varegs, used_vl, veccfg)))
 
     prob_tbl = new ArrayBuffer[(Int, () => InstSeq)]
@@ -496,7 +497,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
-    val using_fpu = (mix.filterKeys(List("fgen","fpmem","fax") contains _).values.reduce(_+_) > 0) || using_vec
+    val using_fpu = (mix.filterKeys(List("fgen","fpmem","fax","fdiv") contains _).values.reduce(_+_) > 0) || using_vec
     // TODO: make a config object that is passed around?
 
     header(nseqs) +
