@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqVALU(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean, use_pred: Boolean) extends VFInstSeq //TODO: better configuration
+class SeqVALU(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean, use_fdiv: Boolean, use_pred: Boolean) extends VFInstSeq //TODO: better configuration
 {
   override val seqname = "valu"
   val pred = if(use_pred) PredReg(reg_read_any(pregs), false)
@@ -47,11 +47,15 @@ class SeqVALU(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPoo
   if (use_mul) oplist2 += (VMUL, VMULH, VMULHSU, VMULHU, VMULW)
   if (use_div) oplist2 += (VDIV, VDIVU, VREM, VREMU, VDIVW, VDIVUW, VREMW, VREMUW)
   if (use_fpu)
-  { 
-    oplist2 += (VFADD_S, VFSUB_S, VFMUL_S, VFDIV_S, VFMIN_S, VFMAX_S,
-    VFADD_D, VFSUB_D, VFMUL_D, VFDIV_D, VFMIN_D, VFMAX_D,
+  {
+    oplist2 += (VFADD_S, VFSUB_S, VFMUL_S, VFMIN_S, VFMAX_S,
+    VFADD_D, VFSUB_D, VFMUL_D, VFMIN_D, VFMAX_D,
     VFSGNJ_S, VFSGNJN_S, VFSGNJX_S, VFSGNJ_D, VFSGNJN_D, VFSGNJX_D)
-    oplist1 += (VFSQRT_S, VFSQRT_D)
+    if (use_fdiv)
+    {
+      oplist1 += (VFSQRT_S, VFSQRT_D)
+      oplist2 += (VFDIV_S, VFDIV_D)
+    }
   }
   if (use_fma) oplist3 += (VFMADD_S, VFMSUB_S, VFNMSUB_S, VFNMADD_S,
     VFMADD_D, VFMSUB_D, VFNMSUB_D, VFNMADD_D)

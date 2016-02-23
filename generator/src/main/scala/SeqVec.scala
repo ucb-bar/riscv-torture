@@ -23,6 +23,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   val use_fpu = cfg.getOrElse("fpu", "true") == "true"
   val use_fma = cfg.getOrElse("fma", "true") == "true"
   val use_fcvt = cfg.getOrElse("fcvt", "true") == "true"
+  val use_fdiv = cfg.getOrElse("fdiv", "true") == "true"
   val use_amo = cfg.getOrElse("amo", "true") == "true"
   val use_seg = cfg.getOrElse("seg", "true") == "true"
   val use_stride = cfg.getOrElse("stride", "true") == "true"
@@ -151,7 +152,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions
-    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vpreg_helper, shadow_vsregs, shadow_varegs, shadow_xregs, vec_mem, seqnum, mixcfg, vl, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, use_amo, use_seg, use_stride, pred_alu, pred_mem) //TODO: Enable configuration of enabling mul,div ops
+    val vf_instseq = new SeqSeq(shadow_vvregs, shadow_vpregs, vpreg_helper, shadow_vsregs, shadow_varegs, shadow_xregs, vec_mem, seqnum, mixcfg, vl, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, use_fdiv, use_amo, use_seg, use_stride, pred_alu, pred_mem) //TODO: Enable configuration of enabling mul,div ops
     for ((seqname, seqcnt) <- vf_instseq.seqstats)
     {
       vseqstats(seqname) += seqcnt

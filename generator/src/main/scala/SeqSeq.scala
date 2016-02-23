@@ -4,7 +4,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import Rand._
 
-class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, aregs: HWRegPool, xregs: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], vl: Int, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean, pred_alu: Boolean, pred_mem: Boolean) extends VFInstSeq
+class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, aregs: HWRegPool, xregs: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], vl: Int, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean, use_fdiv: Boolean, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean, pred_alu: Boolean, pred_mem: Boolean) extends VFInstSeq
 {
   val seqs = new ArrayBuffer[VFInstSeq]
   val seqs_active = new ArrayBuffer[VFInstSeq]
@@ -19,7 +19,7 @@ class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPool
 
   val name_to_seq = Map(
     "vmem" -> (() => new SeqVMem(xregs, vregs, pregs, def_preg, sregs, aregs, mem.asInstanceOf[VMem], vl, use_amo,use_seg, use_stride, pred_mem)),
-    "valu" -> (() => new SeqVALU(vregs, pregs, def_preg, sregs, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, pred_alu)), // TODO: Clean up
+    "valu" -> (() => new SeqVALU(vregs, pregs, def_preg, sregs, use_mul, use_div, use_mix, use_fpu, use_fma, use_fcvt, use_fdiv, pred_alu)), // TODO: Clean up
     "vpop" -> (() => new SeqVPop(vregs, pregs, def_preg, sregs)),
     "vonly" -> (() => new SeqVOnly(vregs, pregs, sregs)))
 
