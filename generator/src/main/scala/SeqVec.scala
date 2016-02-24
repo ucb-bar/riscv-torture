@@ -49,7 +49,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     val randtype = rand_range(0, 99)
     val attempt =
       if(randtype < 5)          //  5% use a lot of registers
-        rand_range(max/2, max)  
+        rand_range(max/2, max)
       else if(randtype < 10)    //  5% use very little registers
         rand_range(1, 3)
       else                      // 90% use moderate number

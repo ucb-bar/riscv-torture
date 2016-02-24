@@ -407,8 +407,9 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
   def init_vector() = 
   {
     "\n" +
+    "\tli x1, " + (num_vxregs + (num_vpregs << 9)) + "\n" +
+    "\tvsetcfg x1\n" +
     "\tli x1, " + used_vl + "\n" +
-    "\tvsetcfg " + num_vxregs + ", " + num_vpregs + "\n" +
     "\tvsetvl x1,x1\n"
   }
 
