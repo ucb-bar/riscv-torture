@@ -23,12 +23,13 @@ trait ScalarRegPool extends HWRegPool
   val ldinst: String
   val stinst: String
   
-  def init_regs() =
+  def init_regs(loop: Boolean, loop_size: Int) =
   {
     var s = name + "_init:\n"
     s += "\tla x31, " + name + "_init_data\n"
     for (i <- 0 to hwregs.length-1)
       s += "\t" + ldinst + " " + hwregs(i) + ", " + 8*i + "(x31)\n"
+    if (loop) { s += "\tli x31" + ", " + loop_size.toString}
     s += "\n"
     s
   }
@@ -84,12 +85,14 @@ trait PoolsMaster extends HWRegPool
   }
 }
 
-class XRegsPool extends ScalarRegPool
+class XRegsPool(loop: Boolean)  extends ScalarRegPool
 {
   val (name, regname, ldinst, stinst) = ("xreg", "reg_x", "ld", "sd")
   
   hwregs += new HWReg("x0", true, false)
-  for (i <- 1 to 31)
+  var last_reg = 31
+  if (loop) {last_reg = 30}
+  for (i <- 1 to last_reg)
     hwregs += new HWReg("x" + i.toString(), true, true)
     
   override def save_regs() =
@@ -130,7 +133,7 @@ class FRegsMaster extends ScalarRegPool with PoolsMaster
                  d_regpool.asInstanceOf[HWRegPool])
   override val hwregs = regpools.map(_.hwregs).flatten
   
-  override def init_regs() = //Wrapper function
+  override def init_regs(loop: Boolean, loop_size: Int) = //Wrapper function
   {
     var s = "freg_init:\n"+"freg_s_init:\n"+"\tla x1, freg_init_data\n"
     for ((i, curreg) <- s_reg_num.zip(s_regpool.hwregs))

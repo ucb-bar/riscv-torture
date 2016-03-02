@@ -25,7 +25,7 @@ object ProgSeg
   }
 }
 
-class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
+class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: Boolean)
 {
   // Setup scalar core memory
   val core_memory = new Mem("test_memory", memsize)
@@ -41,7 +41,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
   val max_vl = (Math.floor(256/(num_vxregs-1))).toInt * 8
   val used_vl = Math.min(max_vl, rand_range(1, max_vl))
 
-  val xregs = new XRegsPool()
+  val xregs = new XRegsPool(loop)
   val fregs = new FRegsMaster()
   val vregs = new VRegsMaster(num_vxregs, num_vpregs, num_vsregs)
 
@@ -272,7 +272,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
       progsegs += ProgSeg()
 
     progsegs.last.insts += inst
-
+    
     val branch_filter = (x: Operand) =>
       x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("branch_patch") != -1
     val branch_patch = inst.operands.indexWhere(branch_filter)
@@ -316,7 +316,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
 
   def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec")
 
-  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
+  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, loop: Boolean) =
   {
     val name_to_seq = Map(
       "xmem" -> (() => new SeqMem(xregs, core_memory, use_amo)),
@@ -336,6 +336,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
 
     for (i <- 0 to nseqs-1) gen_seq()
 
+    if (loop) { progsegs += ProgSeg() }
     while (!is_seqs_empty)
     {
       seqs_find_active()
@@ -343,7 +344,24 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
       while (!is_seqs_active_empty)
       {
         val seq = rand_pick(seqs_active)
-        add_inst(seq.next_inst())
+	if(loop) {
+	  val inst = seq.next_inst()
+	  val branch_filter = (x: Operand) =>
+      	    x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("branch_patch") != -1
+    	  val branch_patch = inst.operands.indexWhere(branch_filter)
+	  val jalr_filter1 = (x: Operand) =>
+      	    x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("jalr_patch1") != -1
+    	  val jalr_patch1 = inst.operands.indexWhere(jalr_filter1)
+	  val jalr_filter2 = (x: Operand) =>
+      	    x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("jalr_patch2") != -1
+    	  val jalr_patch2 = inst.operands.indexWhere(jalr_filter2)
+    	  if (jalr_patch1 == -1 && branch_patch == -1 && jalr_patch2 == -1){
+    	    progsegs.last.insts += inst
+	    update_stats(inst)
+	  }
+	} else {	
+          add_inst(seq.next_inst())
+	}
 
         if (seq.is_done)
         {
@@ -357,10 +375,11 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
         if (rand_range(0,99) < 10) seqs_find_active()
       }
     }
-
+    
+    //Final p_seg
     progsegs.last.insts += J(Label("reg_dump"))
 
-    resolve_jalr_las
+    if(!loop) { resolve_jalr_las }
     rand_permute(progsegs)
  
     if (killed_seqs >= (nseqs*5))
@@ -380,7 +399,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     "#include \"riscv_test.h\"\n"
   }
 
-  def code_header(using_fpu: Boolean, using_vec: Boolean, fprnd: Int) =
+  def code_header(using_fpu: Boolean, using_vec: Boolean, fprnd: Int, loop: Boolean, loop_size: Int) =
   {
     "\n" +
     (if (using_vec) "RVTEST_RV64UV\n"
@@ -397,9 +416,9 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     "test_start:\n" +
     "\n" +
     // fregs must be initialized before xregs!
-    (if (using_fpu) fregs.init_regs() else "") +
+    (if (using_fpu) fregs.init_regs(loop, loop_size) else "") +
     (if (using_vec) vregs.init_regs() else "") +
-    xregs.init_regs() +
+    xregs.init_regs(loop, loop_size) +
     "\tj pseg_0\n" +
     "\n"
   }
@@ -412,9 +431,15 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     "\tvsetvl x1,x1\n"
   }
 
-  def code_footer(using_fpu: Boolean, using_vec: Boolean, run_twice: Boolean) =
+  def code_footer(using_fpu: Boolean, using_vec: Boolean, run_twice: Boolean, loop: Boolean) =
   {
     var s = "reg_dump:\n" +
+    {
+    if(loop){
+      "\taddi x31,x31,-1\n\tbne x31,x0, pseg_0\n"
+      //might want to make branch cond less or greater than
+    } else {""}
+    } +
     // fregs must be saved after xregs
     xregs.save_regs() +
     (if(using_fpu) fregs.save_regs() else "") +
@@ -493,7 +518,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, run_twice: Boolean) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, run_twice: Boolean, loop: Boolean, loop_size: Int) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -501,9 +526,9 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     // TODO: make a config object that is passed around?
 
     header(nseqs) +
-    code_header(using_fpu, using_vec, fprnd) +
-    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div) +
-    code_footer(using_fpu, using_vec, run_twice) +
+    code_header(using_fpu, using_vec, fprnd, loop, loop_size) +
+    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div, loop) +
+    code_footer(using_fpu, using_vec, run_twice, loop) +
     data_header() +
     data_input(using_fpu, using_vec) +
     data_output(using_fpu, using_vec) +
