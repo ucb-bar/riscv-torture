@@ -148,8 +148,7 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   extra_code += ProgSegDump(vf_init_pred_block)
   insts += LUI(xreg_helper, Label("%hi("+vf_init_pred_block.name+")"))
   insts += VF(RegStrImm(xreg_helper, "%lo("+vf_init_pred_block.name+")"))
-  
-  
+    
   for(i <- 1 to vfnum)
   {
     // Create SeqSeq to create some vector instructions

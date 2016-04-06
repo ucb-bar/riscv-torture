@@ -25,7 +25,7 @@ object ProgSeg
   }
 }
 
-class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: Boolean)
+class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop : Boolean)
 {
   // Setup scalar core memory
   val core_memory = new Mem("test_memory", memsize)
@@ -41,7 +41,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
   val max_vl = (Math.floor(256/(num_vxregs-1))).toInt * 8
   val used_vl = Math.min(max_vl, rand_range(1, max_vl))
 
-  val xregs = new XRegsPool(loop)
+  val xregs = new XRegsPool()
   val fregs = new FRegsMaster()
   val vregs = new VRegsMaster(num_vxregs, num_vpregs, num_vsregs)
 
@@ -272,7 +272,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
       progsegs += ProgSeg()
 
     progsegs.last.insts += inst
-    
+
     val branch_filter = (x: Operand) =>
       x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("branch_patch") != -1
     val branch_patch = inst.operands.indexWhere(branch_filter)
@@ -316,7 +316,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
 
   def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec")
 
-  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, loop: Boolean) =
+  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, segment: Boolean) =
   {
     val name_to_seq = Map(
       "xmem" -> (() => new SeqMem(xregs, core_memory, use_amo)),
@@ -336,7 +336,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
 
     for (i <- 0 to nseqs-1) gen_seq()
 
-    if (loop) { progsegs += ProgSeg() }
+    if (segment) { progsegs += ProgSeg() }
     while (!is_seqs_empty)
     {
       seqs_find_active()
@@ -344,7 +344,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
       while (!is_seqs_active_empty)
       {
         val seq = rand_pick(seqs_active)
-	if(loop) {
+	if(segment) {
 	  val inst = seq.next_inst()
 	  val branch_filter = (x: Operand) =>
       	    x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("branch_patch") != -1
@@ -379,7 +379,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
     //Final p_seg
     progsegs.last.insts += J(Label("reg_dump"))
 
-    if(!loop) { resolve_jalr_las }
+    if(!segment) { resolve_jalr_las }
     rand_permute(progsegs)
  
     if (killed_seqs >= (nseqs*5))
@@ -399,7 +399,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
     "#include \"riscv_test.h\"\n"
   }
 
-  def code_header(using_fpu: Boolean, using_vec: Boolean, fprnd: Int, loop: Boolean, loop_size: Int) =
+  def code_header(using_fpu: Boolean, using_vec: Boolean, fprnd: Int) =
   {
     "\n" +
     (if (using_vec) "RVTEST_RV64UV\n"
@@ -416,9 +416,9 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
     "test_start:\n" +
     "\n" +
     // fregs must be initialized before xregs!
-    (if (using_fpu) fregs.init_regs(loop, loop_size) else "") +
+    (if (using_fpu) fregs.init_regs() else "") +
     (if (using_vec) vregs.init_regs() else "") +
-    xregs.init_regs(loop, loop_size) +
+    xregs.init_regs() +
     "\tj pseg_0\n" +
     "\n"
   }
@@ -436,8 +436,11 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
     var s = "reg_dump:\n" +
     {
     if(loop){
-      "\taddi x31,x31,-1\n\tbne x31,x0, pseg_0\n"
-      //might want to make branch cond less or greater than
+      "\tla x1, loop_count\n" +
+      "\tlw x2, 0(x1)\n" +
+      "\taddi x3, x2, -1\n" +
+      "\tsw x3, 0(x1)\n" +
+      "\tbltz x2, pseg_0\n"
     } else {""}
     } +
     // fregs must be saved after xregs
@@ -476,13 +479,15 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
     "\n"
   }
 
-  def output_mem_data() =
+  def output_mem_data(loop_size: Int) =
   {
     var s = "// Memory Blocks\n"
     s += MemDump(core_memory)
     s += "\n"
     s += ".align 8\n"
+    s += "loop_count: .word 0x" + Integer.toHexString(loop_size) + "\n\n"
     s += "execution_count: .word 0x0000000000000001\n\n"
+    //s += "execution_count: .word 0x" + Integer.toHexString(10) + "\n\n"
     for(seq <- seqs.filter(_.is_done))
     {
       val ns = seq.extra_visible_data.mkString("\n")
@@ -505,20 +510,20 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
     s
   }
 
-  def data_output(using_fpu: Boolean, using_vec: Boolean) =
+  def data_output(using_fpu: Boolean, using_vec: Boolean, loop_size: Int) =
   {
     "RVTEST_DATA_BEGIN\n" +
     "\n" +
     xregs.output_regs_data() +
     (if(using_fpu) fregs.output_regs_data() else "") +
     (if(using_vec) vregs.output_regs_data() else "") +
-    output_mem_data() +
+    output_mem_data(loop_size) +
     "RVTEST_DATA_END\n"
   }
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, run_twice: Boolean, loop: Boolean, loop_size: Int) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, run_twice: Boolean, segment : Boolean, loop: Boolean, loop_size: Int) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -526,12 +531,12 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop: B
     // TODO: make a config object that is passed around?
 
     header(nseqs) +
-    code_header(using_fpu, using_vec, fprnd, loop, loop_size) +
-    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div, loop) +
+    code_header(using_fpu, using_vec, fprnd) +
+    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div, segment) +
     code_footer(using_fpu, using_vec, run_twice, loop) +
     data_header() +
     data_input(using_fpu, using_vec) +
-    data_output(using_fpu, using_vec) +
+    data_output(using_fpu, using_vec, loop_size) +
     data_footer()
   }
 
