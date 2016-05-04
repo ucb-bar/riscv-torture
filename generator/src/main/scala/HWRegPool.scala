@@ -87,7 +87,7 @@ trait PoolsMaster extends HWRegPool
 class XRegsPool extends ScalarRegPool
 {
   val (name, regname, ldinst, stinst) = ("xreg", "reg_x", "ld", "sd")
-  
+
   hwregs += new HWReg("x0", true, false)
   for (i <- 1 to 31)
     hwregs += new HWReg("x" + i.toString(), true, true)

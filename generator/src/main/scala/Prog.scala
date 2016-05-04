@@ -25,7 +25,7 @@ object ProgSeg
   }
 }
 
-class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
+class Prog(memsize: Int, veccfg: Map[String,String], loop : Boolean)
 {
   // Setup scalar core memory
   val core_memory = new Mem("test_memory", memsize)
@@ -316,7 +316,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
 
   def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec")
 
-  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean) =
+  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, segment: Boolean) =
   {
     val name_to_seq = Map(
       "xmem" -> (() => new SeqMem(xregs, core_memory, use_amo)),
@@ -336,6 +336,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
 
     for (i <- 0 to nseqs-1) gen_seq()
 
+    if (segment) { progsegs += ProgSeg() }
     while (!is_seqs_empty)
     {
       seqs_find_active()
@@ -343,7 +344,24 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
       while (!is_seqs_active_empty)
       {
         val seq = rand_pick(seqs_active)
-        add_inst(seq.next_inst())
+	if(segment) {
+	  val inst = seq.next_inst()
+	  val branch_filter = (x: Operand) =>
+      	    x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("branch_patch") != -1
+    	  val branch_patch = inst.operands.indexWhere(branch_filter)
+	  val jalr_filter1 = (x: Operand) =>
+      	    x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("jalr_patch1") != -1
+    	  val jalr_patch1 = inst.operands.indexWhere(jalr_filter1)
+	  val jalr_filter2 = (x: Operand) =>
+      	    x.isInstanceOf[Label] && x.asInstanceOf[Label].label.indexOf("jalr_patch2") != -1
+    	  val jalr_patch2 = inst.operands.indexWhere(jalr_filter2)
+    	  if (jalr_patch1 == -1 && branch_patch == -1 && jalr_patch2 == -1){
+    	    progsegs.last.insts += inst
+	    update_stats(inst)
+	  }
+	} else {	
+          add_inst(seq.next_inst())
+	}
 
         if (seq.is_done)
         {
@@ -357,10 +375,11 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
         if (rand_range(0,99) < 10) seqs_find_active()
       }
     }
-
+    
+    //Final p_seg
     progsegs.last.insts += J(Label("reg_dump"))
 
-    resolve_jalr_las
+    if(!segment) { resolve_jalr_las }
     rand_permute(progsegs)
  
     if (killed_seqs >= (nseqs*5))
@@ -412,9 +431,18 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     "\tvsetvl x1,x1\n"
   }
 
-  def code_footer(using_fpu: Boolean, using_vec: Boolean, run_twice: Boolean) =
+  def code_footer(using_fpu: Boolean, using_vec: Boolean, loop: Boolean) =
   {
     var s = "reg_dump:\n" +
+    {
+    if(loop){
+      "\tla x1, loop_count\n" +
+      "\tlw x2, 0(x1)\n" +
+      "\taddi x3, x2, -1\n" +
+      "\tsw x3, 0(x1)\n" +
+      "\tbltz x2, pseg_0\n"
+    } else {""}
+    } +
     // fregs must be saved after xregs
     xregs.save_regs() +
     (if(using_fpu) fregs.save_regs() else "") +
@@ -425,12 +453,6 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     "\tRVTEST_FAIL\n" +
     "\n" +
     "test_end:\n" +
-    // run the test twice (first is to warm the caches)
-    "\tla x1, execution_count\n" +
-    "\tlw x2, 0(x1)\n" +
-    "\taddi x3, x2, -1\n" +
-    "\tsw x3, 0(x1)\n" +
-    (if(run_twice) "\tbnez x2, test_start\n" else "\t#only run once")  +
     "\tRVTEST_PASS\n" +
     "\n" +
     "RVTEST_CODE_END\n" +
@@ -451,13 +473,13 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     "\n"
   }
 
-  def output_mem_data() =
+  def output_mem_data(loop_size: Int) =
   {
     var s = "// Memory Blocks\n"
     s += MemDump(core_memory)
     s += "\n"
     s += ".align 8\n"
-    s += "execution_count: .word 0x0000000000000001\n\n"
+    s += "loop_count: .word 0x" + Integer.toHexString(loop_size) + "\n\n"
     for(seq <- seqs.filter(_.is_done))
     {
       val ns = seq.extra_visible_data.mkString("\n")
@@ -480,20 +502,20 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
     s
   }
 
-  def data_output(using_fpu: Boolean, using_vec: Boolean) =
+  def data_output(using_fpu: Boolean, using_vec: Boolean, loop_size: Int) =
   {
     "RVTEST_DATA_BEGIN\n" +
     "\n" +
     xregs.output_regs_data() +
     (if(using_fpu) fregs.output_regs_data() else "") +
     (if(using_vec) vregs.output_regs_data() else "") +
-    output_mem_data() +
+    output_mem_data(loop_size) +
     "RVTEST_DATA_END\n"
   }
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, run_twice: Boolean) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, segment : Boolean, loop: Boolean, loop_size: Int) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -502,11 +524,11 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean)
 
     header(nseqs) +
     code_header(using_fpu, using_vec, fprnd) +
-    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div) +
-    code_footer(using_fpu, using_vec, run_twice) +
+    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div, segment) +
+    code_footer(using_fpu, using_vec, loop) +
     data_header() +
     data_input(using_fpu, using_vec) +
-    data_output(using_fpu, using_vec) +
+    data_output(using_fpu, using_vec, loop_size) +
     data_footer()
   }
 
