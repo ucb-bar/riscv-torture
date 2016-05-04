@@ -37,16 +37,15 @@ object Generator extends App
     val use_amo = (config.getProperty("torture.generator.amo", "true").toLowerCase == "true")
     val use_mul = (config.getProperty("torture.generator.mul", "true").toLowerCase == "true")
     val use_div = (config.getProperty("torture.generator.divider", "true").toLowerCase == "true")
-    val run_twice = (config.getProperty("torture.generator.run_twice", "true").toLowerCase == "true")
     val mix     = config.filterKeys(_ contains "torture.generator.mix").map { case (k,v) => (k.split('.')(3), v.toInt) }.asInstanceOf[Map[String,Int]]
     val vec     = config.filterKeys(_ contains "torture.generator.vec").map { case (k,v) => (k.split('.').drop(3).reduce(_+"."+_), v) }.asInstanceOf[Map[String,String]]
     val segment = (config.getProperty("torture.generator.segment", "true").toLowerCase == "true")
     val loop    = (config.getProperty("torture.generator.loop", "true").toLowerCase == "true")
     val loop_size = config.getProperty("torture.generator.loop_size", "256").toInt
-    generate(nseqs, memsize, fprnd, mix, vec, use_amo, use_mul, use_div, outFileName, run_twice, segment, loop, loop_size)
+    generate(nseqs, memsize, fprnd, mix, vec, use_amo, use_mul, use_div, outFileName, segment, loop, loop_size)
   }
 
-  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String, run_twice: Boolean, segment : Boolean, loop : Boolean, loop_size : Int): String = {
+  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String, segment : Boolean, loop : Boolean, loop_size : Int): String = {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
     assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name"))
 
@@ -57,10 +56,10 @@ object Generator extends App
     assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
     assert (vecmix.keys.forall(List("vmem","valu","vpop","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
 
-    val prog = new Prog(memsize, veccfg, run_twice, loop)
+    val prog = new Prog(memsize, veccfg, loop)
     ProgSeg.cnt = 0
     SeqVec.cnt = 0
-    val s = prog.generate(nseqs, fprnd, mix, veccfg, use_amo, use_mul, use_div, run_twice, segment, loop, loop_size)
+    val s = prog.generate(nseqs, fprnd, mix, veccfg, use_amo, use_mul, use_div, segment, loop, loop_size)
 
     val oname = "output/" + outFileName + ".S"
     val fw = new FileWriter(oname)

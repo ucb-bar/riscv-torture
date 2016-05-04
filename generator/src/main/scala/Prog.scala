@@ -25,7 +25,7 @@ object ProgSeg
   }
 }
 
-class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop : Boolean)
+class Prog(memsize: Int, veccfg: Map[String,String], loop : Boolean)
 {
   // Setup scalar core memory
   val core_memory = new Mem("test_memory", memsize)
@@ -431,7 +431,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop : 
     "\tvsetvl x1,x1\n"
   }
 
-  def code_footer(using_fpu: Boolean, using_vec: Boolean, run_twice: Boolean, loop: Boolean) =
+  def code_footer(using_fpu: Boolean, using_vec: Boolean, loop: Boolean) =
   {
     var s = "reg_dump:\n" +
     {
@@ -453,12 +453,6 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop : 
     "\tRVTEST_FAIL\n" +
     "\n" +
     "test_end:\n" +
-    // run the test twice (first is to warm the caches)
-    "\tla x1, execution_count\n" +
-    "\tlw x2, 0(x1)\n" +
-    "\taddi x3, x2, -1\n" +
-    "\tsw x3, 0(x1)\n" +
-    (if(run_twice) "\tbnez x2, test_start\n" else "\t#only run once")  +
     "\tRVTEST_PASS\n" +
     "\n" +
     "RVTEST_CODE_END\n" +
@@ -486,8 +480,6 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop : 
     s += "\n"
     s += ".align 8\n"
     s += "loop_count: .word 0x" + Integer.toHexString(loop_size) + "\n\n"
-    s += "execution_count: .word 0x0000000000000001\n\n"
-    //s += "execution_count: .word 0x" + Integer.toHexString(10) + "\n\n"
     for(seq <- seqs.filter(_.is_done))
     {
       val ns = seq.extra_visible_data.mkString("\n")
@@ -523,7 +515,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop : 
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, run_twice: Boolean, segment : Boolean, loop: Boolean, loop_size: Int) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, segment : Boolean, loop: Boolean, loop_size: Int) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -533,7 +525,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], run_twice: Boolean, loop : 
     header(nseqs) +
     code_header(using_fpu, using_vec, fprnd) +
     code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div, segment) +
-    code_footer(using_fpu, using_vec, run_twice, loop) +
+    code_footer(using_fpu, using_vec, loop) +
     data_header() +
     data_input(using_fpu, using_vec) +
     data_output(using_fpu, using_vec, loop_size) +
