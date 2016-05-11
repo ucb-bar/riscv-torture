@@ -440,7 +440,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], loop : Boolean)
       "\tlw x2, 0(x1)\n" +
       "\taddi x3, x2, -1\n" +
       "\tsw x3, 0(x1)\n" +
-      "\tbltz x2, pseg_0\n"
+      "\tbnez x2, pseg_0\n"
     } else {""}
     } +
     // fregs must be saved after xregs
