@@ -121,9 +121,9 @@ class Inst(opcode: String, val operands: Array[Operand])
 
   override def toString =
   {
-    operands.find(op => op.isInstanceOf[PredReg]) match {
+    operands.find(op => op.isInstanceOf[PreLabel] || op.isInstanceOf[PredReg]) match {
       case Some(pred) => pred + " " + opcode +
-        operands.filterNot(op => op.isInstanceOf[PredReg]).mkString(" ", ", ", "")
+        operands.filterNot(op => op.isInstanceOf[PreLabel] || op.isInstanceOf[PredReg]).mkString(" ", ", ", "")
       case None => opcode + operands.mkString(" ", ", ", "")
     }
   }

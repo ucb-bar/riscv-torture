@@ -127,8 +127,8 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     vinsts += VLD(vreg, vareg_helper)
     vinsts += VSTOP()
     extra_code += ProgSegDump(vf_init_block)
-    insts += AUIPC(xreg_helper, Label("%pcrel_hi("+vf_init_block.name+")"))
-    insts += VF(RegStrImm(xreg_helper, "%pcrel_lo("+vf_init_block.name+")"))
+    insts += AUIPC(xreg_helper, Label("%pcrel_hi("+vf_init_block.name+")"), PreLabel(SeqVec.cnt))
+    insts += VF(RegStrImm(xreg_helper, "%pcrel_lo("+SeqVec.cnt+"b)"))
   }
 
   val vf_init_pred_block = new ProgSeg(name+"_vf_init_pred")
@@ -146,8 +146,8 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
   vf_init_pred_block.insts += VSTOP()
   vinsts += VSTOP()
   extra_code += ProgSegDump(vf_init_pred_block)
-  insts += AUIPC(xreg_helper, Label("%pcrel_hi("+vf_init_pred_block.name+")"))
-  insts += VF(RegStrImm(xreg_helper, "%pcrel_lo("+vf_init_pred_block.name+")"))
+  insts += AUIPC(xreg_helper, Label("%pcrel_hi("+vf_init_pred_block.name+")"), PreLabel(SeqVec.cnt))
+  insts += VF(RegStrImm(xreg_helper, "%pcrel_lo("+SeqVec.cnt+"b)"))
   
   for(i <- 1 to vfnum)
   {
@@ -178,8 +178,8 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
     extra_code += ProgSegDump(vf_block)
     extra_hidden_data.appendAll(vf_instseq.extra_hidden_data)
 
-    insts += AUIPC(xreg_helper, Label("%pcrel_hi("+vf_block.name+")"))
-    insts += VF(RegStrImm(xreg_helper, "%pcrel_lo("+vf_block.name+")"))
+    insts += AUIPC(xreg_helper, Label("%pcrel_hi("+vf_block.name+")"), PreLabel(SeqVec.cnt))
+    insts += VF(RegStrImm(xreg_helper, "%pcrel_lo("+SeqVec.cnt+"b)"))
   }
 
   // Handling dumping of vreg to output memories 
@@ -198,8 +198,8 @@ class SeqVec(xregs: HWRegPool, vvregs: HWRegPool, vpregs: HWRegPool, vsregs: HWR
       vinsts += VSD(vreg, vareg_helper)
       vinsts += VSTOP()
       extra_code += ProgSegDump(vf_init_block)
-      insts += AUIPC(xreg_helper, Label("%pcrel_hi("+vf_init_block.name+")"))
-      insts += VF(RegStrImm(xreg_helper, "%pcrel_lo("+vf_init_block.name+")"))
+      insts += AUIPC(xreg_helper, Label("%pcrel_hi("+vf_init_block.name+")"), PreLabel(SeqVec.cnt))
+      insts += VF(RegStrImm(xreg_helper, "%pcrel_lo("+SeqVec.cnt+"b)"))
     }
   }
 

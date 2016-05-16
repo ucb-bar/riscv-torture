@@ -57,6 +57,11 @@ class Label(val label: String) extends Operand
   override def toString = label
 }
 
+class PreLabel(val number: Int) extends Operand
+{
+  override def toString = number + ":"
+}
+
 class PredReg(pred: Reg, neg: Boolean) extends Operand
 {
   override def toString =
@@ -92,6 +97,11 @@ object RegStrImm
 object Label
 {
   def apply(label: String) = new Label(label)
+}
+
+object PreLabel
+{
+  def apply(number: Int) = new PreLabel(number)
 }
 
 object PredReg
