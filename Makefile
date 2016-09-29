@@ -2,8 +2,8 @@
 
 SBT ?= java -Xmx1G -Xss8M -XX:MaxPermSize=128M -jar sbt-launch.jar
 RTL_CONFIG := DefaultConfig
-C_SIM := ../emulator/emulator-TestHarness-$(RTL_CONFIG)
-R_SIM := ../vsim/simv-TestHarness-$(RTL_CONFIG)
+C_SIM := ../emulator/emulator-rocketchip-$(RTL_CONFIG)
+R_SIM := ../vsim/simv-rocketchip-$(RTL_CONFIG)
 TEST := output/test.S
 OPTIONS := $(empty)
 SUITE := output
