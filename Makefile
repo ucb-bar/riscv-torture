@@ -1,19 +1,19 @@
 # Convenience Makefile
 
 SBT ?= java -Xmx1G -Xss8M -XX:MaxPermSize=128M -jar sbt-launch.jar
-RTL_CONFIG := DefaultConfig
-C_SIM := ../emulator/emulator-rocketchip-$(RTL_CONFIG)
-R_SIM := ../vsim/simv-rocketchip-$(RTL_CONFIG)
+CONFIG ?= DefaultConfig
+C_SIM := ../emulator/emulator-rocketchip-$(CONFIG)
+R_SIM := ../vsim/simv-rocketchip-$(CONFIG)
 TEST := output/test.S
 OPTIONS := $(empty)
 SUITE := output
-CONFIG := config/default.config
+TORTURE_CONFIG := config/default.config
 COMMIT := none
 empty :=
 space := $(empty) $(empty)
 cfgopt := $(space)-f$(space)
 gitopt := $(space)-g$(space)
-CFG := $(subst $(space),$(cfgopt),$(CONFIG))
+CFG := $(subst $(space),$(cfgopt),$(TORTURE_CONFIG))
 GITCMT := $(subst $(space),$(gitopt),$(COMMIT))
 
 .phony: gen ctest rtest itest igentest cgentest rgentest \
