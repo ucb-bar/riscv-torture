@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean) extends InstSeq //TODO: better configuration
+class SeqALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean, xlen: Int) extends InstSeq //TODO: better configuration
 {
   override val seqname = "xalu"
   def seq_immfn(op: Opcode, immfn: () => Int) = () =>
@@ -68,17 +68,22 @@ class SeqALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean) extends InstS
   candidates += seq_src1_immfn(SRAI, rand_shamt)
   candidates += seq_src1_immfn(ORI, rand_imm)
   candidates += seq_src1_immfn(ANDI, rand_imm)
-  candidates += seq_src1_immfn(ADDIW, rand_imm)
-  candidates += seq_src1_immfn(SLLIW, rand_shamtw)
-  candidates += seq_src1_immfn(SRLIW, rand_shamtw)
-  candidates += seq_src1_immfn(SRAIW, rand_shamtw)
+  if(xlen >= 64)
+  {
+    candidates += seq_src1_immfn(ADDIW, rand_imm)
+    candidates += seq_src1_immfn(SLLIW, rand_shamtw)
+    candidates += seq_src1_immfn(SRLIW, rand_shamtw)
+    candidates += seq_src1_immfn(SRAIW, rand_shamtw)
+  }
 
   val oplist = new ArrayBuffer[Opcode]
 
   oplist += (ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND)
-  oplist += (ADDW, SUBW, SLLW, SRLW, SRAW)
-  if (use_mul) oplist += (MUL, MULH, MULHSU, MULHU, MULW)
-  if (use_div) oplist += (DIV, DIVU, REM, REMU, DIVW, DIVUW, REMW, REMUW)
+  if(xlen >= 64) oplist += (ADDW, SUBW, SLLW, SRLW, SRAW)
+  if (use_mul) oplist += (MUL, MULH, MULHSU, MULHU)
+  if (use_mul && xlen >= 64) oplist += (MULW)
+  if (use_div) oplist += (DIV, DIVU, REM, REMU)
+  if (use_div && xlen >= 64) oplist += (DIVW, DIVUW, REMW, REMUW)
 
   for (op <- oplist)
   {

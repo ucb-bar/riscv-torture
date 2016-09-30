@@ -4,7 +4,30 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import Rand._
 
-class SeqSeq(vregs: HWRegPool, pregs: HWRegPool, def_preg: Reg, sregs: HWRegPool, aregs: HWRegPool, xregs: HWRegPool, mem: Mem, nseqs: Int, mixcfg: Map[String,Int], vl: Int, use_mul: Boolean, use_div: Boolean, use_mix: Boolean, use_fpu: Boolean, use_fma: Boolean, use_fcvt: Boolean, use_fdiv: Boolean, use_amo: Boolean, use_seg: Boolean, use_stride: Boolean, pred_alu: Boolean, pred_mem: Boolean) extends VFInstSeq
+class SeqSeq(
+    vregs: HWRegPool,
+    pregs: HWRegPool,
+    def_preg: Reg,
+    sregs: HWRegPool,
+    aregs: HWRegPool,
+    xregs: HWRegPool,
+    mem: Mem,
+    nseqs: Int,
+    mixcfg: Map[String,Int],
+    vl: Int,
+    use_mul: Boolean,
+    use_div: Boolean,
+    use_mix: Boolean,
+    use_fpu: Boolean,
+    use_fma: Boolean,
+    use_fcvt: Boolean,
+    use_fdiv: Boolean,
+    use_amo: Boolean,
+    use_seg: Boolean,
+    use_stride: Boolean,
+    pred_alu: Boolean,
+    pred_mem: Boolean,
+    xlen: Int) extends VFInstSeq
 {
   val seqs = new ArrayBuffer[VFInstSeq]
   val seqs_active = new ArrayBuffer[VFInstSeq]

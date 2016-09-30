@@ -316,15 +316,15 @@ class Prog(memsize: Int, veccfg: Map[String,String], loop : Boolean)
 
   def names = List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec")
 
-  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, segment: Boolean) =
+  def code_body(seqnum: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, segment: Boolean, xlen: Int) =
   {
     val name_to_seq = Map(
-      "xmem" -> (() => new SeqMem(xregs, core_memory, use_amo)),
+      "xmem" -> (() => new SeqMem(xregs, core_memory, use_amo, xlen)),
       "xbranch" -> (() => new SeqBranch(xregs)),
-      "xalu" -> (() => new SeqALU(xregs, use_mul, use_div)), //true means use_divider, TODO: make better
+      "xalu" -> (() => new SeqALU(xregs, use_mul, use_div, xlen)), //true means use_divider, TODO: make better
       "fgen" -> (() => new SeqFPU(fregs_s, fregs_d)),
       "fpmem" -> (() => new SeqFPMem(xregs, fregs_s, fregs_d, core_memory)),
-      "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d)),
+      "fax" -> (() => new SeqFaX(xregs, fregs_s, fregs_d, xlen)),
       "fdiv" -> (() => new SeqFDiv(fregs_s, fregs_d)),
       "vec" -> (() => new SeqVec(xregs, vxregs, vpregs, vsregs, varegs, used_vl, veccfg)))
 
@@ -515,7 +515,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], loop : Boolean)
 
   def data_footer() = ""
 
-  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, segment : Boolean, loop: Boolean, loop_size: Int) =
+  def generate(nseqs: Int, fprnd: Int, mix: Map[String, Int], veccfg: Map[String, String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, segment : Boolean, loop: Boolean, loop_size: Int, xlen: Int) =
   {
     // Check if generating any FP operations or Vec unit stuff
     val using_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
@@ -524,7 +524,7 @@ class Prog(memsize: Int, veccfg: Map[String,String], loop : Boolean)
 
     header(nseqs) +
     code_header(using_fpu, using_vec, fprnd) +
-    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div, segment) +
+    code_body(nseqs, mix, veccfg, use_amo, use_mul, use_div, segment, xlen) +
     code_footer(using_fpu, using_vec, loop) +
     data_header() +
     data_input(using_fpu, using_vec) +

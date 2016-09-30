@@ -42,10 +42,11 @@ object Generator extends App
     val segment = (config.getProperty("torture.generator.segment", "true").toLowerCase == "true")
     val loop    = (config.getProperty("torture.generator.loop", "true").toLowerCase == "true")
     val loop_size = config.getProperty("torture.generator.loop_size", "256").toInt
-    generate(nseqs, memsize, fprnd, mix, vec, use_amo, use_mul, use_div, outFileName, segment, loop, loop_size)
+    val xlen = config.getProperty("torture.generator.xlen", "64").toInt
+    generate(nseqs, memsize, fprnd, mix, vec, use_amo, use_mul, use_div, outFileName, segment, loop, loop_size, xlen)
   }
 
-  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String, segment : Boolean, loop : Boolean, loop_size : Int): String = {
+  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String, segment : Boolean, loop : Boolean, loop_size : Int, xlen: Int): String = {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
     assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name"))
 
@@ -59,7 +60,7 @@ object Generator extends App
     val prog = new Prog(memsize, veccfg, loop)
     ProgSeg.cnt = 0
     SeqVec.cnt = 0
-    val s = prog.generate(nseqs, fprnd, mix, veccfg, use_amo, use_mul, use_div, segment, loop, loop_size)
+    val s = prog.generate(nseqs, fprnd, mix, veccfg, use_amo, use_mul, use_div, segment, loop, loop_size, xlen)
 
     val oname = "output/" + outFileName + ".S"
     val fw = new FileWriter(oname)
