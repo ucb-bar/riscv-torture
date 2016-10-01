@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqBranch(xregs: HWRegPool) extends InstSeq
+class SeqBranch(use: EnabledInstructions, xregs: HWRegPool) extends InstSeq
 {
   override val seqname = "xbranch"
   val taken = Label("__needs_branch_patch")
@@ -75,7 +75,7 @@ class SeqBranch(xregs: HWRegPool) extends InstSeq
     val reg_mask = reg_write_visible(xregs)
 
     insts += ADDI(reg_one, reg_read_zero(xregs), Imm(1))
-    insts += SLL(reg_one, reg_one, Imm(63))
+    insts += SLL(reg_one, reg_one, Imm(use.xlen-1))
     insts += ADDI(reg_mask, reg_read_zero(xregs), Imm(-1))
     insts += XOR(reg_mask, reg_mask, reg_one)
     insts += AND(reg_dst1, reg_src, reg_mask)
@@ -95,7 +95,7 @@ class SeqBranch(xregs: HWRegPool) extends InstSeq
     val reg_mask = reg_write_visible(xregs)
 
     insts += ADDI(reg_one, reg_read_zero(xregs), Imm(1))
-    insts += SLL(reg_one, reg_one, Imm(63))
+    insts += SLL(reg_one, reg_one, Imm(use.xlen-1))
     insts += ADDI(reg_mask, reg_read_zero(xregs), Imm(-1))
     insts += XOR(reg_mask, reg_mask, reg_one)
     insts += AND(reg_dst1, reg_src1, reg_mask)

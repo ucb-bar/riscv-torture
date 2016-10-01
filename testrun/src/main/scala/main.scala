@@ -113,10 +113,10 @@ object TestRunner extends App
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)
             println("///////////////////////////////////////////////////////")
-            dumpFromBin(failName)
+            dumpFromBin(failName, isaName)
             (true, Some(failName.split("/")))
           } else {
-            dumpFromBin(binName)
+            dumpFromBin(binName, isaName)
             (true, Some(binName.split("/")))
           }
         } else {
@@ -138,15 +138,17 @@ object TestRunner extends App
     val binFileName = asmFileName.dropRight(2)
     val ext = if(extName.isDefined) "X" + extName.get else ""
     val march = isaName + ext
+    val parseISA = """RV(\d*)([A-Z]+)""".r
+    val parseISA(xlen, _) = isaName
     val process = if (virtualMode) {
       println("Virtual mode")
       val entropy = (new Random()).nextLong()
       println("entropy: " + entropy)
-      s"riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=$march -DENTROPY=$entropy" +
+      s"riscv${xlen}-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=$march -DENTROPY=$entropy" +
         s" -std=gnu99 -O2 -I./env/v -T./env/v/link.ld ./env/v/entry.S ./env/v/vm.c $asmFileName -lc -o $binFileName"
     } else {
       println("Physical mode")
-      s"riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=$march -I./env/p -T./env/p/link.ld $asmFileName -o $binFileName"
+      s"riscv${xlen}-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=$march -I./env/p -T./env/p/link.ld $asmFileName -o $binFileName"
     }
     println(process)
     val pb = Process(process)
@@ -154,9 +156,11 @@ object TestRunner extends App
     if (exitCode == 0) Some(binFileName) else None
   }
 
-  def dumpFromBin(binFileName: String): Option[String] = {
+  def dumpFromBin(binFileName: String, isaName: String): Option[String] = {
     val dumpFileName = binFileName + ".dump"
-    val pd = Process(s"riscv64-unknown-elf-objdump --disassemble-all --section=.text --section=.data --section=.bss $binFileName")
+    val parseISA = """RV(\d*)([A-Z]+)""".r
+    val parseISA(xlen, _) = isaName
+    val pd = Process(s"riscv${xlen}-unknown-elf-objdump --disassemble-all --section=.text --section=.data --section=.bss $binFileName")
     val dump = pd.!!
     val fw = new FileWriter(dumpFileName)
     fw.write(dump)
