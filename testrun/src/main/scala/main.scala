@@ -18,7 +18,9 @@ case class Options(var testAsmName: Option[String] = None,
   var seekOutFailure: Boolean = false,
   var output: Boolean = false,
   var dumpWaveform: Boolean = false,
-  var confFileName: String = "config/default.config")
+  var confFileName: String = "config/default.config",
+  var isaName: String = "RV64IMAFD",
+  var extName: Option[String] = None)
 
 abstract sealed class Result
 case object Failed extends Result
@@ -39,21 +41,19 @@ object TestRunner extends App
       opt[Unit]("seek") abbr("s") text("Seek for failing pseg") action {(_, c) => c.copy(seekOutFailure = true)}
       opt[Unit]("output") abbr("o") text("Write verbose output of simulators to file") action {(_, c) => c.copy(output = true)}
       opt[Unit]("dumpwaveform") abbr("dump") text("Create a vcd from csim or a vpd from vsim") action {(_, c) => c.copy(dumpWaveform= true)}
+      opt[String]('I', "isa") valueName("<isa>") text("RISC-V ISA string") action {(s: String, c) => c.copy(isaName = s)}
+      opt[String]('E', "extension") valueName("<extension>") text("RoCC Extension name") action {(s: String, c) => c.copy(extName = Some(s))}
     }
     parser.parse(args, Options()) match {
-      case Some(options) =>
-      {
-        opts = options;
-        testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.output, opts.dumpWaveform, opts.confFileName) 
-      }
+      case Some(opts) =>
+        testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.output, opts.dumpWaveform, opts.confFileName, opts.isaName, opts.extName) 
       case None =>
         System.exit(1) // error message printed by parser
     }
   }
 
-  var virtualMode = false
-  var maxcycles = 10000000
-  var hwacha = true
+  //                 sim      bin     debug    output   dump        sig    
+  type Simulation = (String, (String, Boolean, Boolean, Boolean) => String)
 
   def testrun(testAsmName:  Option[String], 
               cSimPath:     Option[String], 
@@ -61,49 +61,44 @@ object TestRunner extends App
               doSeek:       Boolean,
               output:       Boolean,
               dumpWaveform: Boolean,
-              confFileName: String): (Boolean, Option[Seq[String]]) =
+              confFileName: String,
+              isaName:      String,
+              extNameIn:    Option[String] = None): (Boolean, Option[Seq[String]]) =
   {
-
     val config = new Properties()
     val configin = new FileInputStream(confFileName)
     config.load(configin)
     configin.close()
 
-    maxcycles = config.getProperty("torture.testrun.maxcycles", "10000000").toInt
-    virtualMode = (config.getProperty("torture.testrun.virtual", "false").toLowerCase == "true")
+    val maxCycles = config.getProperty("torture.testrun.maxcycles", "10000000").toInt
+    val virtualMode = (config.getProperty("torture.testrun.virtual", "false").toLowerCase == "true")
     val dump = (config.getProperty("torture.testrun.dump", "false").toLowerCase == "true")
     val seek = (config.getProperty("torture.testrun.seek", "true").toLowerCase == "true")
-    hwacha = (config.getProperty("torture.testrun.vec", "true").toLowerCase == "true")
+    val extName = if (config.getProperty("torture.testrun.vec", "true").toLowerCase == "true") Some("hwacha") else extNameIn
 
     // Figure out which binary file to test
     val finalBinName = testAsmName match {
-      case Some(asmName) => compileAsmToBin(asmName)
+      case Some(asmName) => compileAsmToBin(asmName, isaName, extName, virtualMode)
       case None => {
         val gen = generator.Generator
-        val newAsmName = gen.generate(confFileName, "test")
-        compileAsmToBin(newAsmName)
+        val newAsmName = gen.generate(confFileName, "test", isaName, extName)
+        compileAsmToBin(newAsmName, isaName, extName, virtualMode)
       }
     }
 
     // Add the simulators that should be tested
-    val simulators = new ArrayBuffer[(String, (String, Boolean, Boolean, Boolean) => String)]
-    simulators += (("spike",runIsaSim _ ))
-    cSimPath match { 
-      case Some(p) => simulators += (("csim",runCSim(p) _ ))
-      case None =>
-    }
-    rtlSimPath match { 
-      case Some(p) => simulators += (("rtlsim",runRtlSim(p) _ ))
-      case None => 
-    }
+    val golden = ("spike", runIsaSim(isaName, extName) _ )
+    val simulations = new ArrayBuffer[Simulation]
+    cSimPath foreach { p => simulations += (("csim", runCSim(p, isaName, extName, maxCycles) _ )) }
+    rtlSimPath foreach { p => simulations += (("rtlsim", runRtlSim(p, isaName, extName, maxCycles) _ )) }
 
     // Test the simulators on the complete binary
     finalBinName match {
       case Some(binName) => {
-      val res = runSimulators(binName, simulators, false, output, dumpWaveform || dump)
-        val fail_names = res.filter(_._3 == Failed).map(_._1.toString)
-        val mism_names = res.filter(_._3 == Mismatched).map(_._1.toString)
-        val bad_sims  = res.filter(_._3 != Matched).map(_._2)
+        val res = runSimulations(golden, simulations)(binName, false, output, dumpWaveform || dump)
+        val fail_names = res.filter(_._2 == Failed).map(_._1._1.toString)
+        val mism_names = res.filter(_._2 == Mismatched).map(_._1._1.toString)
+        val bad_sims   = res.filter(_._2 != Matched).map(_._1)
         if (bad_sims.length > 0) {
           println("///////////////////////////////////////////////////////")
           println("//  Simulation failed for " + binName + ":")
@@ -112,10 +107,9 @@ object TestRunner extends App
           mism_names.foreach(n => println("\t"+n))
           println("//  Rerunning in Debug mode")
           // run debug for failed/mismatched
-          val resDebug = runSimulators(binName, simulators, true, output, dumpWaveform || dump)
           println("///////////////////////////////////////////////////////")
           if(doSeek || seek) {
-            val failName = seekOutFailureBinary(binName, bad_sims, true, output, dumpWaveform || dump)
+            val failName = seekOutFailureBinary(golden, bad_sims)(binName, true, output, dumpWaveform || dump)(isaName, extName, virtualMode)
             println("///////////////////////////////////////////////////////")
             println("//  Failing pseg identified. Binary at " + failName)
             println("///////////////////////////////////////////////////////")
@@ -139,22 +133,22 @@ object TestRunner extends App
     }
   }
 
-  def compileAsmToBin(asmFileName: String): Option[String] = {  
+  def compileAsmToBin(asmFileName: String, isaName: String, extName: Option[String], virtualMode: Boolean): Option[String] = {  
     assert(asmFileName.endsWith(".S"), println("Filename does not end in .S"))
     val binFileName = asmFileName.dropRight(2)
-    var process = ""
-    if (virtualMode)
-    {
+    val ext = if(extName.isDefined) "X" + extName.get else ""
+    val march = isaName + ext
+    val process = if (virtualMode) {
       println("Virtual mode")
       val entropy = (new Random()).nextLong()
       println("entropy: " + entropy)
-      process = "riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -DENTROPY=" + entropy + " -std=gnu99 -O2 -I./env/v -T./env/v/link.ld ./env/v/entry.S ./env/v/vm.c " + asmFileName + " -lc -o " + binFileName
-    }
-    else
-    {
+      s"riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=$march -DENTROPY=$entropy" +
+        s" -std=gnu99 -O2 -I./env/v -T./env/v/link.ld ./env/v/entry.S ./env/v/vm.c $asmFileName -lc -o $binFileName"
+    } else {
       println("Physical mode")
-      process = "riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=RVIMAFDXhwacha -I./env/p -T./env/p/link.ld " + asmFileName + " -o " + binFileName
+      s"riscv64-unknown-elf-gcc -nostdlib -nostartfiles -Wa,-march=$march -I./env/p -T./env/p/link.ld $asmFileName -o $binFileName"
     }
+    println(process)
     val pb = Process(process)
     val exitCode = pb.!
     if (exitCode == 0) Some(binFileName) else None
@@ -162,13 +156,14 @@ object TestRunner extends App
 
   def dumpFromBin(binFileName: String): Option[String] = {
     val dumpFileName = binFileName + ".dump"
-    val pd = Process("riscv64-unknown-elf-objdump --disassemble-all --section=.text --section=.data --section=.bss " + binFileName)
+    val pd = Process(s"riscv64-unknown-elf-objdump --disassemble-all --section=.text --section=.data --section=.bss $binFileName")
     val dump = pd.!!
     val fw = new FileWriter(dumpFileName)
     fw.write(dump)
     fw.close()
     Some(dumpFileName)
   }
+
   def generateHexFromBin(binFileName: String) = {
     import java.io.File
     // Determine binary size
@@ -177,7 +172,7 @@ object TestRunner extends App
     val hexlines = 2 << (Math.log(binfile.length >>> 4)/Math.log(2)+1).toInt
 
     val hexFileName = binFileName + ".hex"
-    val pd = Process("elf2hex 16 "+hexlines+" " + binFileName)
+    val pd = Process(s"elf2hex 16 $hexlines $binFileName")
     val hexdump = pd.!!
 
     val fw = new FileWriter(hexFileName)
@@ -187,9 +182,9 @@ object TestRunner extends App
     hexFileName
   }
 
-  def runSim(sim: String, simargs: Seq[String], signature: String, output: Boolean, outName: String, args: Seq[String], invokebin: String): String = {
+  def runSim(sim: String, simargs: Seq[String], signature: String, output: Boolean, outName: String, args: Seq[String], invokebin: String, extName: Option[String]): String = {
     val cmd = Seq(sim) ++ simargs ++ Seq("+signature="+signature) ++ args ++ Seq(invokebin)
-    println("running:"+cmd)
+    println("running:" + cmd.mkString(" "))
     if(output) {
       var fw = new FileWriter(outName+".raw")
       cmd ! ProcessLogger(
@@ -197,7 +192,7 @@ object TestRunner extends App
          {s => fw.write(s+"\n") })
       fw.close()
       val fwd = new FileWriter(outName)
-      Process(Seq("cat",outName+".raw")) #| Process("spike-dasm --extension=hwacha") ! ProcessLogger(
+      Process(Seq("cat",outName+".raw")) #| Process("spike-dasm" + extName.map(" --extension="+_)) ! ProcessLogger(
          {s => fwd.write(s+"\n") },
          {s => fwd.write(s+"\n") })
       fwd.close()
@@ -210,46 +205,46 @@ object TestRunner extends App
     else new Scanner(sigFile).useDelimiter("\\Z").next()
   }
 
-  def runCSim(sim: String)(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
+  def runCSim(sim: String, isaName: String, extName: Option[String], maxCycles: Int)(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
     val outputArgs = if(output) Seq("+verbose") else Seq()
     val dumpArgs = if(dump && debug) Seq("-v"+bin+".vcd") else Seq()
     val debugArgs = if(debug) outputArgs ++ dumpArgs else Seq()
-    val simArgs = Seq("+max-cycles="+maxcycles) ++ debugArgs
-    val simName = sim
-    runSim(simName, Seq(), bin+".csim.sig", output, bin+".csim.out", simArgs, bin)
+    val simArgs = Seq(s"+max-cycles=$maxCycles") ++ debugArgs
+    runSim(sim, Seq(), bin+".csim.sig", output, bin+".csim.out", simArgs, bin, extName)
   }
 
-  def runRtlSim(sim: String)(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
+  def runRtlSim(sim: String, isaName: String, extName: Option[String], maxCycles: Int)(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
     val outputArgs = if(output) Seq("+verbose") else Seq()
     val dumpArgs = if(dump && debug) Seq("+vcdplusfile="+bin+".vpd") else Seq()
     val debugArgs = if(debug) outputArgs ++ dumpArgs else Seq()
-    val simArgs = Seq("+max-cycles="+maxcycles) ++ debugArgs
-    val simName = sim
-    runSim(simName, Seq(), bin+".rtlsim.sig", output, bin+".rtlsim.out", simArgs, bin)
+    val simArgs = Seq(s"+max-cycles=$maxCycles") ++ debugArgs
+    runSim(sim, Seq(), bin+".rtlsim.sig", output, bin+".rtlsim.out", simArgs, bin, extName)
   }
 
-  def runIsaSim(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
+  def runIsaSim(isaName: String, extName: Option[String])(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
     val debugArgs = if(debug && output) Seq("-d") else Seq()
-    val simArgs = if (hwacha) Seq("--extension=hwacha") else Seq()
-    runSim("spike", simArgs ++ debugArgs, bin+".spike.sig", output, bin+".spike.out", Seq(), bin)
+    val simArgs = Seq(s"--isa=$isaName") ++ (if(extName.isDefined) Seq("--extension="+extName.get) else Seq())
+    runSim("spike", simArgs ++ debugArgs, bin+".spike.sig", output, bin+".spike.out", Seq(), bin, extName)
   }
 
-  def runSimulators(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpWaveform: Boolean): Seq[(String, (String, (String, Boolean, Boolean, Boolean) => String), Result)] = {
-    if(simulators.length == 0) println("Warning: No simulators specified for comparison. Comparing ISA to ISA...")
-    val isa_sig = runIsaSim(bin, debug, output, false)
-    simulators.map { case (name, sim) => {
-      val res =
-        try {
-        if (isa_sig != sim(bin, debug, output, dumpWaveform)) Mismatched
-          else Matched
-        } catch {
-          case e:RuntimeException => Failed
-        }
-      (name, (name, sim), res)
-    } }
+  def runSimulations(golden: Simulation, simulations: Seq[Simulation])(
+      bin: String,
+      debug: Boolean,
+      output: Boolean,
+      dumpWaveform: Boolean): Seq[(Simulation, Result)] = {
+    if(simulations.length == 0) println("Warning: No simulators specified for comparison. Comparing golden model to itself...")
+    val goldSig = golden._2(bin, debug, output, false)
+    simulations.map { case (name, sim) =>
+      val res = try {
+        if (goldSig != sim(bin, debug, output, dumpWaveform)) Mismatched else Matched
+      } catch { case e:RuntimeException => Failed }
+      ((name, sim), res)
+    }
   }
 
-  def seekOutFailureBinary(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpWaveform: Boolean): String =
+  def seekOutFailureBinary(golden: Simulation, simulations: Seq[Simulation])
+      (bin: String, debug: Boolean, output: Boolean, dumpWaveform: Boolean)
+      (isaName: String, extName: Option[String], virtualMode: Boolean): String =
   {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
@@ -278,11 +273,11 @@ object TestRunner extends App
       fw.close()
 
       // Compile new asm and test on sims
-      val newBinName = compileAsmToBin(newAsmName)
+      val newBinName = compileAsmToBin(newAsmName, isaName, extName, virtualMode)
       newBinName match {
         case Some(b) => {
-          val res = runSimulators(b, simulators, debug, output, dumpWaveform)
-          if (!res.forall(_._3 == Matched)) {
+          val res = runSimulations(golden, simulations)(b, debug, output, dumpWaveform)
+          if (!res.forall(_._2 == Matched)) {
             lastfound = b
             high = p-1
           } else {
@@ -300,7 +295,10 @@ object TestRunner extends App
     }
   }
 
-  def seekOutFailure(bin: String, simulators: Seq[(String, (String, Boolean, Boolean, Boolean) => String)], debug: Boolean, output: Boolean, dumpWaveform: Boolean): String = {
+  def seekOutFailure(golden: Simulation, simulations: Seq[Simulation])
+      (bin: String, debug: Boolean, output: Boolean, dumpWaveform: Boolean)
+      (isaName: String, extName: Option[String], virtualMode: Boolean): String =
+  {
     // Find failing asm file
     val source = scala.io.Source.fromFile(bin+".S")
     val lines = source.mkString
@@ -324,11 +322,11 @@ object TestRunner extends App
       fw.close()
 
       // Compile new asm and test on sims
-      val newBinName = compileAsmToBin(newAsmName)
+      val newBinName = compileAsmToBin(newAsmName, isaName, extName, virtualMode)
       newBinName match {
         case Some(b) => {
-        val res = runSimulators(b, simulators, debug, output, dumpWaveform)
-          if (!res.forall(_._3 == Matched)) {
+        val res = runSimulations(golden, simulations)(b, debug, output, dumpWaveform)
+          if (!res.forall(_._2 == Matched)) {
             return b
           }
         }
@@ -337,7 +335,5 @@ object TestRunner extends App
     }
     println("Warning: No subset tests could compile.")
     bin
-  } 
-
+  }
 }
-

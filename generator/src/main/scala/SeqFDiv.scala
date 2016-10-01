@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqFDiv(fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
+class SeqFDiv(use: EnabledInstructions, fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
 {
   override val seqname = "fdiv"
   def seq_src1_s(op: Opcode) = () =>
@@ -38,10 +38,17 @@ class SeqFDiv(fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
 
   val candidates = new ArrayBuffer[() => insts.type]
 
-  candidates += seq_src1_s(FSQRT_S)
-  candidates += seq_src1_d(FSQRT_D)
-  candidates += seq_src2_s(FDIV_S)
-  candidates += seq_src2_d(FDIV_D)
+  if(use.fps)
+  {
+    candidates += seq_src1_s(FSQRT_S)
+    candidates += seq_src2_s(FDIV_S)
+  }
+
+  if(use.fpd)
+  {
+    candidates += seq_src1_d(FSQRT_D)
+    candidates += seq_src2_d(FDIV_D)
+  }
 
   rand_pick(candidates)()
 }

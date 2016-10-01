@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqFaX(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, xlen: Int) extends InstSeq
+class SeqFaX(use: EnabledInstructions, xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool) extends InstSeq
 {
   override val seqname = "fax"
   def seq_src1(op: Opcode, dst_pool: HWRegPool, src_pool: HWRegPool) = () =>
@@ -23,54 +23,54 @@ class SeqFaX(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, xlen: Int
 
   val candidates = new ArrayBuffer[() => insts.type]
 
-  // Intra-FPU Instructions
-  candidates += seq_src1(FCVT_S_D, fregs_s, fregs_d)
-  candidates += seq_src1(FCVT_D_S, fregs_d, fregs_s)
+  if (use.fps)
+  {
+    for (op <- List(FSGNJ_S, FSGNJN_S, FSGNJX_S))
+      candidates += seq_src2(op, fregs_s, fregs_s)
 
-  for (op <- List(FSGNJ_S, FSGNJN_S, FSGNJX_S))
-    candidates += seq_src2(op, fregs_s, fregs_s)
-
-  for (op <- List(FSGNJ_D, FSGNJN_D, FSGNJX_D))
-    candidates += seq_src2(op, fregs_d, fregs_d)
-
-  // X<->F Instructions
-  for (op <- List(FCVT_S_W, FCVT_S_WU, FMV_S_X))
-    candidates += seq_src1(op, fregs_s, xregs)
-
-  if(xlen >= 64) {
-    for (op <- List(FCVT_S_L, FCVT_S_LU))
+    for (op <- List(FCVT_S_W, FCVT_S_WU, FMV_S_X))
       candidates += seq_src1(op, fregs_s, xregs)
-  }
 
-  for (op <- List(FCVT_D_W, FCVT_D_WU))
-    candidates += seq_src1(op, fregs_d, xregs)
-  
-  if(xlen >= 64) {
-    for (op <- List(FCVT_D_L, FCVT_D_LU, FMV_D_X))
-      candidates += seq_src1(op, fregs_d, xregs)
-  }
-  
-  for (op <- List(FCVT_W_S, FCVT_WU_S, FMV_X_S))
-    candidates += seq_src1(op, xregs, fregs_s)
-
-  if(xlen >= 64) {
-    for (op <- List(FCVT_L_S, FCVT_LU_S))
+    for (op <- List(FCVT_W_S, FCVT_WU_S, FMV_X_S))
       candidates += seq_src1(op, xregs, fregs_s)
+
+    for (op <- List(FEQ_S, FLT_S, FLE_S))
+      candidates += seq_src2(op, xregs, fregs_s)
+
+    if(use.xlen >= 64) {
+      for (op <- List(FCVT_S_L, FCVT_S_LU))
+        candidates += seq_src1(op, fregs_s, xregs)
+
+      for (op <- List(FCVT_L_S, FCVT_LU_S))
+        candidates += seq_src1(op, xregs, fregs_s)
+    }
   }
 
-  for (op <- List(FCVT_W_D, FCVT_WU_D))
-    candidates += seq_src1(op, xregs, fregs_d)
+  if (use.fpd)
+  {
+    candidates += seq_src1(FCVT_S_D, fregs_s, fregs_d)
+    candidates += seq_src1(FCVT_D_S, fregs_d, fregs_s)
 
-  if(xlen >= 64) {
-    for (op <- List(FCVT_L_D, FCVT_LU_D, FMV_X_D))
+    for (op <- List(FSGNJ_D, FSGNJN_D, FSGNJX_D))
+      candidates += seq_src2(op, fregs_d, fregs_d)
+
+    for (op <- List(FCVT_D_W, FCVT_D_WU))
+      candidates += seq_src1(op, fregs_d, xregs)
+    
+    for (op <- List(FCVT_W_D, FCVT_WU_D))
       candidates += seq_src1(op, xregs, fregs_d)
+
+    for (op <- List(FEQ_D, FLT_D, FLE_D))
+      candidates += seq_src2(op, xregs, fregs_d)
+
+    if(use.xlen >= 64) {
+      for (op <- List(FCVT_D_L, FCVT_D_LU, FMV_D_X))
+        candidates += seq_src1(op, fregs_d, xregs)
+
+      for (op <- List(FCVT_L_D, FCVT_LU_D, FMV_X_D))
+        candidates += seq_src1(op, xregs, fregs_d)
+    }
   }
-
-  for (op <- List(FEQ_S, FLT_S, FLE_S))
-    candidates += seq_src2(op, xregs, fregs_s)
-
-  for (op <- List(FEQ_D, FLT_D, FLE_D))
-    candidates += seq_src2(op, xregs, fregs_d)
 
   rand_pick(candidates)()
 }

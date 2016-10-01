@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean, xlen: Int) extends InstSeq //TODO: better configuration
+class SeqALU(use: EnabledInstructions, xregs: HWRegPool) extends InstSeq //TODO: better configuration
 {
   override val seqname = "xalu"
   def seq_immfn(op: Opcode, immfn: () => Int) = () =>
@@ -60,15 +60,16 @@ class SeqALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean, xlen: Int) ex
 
   candidates += seq_immfn(LUI, rand_bigimm)
   candidates += seq_src1_immfn(ADDI, rand_imm)
-  candidates += seq_src1_immfn(SLLI, rand_shamt)
+  candidates += seq_src1_immfn(SLLI, if(use.xlen >= 64) rand_shamt else rand_shamtw)
   candidates += seq_src1_immfn(SLTI, rand_imm)
   candidates += seq_src1_immfn(SLTIU, rand_imm)
   candidates += seq_src1_immfn(XORI, rand_imm)
-  candidates += seq_src1_immfn(SRLI, rand_shamt)
-  candidates += seq_src1_immfn(SRAI, rand_shamt)
+  candidates += seq_src1_immfn(SRLI, if(use.xlen >= 64) rand_shamt else rand_shamtw)
+  candidates += seq_src1_immfn(SRAI, if(use.xlen >= 64) rand_shamt else rand_shamtw)
   candidates += seq_src1_immfn(ORI, rand_imm)
   candidates += seq_src1_immfn(ANDI, rand_imm)
-  if(xlen >= 64)
+
+  if(use.xlen >= 64)
   {
     candidates += seq_src1_immfn(ADDIW, rand_imm)
     candidates += seq_src1_immfn(SLLIW, rand_shamtw)
@@ -79,11 +80,15 @@ class SeqALU(xregs: HWRegPool, use_mul: Boolean, use_div: Boolean, xlen: Int) ex
   val oplist = new ArrayBuffer[Opcode]
 
   oplist += (ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND)
-  if(xlen >= 64) oplist += (ADDW, SUBW, SLLW, SRLW, SRAW)
-  if (use_mul) oplist += (MUL, MULH, MULHSU, MULHU)
-  if (use_mul && xlen >= 64) oplist += (MULW)
-  if (use_div) oplist += (DIV, DIVU, REM, REMU)
-  if (use_div && xlen >= 64) oplist += (DIVW, DIVUW, REMW, REMUW)
+  if (use.mul) oplist += (MUL, MULH, MULHSU, MULHU)
+  if (use.div) oplist += (DIV, DIVU, REM, REMU)
+
+  if (use.xlen >= 64)
+  {
+    oplist += (ADDW, SUBW, SLLW, SRLW, SRAW)
+    if (use.mul) oplist += (MULW)
+    if (use.div) oplist += (DIVW, DIVUW, REMW, REMUW)
+  }
 
   for (op <- oplist)
   {

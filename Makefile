@@ -2,6 +2,7 @@
 
 SBT ?= java -Xmx1G -Xss8M -XX:MaxPermSize=128M -jar sbt-launch.jar
 CONFIG ?= DefaultConfig
+ISA ?= RM64IMAFD
 C_SIM := ../emulator/emulator-rocketchip-$(CONFIG)
 R_SIM := ../vsim/simv-rocketchip-$(CONFIG)
 TEST := output/test.S
@@ -41,28 +42,28 @@ crsuite:
 	rm $(SUITE)/tes*[!.S]
 
 igentest:
-	$(SBT) 'testrun/run'
+	$(SBT) 'testrun/run -I $(ISA)'
 
 cgentest:
-	$(SBT) 'testrun/run -c $(C_SIM) $(OPTIONS)'
+	$(SBT) 'testrun/run -c $(C_SIM) -I $(ISA) $(OPTIONS)'
 
 rgentest:
-	$(SBT) 'testrun/run -r $(R_SIM) $(OPTIONS)'
+	$(SBT) 'testrun/run -r $(R_SIM) -I $(ISA) $(OPTIONS)'
 
 crgentest:
-	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) $(OPTIONS)'
+	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) -I $(ISA) $(OPTIONS)'
 
 itest:
-	$(SBT) 'testrun/run -a $(TEST) $(OPTIONS)'
+	$(SBT) 'testrun/run -a $(TEST) -I $(ISA) $(OPTIONS)'
 
 ctest:
-	$(SBT) 'testrun/run -c $(C_SIM) -a $(TEST) $(OPTIONS)'
+	$(SBT) 'testrun/run -c $(C_SIM) -a $(TEST) -I $(ISA) $(OPTIONS)'
 
 rtest:
-	$(SBT) 'testrun/run -r $(R_SIM) -a $(TEST) $(OPTIONS)'
+	$(SBT) 'testrun/run -r $(R_SIM) -a $(TEST) -I $(ISA) $(OPTIONS)'
 
 crtest:
-	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) -a $(TEST) $(OPTIONS)'
+	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) -a $(TEST) -I $(ISA) $(OPTIONS)'
 
 cnight:
 	$(SBT) 'overnight/run -c $(C_SIM) -g $(COMMIT) $(OPTIONS)'

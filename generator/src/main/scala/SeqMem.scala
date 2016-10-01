@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqMem(xregs: HWRegPool, mem: Mem, use_amo: Boolean, xlen: Int) extends InstSeq
+class SeqMem(use: EnabledInstructions, xregs: HWRegPool, mem: Mem) extends InstSeq
 {
   override val seqname = "xmem"
   def seq_load_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
@@ -102,7 +102,8 @@ class SeqMem(xregs: HWRegPool, mem: Mem, use_amo: Boolean, xlen: Int) extends In
 
   val candidates = new ArrayBuffer[() => insts.type]
 
-  if(xlen >= 64) {
+  if(use.xlen >= 64)
+  { // TODO: Make this work for xlen == 32
     candidates += seq_stld_overlap()
     candidates += seq_stld_overlap()
   }
@@ -112,7 +113,8 @@ class SeqMem(xregs: HWRegPool, mem: Mem, use_amo: Boolean, xlen: Int) extends In
   candidates += seq_load_addrfn(LH, rand_addr_h)
   candidates += seq_load_addrfn(LHU, rand_addr_h)
   candidates += seq_load_addrfn(LW, rand_addr_w)
-  if(xlen >= 64) {
+  if(use.xlen >= 64)
+  {
     candidates += seq_load_addrfn(LWU, rand_addr_w)
     candidates += seq_load_addrfn(LD, rand_addr_d)
   }
@@ -120,9 +122,9 @@ class SeqMem(xregs: HWRegPool, mem: Mem, use_amo: Boolean, xlen: Int) extends In
   candidates += seq_store_addrfn(SB, rand_addr_b)
   candidates += seq_store_addrfn(SH, rand_addr_h)
   candidates += seq_store_addrfn(SW, rand_addr_w)
-  if(xlen >= 64) candidates += seq_store_addrfn(SD, rand_addr_d)
+  if(use.xlen >= 64) candidates += seq_store_addrfn(SD, rand_addr_d)
 
-  if (use_amo) 
+  if (use.amo) 
   {
     candidates += seq_amo_addrfn(AMOADD_W, rand_addr_w)
     candidates += seq_amo_addrfn(AMOSWAP_W, rand_addr_w)
@@ -132,7 +134,7 @@ class SeqMem(xregs: HWRegPool, mem: Mem, use_amo: Boolean, xlen: Int) extends In
     candidates += seq_amo_addrfn(AMOMINU_W, rand_addr_w)
     candidates += seq_amo_addrfn(AMOMAX_W, rand_addr_w)
     candidates += seq_amo_addrfn(AMOMAXU_W, rand_addr_w)
-    if(xlen >= 64)
+    if(use.xlen >= 64)
     {
       candidates += seq_amo_addrfn(AMOADD_D, rand_addr_d)
       candidates += seq_amo_addrfn(AMOSWAP_D, rand_addr_d)

@@ -84,9 +84,14 @@ trait PoolsMaster extends HWRegPool
   }
 }
 
-class XRegsPool extends ScalarRegPool
+class XRegsPool(use: EnabledInstructions) extends ScalarRegPool
 {
-  val (name, regname, ldinst, stinst) = ("xreg", "reg_x", "ld", "sd")
+  val (name, regname, ldinst, stinst) = 
+    if (use.xlen >= 64) {
+      ("xreg", "reg_x", "ld", "sd")
+    } else {
+      ("xreg", "reg_x", "lw", "sw")
+    }
 
   hwregs += new HWReg("x0", true, false)
   for (i <- 1 to 31)
@@ -99,9 +104,15 @@ class XRegsPool extends ScalarRegPool
   }
 }
 
-class FRegsMaster extends ScalarRegPool with PoolsMaster
+class FRegsMaster(use: EnabledInstructions) extends ScalarRegPool with PoolsMaster
 {
   val (name,regname,ldinst,stinst) = ("freg","reg_f","fld","fsd") // and flw and fsw
+    if (use.xlen >= 64) {
+      ("freg", "reg_f", "fld", "fsd")
+    } else {
+      ("freg", "reg_f", "flw", "fsw")
+    }
+
   val s_reg_num = new ArrayBuffer[Int]
   val d_reg_num = new ArrayBuffer[Int]
 

@@ -3,7 +3,7 @@ package torture
 import scala.collection.mutable.ArrayBuffer
 import Rand._
 
-class SeqFPMem(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem) extends InstSeq
+class SeqFPMem(use: EnabledInstructions, xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Mem) extends InstSeq
 {
   override val seqname = "fpmem"
 
@@ -28,11 +28,18 @@ class SeqFPMem(xregs: HWRegPool, fregs_s: HWRegPool, fregs_d: HWRegPool, mem: Me
   }
   
   val candidates = new ArrayBuffer[() => insts.type]
-  candidates += seq_load_addrfn(FLW, rand_addr_w, fregs_s)
-  candidates += seq_store_addrfn(FSW, rand_addr_w, fregs_s)
-  candidates += seq_load_addrfn(FLD, rand_addr_d, fregs_d)
-  candidates += seq_store_addrfn(FSD, rand_addr_d, fregs_d)
+
+  if(use.fps)
+  {
+    candidates += seq_load_addrfn(FLW, rand_addr_w, fregs_s)
+    candidates += seq_store_addrfn(FSW, rand_addr_w, fregs_s)
+  }
+  
+  if(use.fpd)
+  {
+    candidates += seq_load_addrfn(FLD, rand_addr_d, fregs_d)
+    candidates += seq_store_addrfn(FSD, rand_addr_d, fregs_d)
+  }
 
   rand_pick(candidates)()
-
 }
