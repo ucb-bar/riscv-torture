@@ -27,7 +27,9 @@ case class Options(var timeToRun: Int = Overnight.DefTime,
   var gitCommit: String = Overnight.DefGitCommit,
   var confFileName: String = Overnight.DefConfig,
   var output: Boolean = false,
-  var dumpWaveform: Boolean = false)
+  var dumpWaveform: Boolean = false,
+  var isaName: String = "RV64IMAFD",
+  var extName: Option[String] = None)
 
 object Overnight extends App
 {
@@ -53,11 +55,13 @@ object Overnight extends App
       opt[Int]('m', "minutes") valueName("<minutes>") text("number of minutes to run tests") action {(i: Int, c) => c.copy(timeToRun = i)}
       opt[Unit]("output") abbr("o") text("Write verbose output of simulators to file") action {(_, c) => c.copy(output = true)}
       opt[Unit]("dumpwaveform") abbr("dump") text("Create a vcd from a csim or a vpd from vsim") action {(_, c) => c.copy(dumpWaveform= true)}
+      opt[String]('I', "isa") valueName("<isa>") text("RISC-V ISA string") action {(s: String, c) => c.copy(isaName = s)}
+      opt[String]('E', "extension") valueName("<extension>") text("RoCC Extension name") action {(s: String, c) => c.copy(extName = Some(s))}
     }
     parser.parse(args, Options()) match {
       case Some(opts) =>
         overnight(opts.confFileName, opts.permDir, opts.cSimPath, opts.rtlSimPath,
-          opts.emailAddress, opts.gitCommit, opts.errorThreshold, opts.timeToRun, opts.output, opts.dumpWaveform)
+          opts.emailAddress, opts.gitCommit, opts.errorThreshold, opts.timeToRun, opts.output, opts.dumpWaveform, opts.isaName, opts.extName)
       case None =>
         System.exit(1) // error message printed by parser
     }
@@ -71,7 +75,9 @@ object Overnight extends App
                   errorThreshold: Int,
                   timeToRun: Int,
                   output: Boolean,
-                  dumpWaveform: Boolean)
+                  dumpWaveform: Boolean,
+                  isaName: String,
+                  extName: Option[String] = None) =
     {
       val config = new Properties()
       val configin = new FileInputStream(configFileName)
@@ -94,8 +100,8 @@ object Overnight extends App
       val (cSim, rtlSim) = checkoutRocket(cSimPath, rtlSimPath, gitCommit)
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
-        val newAsmName = generator.Generator.generate(configFileName, baseName)
-        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, true, output, dumpWaveform, configFileName)
+        val newAsmName = generator.Generator.generate(configFileName, baseName, isaName, extName)
+        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, true, output, dumpWaveform, configFileName, isaName, extName)
         if(failed) {
           errCount += 1
           test foreach { t =>

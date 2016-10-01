@@ -66,11 +66,11 @@ crtest:
 	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) -a $(TEST) -I $(ISA) $(OPTIONS)'
 
 cnight:
-	$(SBT) 'overnight/run -c $(C_SIM) -g $(COMMIT) $(OPTIONS)'
+	$(SBT) 'overnight/run -c $(C_SIM) -g $(COMMIT) -I $(ISA) $(OPTIONS)'
 
 rnight:
-	$(SBT) 'overnight/run -r $(R_SIM) -g $(COMMIT) $(OPTIONS)'
+	$(SBT) 'overnight/run -r $(R_SIM) -g $(COMMIT) -I $(ISA) $(OPTIONS)'
 
 crnight:
-	$(SBT) 'overnight/run -c $(C_SIM) -r $(R_SIM) -g $(COMMIT) $(OPTIONS)'
+	$(SBT) 'overnight/run -c $(C_SIM) -r $(R_SIM) -g $(COMMIT) -I $(ISA) $(OPTIONS)'
 
