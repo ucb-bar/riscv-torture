@@ -95,7 +95,7 @@ object Overnight extends App
       while(System.currentTimeMillis < endTime) {
         val baseName = "test_" + System.currentTimeMillis
         val newAsmName = generator.Generator.generate(configFileName, baseName)
-        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, true, output, dumpWaveform, configFileName)
+        val (failed, test) = testrun.TestRunner.testrun( Some(newAsmName), cSim, rtlSim, false, true, output, dumpWaveform, configFileName)
         if(failed) {
           errCount += 1
           test foreach { t =>

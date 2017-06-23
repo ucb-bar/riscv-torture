@@ -15,6 +15,7 @@ case class Options(var testAsmName: Option[String] = None,
   var testBinName: Option[String] = None,
   var cSimPath: Option[String] = None,
   var rtlSimPath: Option[String] = None,
+  var debugRerun: Boolean = false,
   var seekOutFailure: Boolean = false,
   var output: Boolean = false,
   var dumpWaveform: Boolean = false,
@@ -36,6 +37,7 @@ object TestRunner extends App
       opt[String]('a', "asm") valueName("<file>") text("input ASM file") action {(s: String, c) => c.copy(testAsmName = Some(s))}
       opt[String]('c', "csim") valueName("<file>") text("C simulator") action {(s: String, c) => c.copy(cSimPath = Some(s))}
       opt[String]('r', "rtlsim") valueName("<file>") text("RTL simulator") action {(s: String, c) => c.copy(rtlSimPath = Some(s))}
+      opt[Unit]("debug") abbr("debug") text("Rerun failing tests with debug simulator") action {(_, c) => c.copy(debugRerun = true)}
       opt[Unit]("seek") abbr("s") text("Seek for failing pseg") action {(_, c) => c.copy(seekOutFailure = true)}
       opt[Unit]("output") abbr("o") text("Write verbose output of simulators to file") action {(_, c) => c.copy(output = true)}
       opt[Unit]("dumpwaveform") abbr("dump") text("Create a vcd from csim or a vpd from vsim") action {(_, c) => c.copy(dumpWaveform= true)}
@@ -44,7 +46,7 @@ object TestRunner extends App
       case Some(options) =>
       {
         opts = options;
-        testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.output, opts.dumpWaveform, opts.confFileName) 
+        testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.debugRerun, opts.seekOutFailure, opts.output, opts.dumpWaveform, opts.confFileName)
       }
       case None =>
         System.exit(1) // error message printed by parser
@@ -58,6 +60,7 @@ object TestRunner extends App
   def testrun(testAsmName:  Option[String], 
               cSimPath:     Option[String], 
               rtlSimPath:   Option[String], 
+              doRerun:      Boolean,
               doSeek:       Boolean,
               output:       Boolean,
               dumpWaveform: Boolean,
@@ -110,10 +113,12 @@ object TestRunner extends App
           fail_names.foreach(n => println("\t"+n))
           println("//  Mismatched sigs for " + binName + ":")
           mism_names.foreach(n => println("\t"+n))
-          println("//  Rerunning in Debug mode")
-          // run debug for failed/mismatched
-          val resDebug = runSimulators(binName, simulators, true, output, dumpWaveform || dump)
-          println("///////////////////////////////////////////////////////")
+          if(doRerun) {
+            println("//  Rerunning in Debug mode")
+            // run debug for failed/mismatched
+            val resDebug = runSimulators(binName, simulators, true, output, dumpWaveform || dump)
+            println("///////////////////////////////////////////////////////")
+          }
           if(doSeek || seek) {
             val failName = seekOutFailureBinary(binName, bad_sims, true, output, dumpWaveform || dump)
             println("///////////////////////////////////////////////////////")
