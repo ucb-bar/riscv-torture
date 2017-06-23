@@ -154,6 +154,30 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
     vinsts += op(reg_dest, RegImm(reg_vaddr, 0), reg_src, pred)
   }
 
+  def seq_load_index_addrfn(op: Opcode, addrfn: (Int) => Int) = () =>
+  {
+    val reg_addr = reg_write_hidden(xregs)
+    val reg_dest = reg_write_visible(vregs)
+
+    val reg_vaddr = reg_write_hidden(vregs)
+
+    // Generate a vector's worth of addresses
+    val index_addr_mem = new Mem(seqname+"_index_addr_init", 8*vl)
+    extra_hidden_data += MemAddrDump(index_addr_mem, addrfn, mem.size)
+
+    val reg_help = reg_write_hidden(aregs)
+    helper_setup_address(reg_addr, reg_help, index_addr_mem, 0)
+
+    val reg_xhelp = reg_write_hidden(xregs)
+    val reg_scalar = reg_write_hidden(sregs)
+    helper_setup_scalar(reg_xhelp, reg_scalar, mem, 0)
+
+    vinsts += VLD(reg_vaddr, reg_help, PredReg(def_preg, false))
+    //vinsts += VADD(reg_vaddr, reg_vaddr, reg_scalar, PredReg(def_preg, false))
+
+    vinsts += op(reg_dest, reg_scalar, reg_vaddr, pred)
+  }
+
   val candidates = new ArrayBuffer[() => vinsts.type]
 
   candidates += seq_load_addrfn(VLB, rand_addr_b)
@@ -237,6 +261,16 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
       candidates += seq_amo_addrfn(amo, rand_addr_d, vregs, sregs)
       candidates += seq_amo_addrfn(amo, rand_addr_d, vregs, vregs)
     }
+  }
+  if(true)
+  {
+    candidates += seq_load_index_addrfn(VLXB, rand_addr_b)
+    candidates += seq_load_index_addrfn(VLXBU, rand_addr_b)
+    candidates += seq_load_index_addrfn(VLXH, rand_addr_h)
+    candidates += seq_load_index_addrfn(VLXHU, rand_addr_h)
+    candidates += seq_load_index_addrfn(VLXW, rand_addr_w)
+    candidates += seq_load_index_addrfn(VLXWU, rand_addr_w)
+    candidates += seq_load_index_addrfn(VLXD, rand_addr_d)
   }
 
   rand_pick(candidates)()
