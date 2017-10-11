@@ -262,7 +262,7 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
       candidates += seq_amo_addrfn(amo, rand_addr_d, vregs, vregs)
     }
   }
-  if(true)
+  if(use_index)
   {
     candidates += seq_load_index_addrfn(VLXB, rand_addr_b)
     candidates += seq_load_index_addrfn(VLXBU, rand_addr_b)
@@ -271,6 +271,17 @@ class SeqVMem(xregs: HWRegPool, vregs: HWRegPool, pregs: HWRegPool, def_preg: Re
     candidates += seq_load_index_addrfn(VLXW, rand_addr_w)
     candidates += seq_load_index_addrfn(VLXWU, rand_addr_w)
     candidates += seq_load_index_addrfn(VLXD, rand_addr_d)
+    if(use_seg)
+    {
+      candidates += seq_load_index_seg_addrfn(VLXB, rand_addr_b)
+      candidates += seq_load_index_seg_addrfn(VLXBU, rand_addr_b)
+      candidates += seq_load_index_seg_addrfn(VLXH, rand_addr_h)
+      candidates += seq_load_index_seg_addrfn(VLXHU, rand_addr_h)
+      candidates += seq_load_index_seg_addrfn(VLXW, rand_addr_w)
+      candidates += seq_load_index_seg_addrfn(VLXWU, rand_addr_w)
+      candidates += seq_load_index_seg_addrfn(VLXD, rand_addr_d)
+    }
+
   }
 
   rand_pick(candidates)()
