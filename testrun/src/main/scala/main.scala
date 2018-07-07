@@ -44,7 +44,7 @@ object TestRunner extends App
       case Some(options) =>
       {
         opts = options;
-        testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.output, opts.dumpWaveform, opts.confFileName) 
+        testrun(opts.testAsmName, opts.cSimPath, opts.rtlSimPath, opts.seekOutFailure, opts.output, opts.dumpWaveform, opts.confFileName)
       }
       case None =>
         System.exit(1) // error message printed by parser
@@ -55,9 +55,9 @@ object TestRunner extends App
   var maxcycles = 10000000
   var hwacha = true
 
-  def testrun(testAsmName:  Option[String], 
-              cSimPath:     Option[String], 
-              rtlSimPath:   Option[String], 
+  def testrun(testAsmName:  Option[String],
+              cSimPath:     Option[String],
+              rtlSimPath:   Option[String],
               doSeek:       Boolean,
               output:       Boolean,
               dumpWaveform: Boolean,
@@ -88,13 +88,13 @@ object TestRunner extends App
     // Add the simulators that should be tested
     val simulators = new ArrayBuffer[(String, (String, Boolean, Boolean, Boolean) => String)]
     simulators += (("spike",runIsaSim _ ))
-    cSimPath match { 
+    cSimPath match {
       case Some(p) => simulators += (("csim",runCSim(p) _ ))
       case None =>
     }
-    rtlSimPath match { 
+    rtlSimPath match {
       case Some(p) => simulators += (("rtlsim",runRtlSim(p) _ ))
-      case None => 
+      case None =>
     }
 
     // Test the simulators on the complete binary
@@ -139,7 +139,7 @@ object TestRunner extends App
     }
   }
 
-  def compileAsmToBin(asmFileName: String): Option[String] = {  
+  def compileAsmToBin(asmFileName: String): Option[String] = {
     assert(asmFileName.endsWith(".S"), println("Filename does not end in .S"))
     val binFileName = asmFileName.dropRight(2)
     var process = ""
@@ -173,7 +173,7 @@ object TestRunner extends App
     import java.io.File
     // Determine binary size
     val binfile = new File(binFileName)
-    
+
     val hexlines = 2 << (Math.log(binfile.length >>> 4)/Math.log(2)+1).toInt
 
     val hexFileName = binFileName + ".hex"
@@ -216,16 +216,16 @@ object TestRunner extends App
     val debugArgs = if(debug) outputArgs ++ dumpArgs else Seq()
     val simArgs = Seq("+max-cycles="+maxcycles) ++ debugArgs
     val simName = sim
-    runSim(simName, Seq(), bin+".csim.sig", output, bin+".csim.out", simArgs, bin)
+    runSim(simName, simArgs, bin+".csim.sig", output, bin+".csim.out", Seq(), bin)
   }
 
   def runRtlSim(sim: String)(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
     val outputArgs = if(output) Seq("+verbose") else Seq()
     val dumpArgs = if(dump && debug) Seq("+vcdplusfile="+bin+".vpd") else Seq()
     val debugArgs = if(debug) outputArgs ++ dumpArgs else Seq()
-    val simArgs = Seq("+max-cycles="+maxcycles) ++ debugArgs
+    val simArgs = Seq("+permissive") ++ Seq("+max-cycles="+maxcycles) ++ debugArgs ++ Seq("+permissive-off")
     val simName = sim
-    runSim(simName, Seq(), bin+".rtlsim.sig", output, bin+".rtlsim.out", simArgs, bin)
+    runSim(simName, simArgs, bin+".rtlsim.sig", output, bin+".rtlsim.out", Seq(), bin)
   }
 
   def runIsaSim(bin: String, debug: Boolean, output: Boolean, dump: Boolean): String = {
@@ -260,7 +260,7 @@ object TestRunner extends App
     val psegFinder = """pseg_\d+""".r
     val psegNums: List[Int] = psegFinder.findAllIn(lines).map(_.drop(5).toInt).toList
     var (low, high) = (psegNums.min, psegNums.max)
-    if (low == high) 
+    if (low == high)
     {
       println("Only one pseg was detected.")
       return bin
@@ -289,14 +289,14 @@ object TestRunner extends App
             low = p+1
           }
         }
-        case None => println("Warning: Subset test could not compile.")    
+        case None => println("Warning: Subset test could not compile.")
       }
     }
     if (lastfound == "") {
       println("Warning: No subset tests could compile.")
       bin
     } else {
-      lastfound 
+      lastfound
     }
   }
 
@@ -309,7 +309,7 @@ object TestRunner extends App
     // For all psegs
     val psegFinder = """pseg_\d+""".r
     val psegNums: List[Int] = psegFinder.findAllIn(lines).map(_.drop(5).toInt).toList
-    if (psegNums.min == psegNums.max) 
+    if (psegNums.min == psegNums.max)
     {
       println("Only one pseg was detected.")
       return bin
@@ -332,12 +332,12 @@ object TestRunner extends App
             return b
           }
         }
-        case None => println("Warning: Subset test could not compile.")    
+        case None => println("Warning: Subset test could not compile.")
       }
     }
     println("Warning: No subset tests could compile.")
     bin
-  } 
+  }
 
 }
 
