@@ -465,8 +465,7 @@ rv_vpermute: Boolean, rv_wide: Boolean, rv_narrow: Boolean, lmul: String, sew: I
   val oplist1		= new ArrayBuffer[Opcode]
   val oplist2		= new ArrayBuffer[Opcode]
   val oplist3		= new ArrayBuffer[Opcode]
-  val oplist4		= new ArrayBuffer[Opcode]
-  val oplist5		= new ArrayBuffer[Opcode]
+
   val oplist6		= new ArrayBuffer[Opcode]
   val oplist6_w		= new ArrayBuffer[Opcode]
   val oplist6_wx	= new ArrayBuffer[Opcode]
@@ -553,10 +552,6 @@ if (rv_vmem_vect){
 
 //------------------------------------------------------------------------------------------------------------------//
 
-oplist4 += (VAMOSWAPEI_V,VAMOADDEI_V,VAMOXOREI_V,VAMOANDEI_V,VAMOOREI_V,VAMOMINEI_V,
-			VAMOMAXEI_V,VAMOMINUEI_V,VAMOMAXUEI_V)
-oplist5 += (VAMOSWAPEI_V,VAMOADDEI_V,VAMOXOREI_V,VAMOANDEI_V,VAMOOREI_V,VAMOMINEI_V,
-			VAMOMAXEI_V,VAMOMINUEI_V,VAMOMAXUEI_V)
 
 if (rv_vinteger)	{oplist6	+= (VADD_VV,VSUB_VV,VMADC_VV,VMSBC_VV,VAND_VV,VOR_VV,VXOR_VV,VSLL_VV,VSRL_VV,VSRA_VV,
 		    						VMSEQ_VV,VMSNE_VV,VMSLTU_VV,VMSLT_VV,VMSLEU_VV,VMSLE_VV,VMINU_VV,
