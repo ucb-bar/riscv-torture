@@ -280,3 +280,104 @@ class VARegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool
   for (i <- reg_nums)
     hwregs += new HWReg("va" + i.toString(), true, true)
 }
+
+// Register Pool for RISCV
+class RISCV_VRegsPool(reg_nums: Array[Int] = (0 to 31).toArray) extends HWRegPool
+{
+  for (i <- reg_nums)
+    hwregs += new HWReg("v" + i.toString(), true, true)
+  def init_regs(lmul:String) = 
+  {
+    var s = "rvvreg_init:\n"+"\tla x1, rvvreg_init_data\n"
+    for ((i, curreg) <- reg_nums.zip(hwregs)) 
+    {
+    if(lmul == "1" || lmul == "f8" || lmul == "f4" || lmul == "f2"){
+      s += "\tld" + " x2, " + 8*i + "(x1)\n"
+      s += "\tvmv.v.x"+ " " + curreg + ", x2\n"
+    }
+    
+    if(lmul== "2")
+    	if(i%2==0){
+      s += "\tld" + " x2, " + 8*i + "(x1)\n"
+      s += "\tvmv.v.x"+ " " + curreg + ", x2\n"
+    }
+    
+    if(lmul== "4")
+    	if(i%4==0){
+      s += "\tld" + " x2, " + 8*i + "(x1)\n"
+      s += "\tvmv.v.x"+ " " + curreg + ", x2\n"
+    }
+    
+    if(lmul== "8")
+    	if(i%8==0){
+      s += "\tld" + " x2, " + 8*i + "(x1)\n"
+      s += "\tvmv.v.x"+ " " + curreg + ", x2\n"
+    }
+    }
+    
+    
+    s += "\n\n"
+    s
+  } 
+  
+  def save_regs(lmul:String, sew:Int) =
+  {
+    hwregs(1).state = HID
+   var s = "rvvreg_save:\n"+"\tla x1, rvvreg_output_data\n"
+    s += "\tvmv.v.x v0, x1\n"
+    s += "\tli x6, 8\n"
+    for ((i, curreg) <- reg_nums.zip(hwregs)) {
+      if (lmul == "1" || lmul == "f8" || lmul == "f4" || lmul == "f2") 
+      {
+        s += "\tvsse"+ sew.toString + ".v " + curreg + ", (x1), x6\n"
+        s += "\taddi  x1, x1, 8\n"
+      }
+      
+      if(lmul=="2"){
+       if (i%2==0) 
+      {
+        s += "\tvsse"+ sew.toString + ".v " + curreg + ", (x1), x6\n"
+        s += "\taddi  x1, x1, 8\n"
+      }
+      }
+      
+       if(lmul=="4"){
+       if (i%4==0) 
+      {
+        s += "\tvsse"+ sew.toString + ".v " + curreg + ", (x1), x6\n"
+        s += "\taddi  x1, x1, 8\n"
+      }
+      }
+       if(lmul=="8"){
+       if (i%8==0) 
+      {
+        s += "\tvsse"+ sew.toString + ".v " + curreg + ", (x1), x6\n"
+        s += "\taddi  x1, x1, 8\n"
+      }
+      }
+    }
+      s += "rvreg_save_end:\n\n"
+     s
+  }
+  
+  def init_regs_data() = 
+  {
+    var s = "\t.align 8\n"
+    s += "rvvreg_init_data:\n"
+    for (i <- 0 to hwregs.length-1)
+      s += ("v" + i + "_init:\t.dword " + "0x%016x\n" format rand_biased)
+    s += "\n"
+    s
+  }
+  
+  def output_regs_data() =
+  {
+    var s = "\t.align 8\n"
+    s += "rvvreg_output_data:\n"
+    for (i <- 0 to hwregs.length-1)
+      s += ("v" + i + "_output:\t.dword 0x%016x\n" format rand_dword)
+    s += "\n"
+    s
+  }
+}
+

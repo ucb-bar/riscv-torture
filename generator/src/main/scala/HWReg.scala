@@ -23,6 +23,7 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
 
   def is_unallocated = is_state(VIS, HID)
     //TODO: should this also check readers == 0?
+    
 
   override def toString = name
 
@@ -41,7 +42,22 @@ class HWReg(val name: String, val readable: Boolean, val writable: Boolean)
 
 object HWReg
 {
-  // These filters are for allocation purposes
+//==============================Riscv Functionality================================================================
+  def filter_read_v0 = (hwreg: HWReg) => (hwreg.name == "v0")
+  def filter_read_dest_n(lmul:String, src:Int) = (hwreg: HWReg) => (((hwreg.name == "v" +src)) && hwreg.readable)
+  def filter_write_dest_n(lmul:String, src:Int) = (hwreg: HWReg) =>(((hwreg.name == "v" +src)) && hwreg.writable && hwreg.is_state(VIS,HID))
+  def filter_read_src1_n(lmul:String, src:Int) = (hwreg: HWReg) => ((hwreg.name == "v" + src && hwreg.readable ))
+  def filter_write_src1_n(lmul:String, src:Int) = (hwreg: HWReg) =>((hwreg.name == "v" + src && hwreg.writable && hwreg.is_state(VIS,HID)))
+  def filter_read_src2_n(lmul:String, src:Int) = (hwreg: HWReg) => ((hwreg.name == "v" + src && hwreg.readable))
+  def filter_write_src2_n(lmul:String, src:Int) = (hwreg: HWReg) => ((hwreg.name == "v" + src && hwreg.writable && hwreg.is_state(VIS,HID)))
+  def filter_read_dest_w(lmul:String, src:Int) = (hwreg: HWReg) => ((hwreg.name == "v" + src && hwreg.readable))
+  def filter_write_dest_w(lmul:String, src:Int) = (hwreg: HWReg) => ((hwreg.name == "v" +src && hwreg.writable && hwreg.is_state(VIS,HID)))
+  def filter_read_src1_w(lmul:String, src:Int) = (hwreg: HWReg) => (((hwreg.name == "v" +src)) && hwreg.readable)
+  def filter_write_src1_w(lmul:String, src:Int) = (hwreg: HWReg) =>(((hwreg.name == "v" +src)) && hwreg.writable && hwreg.is_state(VIS,HID))
+  def filter_read_src2_w(lmul:String, src:Int) = (hwreg: HWReg) => ((hwreg.name == "v" + src && hwreg.readable ))
+  def filter_write_src2_w(lmul:String, src:Int) = (hwreg: HWReg) =>((hwreg.name == "v" + src && hwreg.writable && hwreg.is_state(VIS,HID)))
+  
+  // ================================================================================================================
   def filter_read_zero = (hwreg: HWReg) => (hwreg.name == "x0" || hwreg.name == "x0_shadow")
   def filter_read_any = (hwreg: HWReg) => hwreg.readable
   def filter_read_any_other(other: Reg)(hwreg: HWReg) = (hwreg.readable && hwreg.name != other.hwreg.name)
@@ -77,6 +93,7 @@ object HWReg
     }
     else println("bug in do_write")
   }
+  
   def alloc_write_dep(regs: List[Reg]) = alloc_write(regs.forall(_.hwreg.is_visible)) _
 
   def free_read = (hwreg: HWReg) => hwreg.readers -= 1
