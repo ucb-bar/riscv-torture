@@ -1,0 +1,108 @@
+===========================================================================
+RISC-V Torture Test Generator
+===========================================================================
+# Author: Yunsup Lee and Henry Cook
+# Date: January 29th, 2012
+# Version: (under version control)
+
+
+
+###########################################################################
+Extending Torture for RISC-V Vector ext. (v0.9)
+###########################################################################
+
+---------------------------------------------------------------------------
+Organization and Members
+---------------------------------------------------------------------------
+# Organization: Lampro Mellon
+# Date: August 17th, 2020
+# Members:	Hassaan Khalid (Team Lead)
+			Nouman Akbar
+			Usman Qadir
+			Faisal Saeed
+			Faisal Usman
+
+---------------------------------------------------------------------------
+Overview of changes
+---------------------------------------------------------------------------
+- Added RISC-V vector registers (v0 - v31)
+- Added RISC-V vector instruction opcodes
+- Added RISC-V vector instructions sequence generator (SeqRVV.scala)
+- Added new random functions for generating vector instructions
+- Added RISC-V vector opcode usage section in stats file
+- Added RISC-V vector register accesses section in stats file
+- Added ISA coverage section in stats file
+- Added knobs for customizing vector tests in config file
+- Bumped riscv-test-env ("env" folder) to July 14th, 2020 commit
+- Added tutorial documents
+- Added README files
+
+---------------------------------------------------------------------------
+Configuring RISC-V vector instructions for Torture tests
+---------------------------------------------------------------------------
+To configure or customize the vector instructions, the same default.config
+file will be used. See the config_README file in the config folder to
+understand what each option does.
+
+---------------------------------------------------------------------------
+List of files modified/added
+---------------------------------------------------------------------------
+Modified:
+	torture/generator/src/main/scala:
+		HWReg.scala
+		HWRegPool.scala
+		Inst.scala
+		InstSeq.scala
+		Rand.scala
+		Prog.scala
+		Main.scala
+
+	torture/config:
+		default.config
+
+	torture/testrun/src/main/scala:
+		main.scala
+
+Added:
+	torture/generator/src/main/scala:
+		SeqRVV.scala
+
+	torture/config:
+		config_README
+
+	torture/~:
+		README_RVV
+
+---------------------------------------------------------------------------
+Required RISC-V tools
+---------------------------------------------------------------------------
+To build the vector extension compatible RISC-V tools for use with Torture
+test programs, see the documents: RISCV Vector Toolchain.pdf and
+Run Vector Code.pdf in the tutorial_docs folder.
+
+Note:
+1. env folder contains the repo: https://github.com/riscv/riscv-test-env
+   This repo was updated to the latest version which had the relavant
+   header files for vector instructions.
+
+2. Spike has to be used with an old commit as newer ones are modified for
+   v1.0 of the vector extension. For v0.9, the July 15th, 2020 commit is
+   used with commit hash: 759f4eba829d299eb34cd1568d3f4694e0d198cb
+
+---------------------------------------------------------------------------
+Spike "signature mismatch" issue
+---------------------------------------------------------------------------
+There is a "Spike signature mismatch" error that occurs spontaneously with
+the "igentest" command. It is concluded that this is a bug in Spike
+simulator, as this error does not occur with the vector v1.0 updates of
+the same tool.
+
+---------------------------------------------------------------------------
+Future TO-DO
+---------------------------------------------------------------------------
+- Provide masked instructions option to the user (add “v0.t” operand)
+- Add support for Zvlsseg/Zvamo/Zvqmac/Zvediv extensions
+- Provide more options for instruction categories
+- Enable multiple vector configurations in a single test
+- Make Torture fully compliant with the spec rather than just the ISS
+- Make the Torture’s vector extension compatible for v1.0
