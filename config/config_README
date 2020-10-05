@@ -1,0 +1,74 @@
+torture.generator.nseqs					2		# number of instructions in program segment
+torture.generator.memsize				4096	# size of memory; to be used by integer, floating-point and vector registers
+torture.generator.fprnd					0		# *{unused parameter}
+torture.generator.amo					false	# scalar atomic instructions flag
+torture.generator.mul					false	# scalar multiplication instructions flag
+torture.generator.divider				false	# scalar division instructions flag
+torture.generator.segment				true	# Enables consecutive instruction sequences; default => true
+torture.generator.loop					true	# enable loop for running program segment multiple times
+torture.generator.loop_size				64		# number of times to rerun program segment
+
+torture.generator.mix.xmem				0		# scalar integer memory instructions percentage
+torture.generator.mix.xbranch			0		# scalar integer branch instructions percentage
+torture.generator.mix.xalu				0		# scalar integer ALU instructions percentage
+torture.generator.mix.fgen				0		# scalar floating-point ALU instructions percentage
+torture.generator.mix.fpmem				0		# scalar floating-point memory instructions percentage
+torture.generator.mix.fax				0		# scalar floating-point comparison/conversion instructions percentage
+torture.generator.mix.fdiv				0		# scalar floating-point division instructions percentage
+torture.generator.mix.vec				0		# Hwacha vector instructions percentage
+torture.generator.mix.rvec				100		# RISC-V vector (v0.9) instructions percentage
+
+torture.generator.vec.vf				1
+torture.generator.vec.seq				10
+torture.generator.vec.memsize			128
+torture.generator.vec.numsregs			64
+torture.generator.vec.mul				false
+torture.generator.vec.div				false
+torture.generator.vec.mix				true
+torture.generator.vec.fpu				false
+torture.generator.vec.fma				false
+torture.generator.vec.fcvt				false
+torture.generator.vec.fdiv				false
+torture.generator.vec.amo				false
+torture.generator.vec.seg				false
+torture.generator.vec.stride			false
+torture.generator.vec.pred_alu			true
+torture.generator.vec.pred_mem			true
+
+torture.generator.vec.mix.valu			20
+torture.generator.vec.mix.vpop			60
+torture.generator.vec.mix.vmem			20
+torture.generator.vec.mix.vonly			0
+
+torture.generator.rvec.riscv_vmem_unit	true	# RISC-V vector (v0.9) memory (unit-stride) instructions flag
+torture.generator.rvec.riscv_vmem_const	true	# RISC-V vector (v0.9) memory (constant-stride) instructions flag
+torture.generator.rvec.riscv_vmem_vect	true	# RISC-V vector (v0.9) memory (indexed-stride) instructions flag
+torture.generator.rvec.riscv_vfloat		false	# RISC-V vector (v0.9) floating-point instructions flag
+torture.generator.rvec.riscv_vinteger	true	# RISC-V vector (v0.9) integer instructions flag
+torture.generator.rvec.riscv_vfixed		true	# RISC-V vector (v0.9) fixed-point instructions flag
+torture.generator.rvec.riscv_vreduce	false	# RISC-V vector (v0.9) reduction instructions flag
+torture.generator.rvec.riscv_vmask		false	# RISC-V vector (v0.9) mask instructions flag
+torture.generator.rvec.riscv_vpermute	true	# RISC-V vector (v0.9) permutation instructions flag
+torture.generator.rvec.wide				true	# RISC-V vector (v0.9) widening (integer & floating-point) instructions flag
+torture.generator.rvec.narrow			false	# RISC-V vector (v0.9) narrowing (integer & floating-point) instructions flag
+
+torture.generator.rvec.lmul		1			# RISC-V vector (v0.9) LMUL setting; valid: f2, f4, f8, 1, 2, 4, *8(wide/narrow => false)
+torture.generator.rvec.sew		32			# RISC-V vector (v0.9) SEW setting; valid: *8(vfloat => false), 16, 32, *64(wide/narrow => false)
+torture.generator.rvec.nr		1			# RISC-V vector (v0.9) NR setting; valid: 1, 2, 4, 8
+torture.generator.rvec.nf		1			# RISC-V vector (v0.9) NF setting; valid: 1
+
+torture.testrun.maxcycles		10000000	# Maximum number of cycle for RTL and C simulation
+torture.testrun.virtual			false		# To run the test in virtual mode
+torture.testrun.seek			false		# Seek and report the failing program segment
+torture.testrun.dump			false		# To dump the data from RTL simulation in a file
+torture.testrun.vec				false		# Hwacha extension flag for Spike
+torture.testrun.rvec			true		# RISC-V vector (v0.9) extension flag for Spike
+
+torture.overnight.errors	1					# Set number of errors after which an error message will be printed and emailed
+torture.overnight.minutes	1					# Set the time for running the test generator non-stop
+torture.overnight.outdir	output/failedtests	# To set the directory for failed tests
+torture.overnight.email		your@email.address	# Email for recieving error message
+
+NOTE:
+1. Spike (July 15th, 2020 commit) is programmed to have vector registers of length 64 bits.
+2. If testing gets stuck, try reducing the memory size or decreasing the nseqs parameter; or just restart.
