@@ -64,6 +64,33 @@ class PredReg(pred: Reg, neg: Boolean) extends Operand
     else "@" + pred
 }
 
+// *******************************************************
+class SEW(sew: Int) extends Operand
+{
+  override def toString = "e"+sew.toString
+}
+
+class LMUL(lmul: String) extends Operand
+{
+  override def toString = "m"+lmul
+}
+
+class TA() extends Operand
+{
+  override def toString = "ta"
+}
+
+class MA() extends Operand
+{
+  override def toString = "ma"
+}
+
+class V0t(b : String) extends Operand
+{
+  override def toString = b.toString
+}
+// ***********************************************************
+
 object Imm
 {
   def apply(imm: Int) = new Imm(imm)
@@ -98,3 +125,30 @@ object PredReg
 {
   def apply(pred: Reg, neg: Boolean) = new PredReg(pred, neg)
 }
+
+// *******************************************************
+object SEW
+{
+  def apply(sew: Int) = new SEW(sew)
+}
+
+object LMUL
+{
+  def apply(lmul: String) = new LMUL(lmul)
+}
+
+object TA
+{
+  def apply() = new TA()
+}
+
+object MA
+{
+  def apply() = new MA()
+}
+
+object V0t
+{
+  def apply(b : String) = new V0t(b)
+}
+// *******************************************************
