@@ -13,7 +13,9 @@ class InstSeq extends HWRegAllocator
   val extra_hidden_data = new ArrayBuffer[DataChunk]
   val extra_visible_data = new ArrayBuffer[DataChunk]
   
-  def is_done = insts.length == inst_ptr
+  def is_done  = insts.length == inst_ptr
+
+  def inst_len = insts.length
 
   def next_inst() =
   {
@@ -54,6 +56,25 @@ class HWRegAllocator
     reg
   }
 
+  //======================================= Riscv Functionality ==========================================================
+
+  def reg_read_v0(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_v0, alloc_read, free_read) }
+  //def reg_read_v0t(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_v0t, alloc_read, free_read)}
+  def vreg_read_dest_n(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_read_dest_n(lmul, src), alloc_read, free_read) }
+  def vreg_write_dest_n(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_write_dest_n(lmul, src), alloc_write(true), free_write) }
+  def vreg_read_src1_n(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_read_src1_n(lmul, src), alloc_read, free_read) }
+  def vreg_write_src1_n(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_write_src1_n(lmul, src), alloc_write(true), free_write) }
+  def vreg_read_src2_n(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_read_src2_n(lmul, src), alloc_read, free_read) }
+  def vreg_write_src_2(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_write_src2_n(lmul, src), alloc_write(true), free_write) }
+  def vreg_read_dest_w(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_read_dest_w(lmul, src), alloc_read, free_read) }
+  def vreg_write_dest_w(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_write_dest_w(lmul, src), alloc_write(true), free_write)}
+  def vreg_read_src1_w(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_read_src1_w(lmul, src), alloc_read, free_read) }
+  def vreg_write_src1_w(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_write_src1_w(lmul, src), alloc_write(true), free_write) }
+  def vreg_read_src2_w(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_read_src2_w(lmul, src), alloc_read, free_read) }
+  def vreg_write_src2_w(hwrp: HWRegPool, lmul:String, src : Int) = { reg_fn(hwrp, filter_write_src2_w(lmul, src), alloc_write(true), free_write) }
+ 
+  //======================================================================================================================
+  
   def reg_read_zero(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_zero, alloc_read, free_read) }
   def reg_read_any(hwrp: HWRegPool) = { reg_fn(hwrp, filter_read_any, alloc_read, free_read) }
   def reg_read_any_other(hwrp: HWRegPool, other: Reg) = { reg_fn(hwrp, filter_read_any_other(other), alloc_read, free_read) }
@@ -95,7 +116,8 @@ class HWRegAllocator
       if(consec_candidates.size == 0)
         return false
       val reg_index = rand_pick(consec_candidates)
-      for(i <- reg_index until reg_index+consec_regs){
+      for(i <- reg_index until reg_index+consec_regs)
+      {
         val hwreg = hwregs(i)
         regna.alloc(hwreg)
         if(i == reg_index) regna.hwreg = hwreg
@@ -107,7 +129,6 @@ class HWRegAllocator
 
     return true
   }
-
   def free_regs() =
   {
     for (reg <- regs)

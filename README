@@ -258,3 +258,97 @@ Future TODO
  - code refactoring
    + consolidate RegPool logic
    + detect and suppress unallocatable sequences
+
+###########################################################################
+Extending Torture for RISC-V Vector ext. (v0.9)
+###########################################################################
+
+---------------------------------------------------------------------------
+Organization and Members
+---------------------------------------------------------------------------
+# Organization: Lampro Mellon
+# Date: August 17th, 2020
+# Members:
+        Hassaan Khalid
+        Nouman Akbar
+        Usman Qadir
+        Faisal Saeed
+        Faisal Usman
+        Dr. Faisal Iqbal
+
+---------------------------------------------------------------------------
+New Instructions
+---------------------------------------------------------------------------
+$ git clone <repo-https-link>
+$ cd <repo-name>
+$ git submodule update --init
+$ sudo apt-get install -y device-tree-compiler
+$ ./build_rvv09_toolchain.sh
+
+# CLOSE terminal and open a new one in Torture directory:
+
+$ sbt
+
+# Wait for sbt to import libraries and then type "exit" in it's CLI
+# Torture is all set up now and above commands don't need to be run again
+
+# Generate a test and simulate it on Spike:
+
+$ make igentest
+
+---------------------------------------------------------------------------
+Overview of changes
+---------------------------------------------------------------------------
+# Added RISC-V vector registers (v0 - v31)
+# Added RISC-V vector instruction opcodes
+# Added RISC-V vector instructions sequence generator (SeqRVV.scala)
+# Added new random functions for generating vector instructions
+# Added RISC-V vector opcode usage section in stats file
+# Added RISC-V vector register accesses section in stats file
+# Added ISA coverage section in stats file
+# Added knobs for customizing vector tests in config file
+# Added preset config files for RISC-V vector testing
+# Bumped up commit of riscv-test-env ("env" folder)
+# Added script for building vector (v0.9) enabled RISC-V toolchain
+# Added config_README file
+
+---------------------------------------------------------------------------
+Configuring RISC-V vector instructions for Torture tests
+---------------------------------------------------------------------------
+To configure or customize the vector instructions, the same default.config
+file will be used. See the config_README file in the config folder to
+understand what each option does.
+
+---------------------------------------------------------------------------
+Required RISC-V tools
+---------------------------------------------------------------------------
+The vector extension compatible RISC-V tools are necessary for use with
+this version of the Torture test generator. The script
+"build_rvv09_toolchain.sh" is provided to build them.
+
+Note:
+1. env folder contains the repo: https://github.com/riscv/riscv-test-env
+   This repo was updated to the Nov 24th, 2020 commit which had the
+   relavant header files for vector instructions.
+   {commit hash: 1d9e7eaa85d9929d3f76b460c25ca26e1245a371}
+
+2. Spike has to be used with an old commit as newer ones are modified for
+   v1.0 of the vector extension. For v0.9, the July 15th, 2020 commit is
+   used.
+   {commit hash: 759f4eba829d299eb34cd1568d3f4694e0d198cb}
+
+---------------------------------------------------------------------------
+Spike "signature mismatch" issue
+---------------------------------------------------------------------------
+There is a "Spike signature mismatch" error that occurs spontaneously with
+the "igentest" command. It is concluded that this is a bug in Spike
+simulator, as this error does not occur with the vector v1.0 updates of
+the same tool.
+
+---------------------------------------------------------------------------
+Future TO-DO
+---------------------------------------------------------------------------
+# Make the Torture’s vector extension compatible for v1.0
+# Add support for Zvqmac and Zvediv extensions
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
