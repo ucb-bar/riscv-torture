@@ -26,7 +26,8 @@ object Generator extends App
     }
   }
 
-  def generate(confFile: String, outFileName: String): String = {
+  def generate(confFile: String, outFileName: String): String =
+  {
     val config = new Properties()
     val in = new FileInputStream(confFile)
     config.load(in)
@@ -39,15 +40,41 @@ object Generator extends App
     val use_div = (config.getProperty("torture.generator.divider", "true").toLowerCase == "true")
     val mix     = config.filterKeys(_ contains "torture.generator.mix").map { case (k,v) => (k.split('.')(3), v.toInt) }.asInstanceOf[Map[String,Int]]
     val vec     = config.filterKeys(_ contains "torture.generator.vec").map { case (k,v) => (k.split('.').drop(3).reduce(_+"."+_), v) }.asInstanceOf[Map[String,String]]
-    val segment = (config.getProperty("torture.generator.segment", "true").toLowerCase == "true")
-    val loop    = (config.getProperty("torture.generator.loop", "true").toLowerCase == "true")
+
+    // Added RISC-V Vector functionality ===============================================
+    val vlen         =  config.getProperty("torture.generator.rvv.vlen", "64").toInt
+    val lmul         =  config.getProperty("torture.generator.rvv.lmul", "1").toString
+    val sew          =  config.getProperty("torture.generator.rvv.sew", "32").toInt
+    val nr           =  config.getProperty("torture.generator.rvv.nr", "1").toInt
+    val nf           =  config.getProperty("torture.generator.rvv.nf", "1").toInt
+    val multi_config = (config.getProperty("torture.generator.rvv.multi_cfg", "false").toLowerCase == "true")
+
+    val rv_vmem_unit    = (config.getProperty("torture.generator.rvv.vmem_unit","false").toLowerCase == "true")
+    val rv_vmem_const   = (config.getProperty("torture.generator.rvv.vmem_const","false").toLowerCase == "true")
+    val rv_vmem_vect    = (config.getProperty("torture.generator.rvv.vmem_vect", "false").toLowerCase == "true")
+    val rv_vmem_zvlsseg = (config.getProperty("torture.generator.rvv.Zvlsseg","false").toLowerCase == "true")
+    val rv_vinteger     = (config.getProperty("torture.generator.rvv.vinteger", "true").toLowerCase == "true")
+    val rv_vfixed       = (config.getProperty("torture.generator.rvv.vfixed", "false").toLowerCase == "true")
+    val rv_vfloat       = (config.getProperty("torture.generator.rvv.vfloat", "false").toLowerCase == "true")
+    val rv_vreduce      = (config.getProperty("torture.generator.rvv.vreduce", "false").toLowerCase == "true")
+    val rv_vmask        = (config.getProperty("torture.generator.rvv.vmask", "false").toLowerCase == "true")
+    val rv_vpermute     = (config.getProperty("torture.generator.rvv.vpermute", "false").toLowerCase == "true")
+    val rv_vamo         = (config.getProperty("torture.generator.rvv.Zvamo", "false").toLowerCase == "true")
+    val rv_wide         = (config.getProperty("torture.generator.rvv.wide", "false").toLowerCase == "true")
+    val rv_narrow       = (config.getProperty("torture.generator.rvv.narrow", "false").toLowerCase == "true")
+    val mask            = (config.getProperty("torture.generator.rvv.masking", "false").toLowerCase == "true")
+    //================================================================================
+
+    val segment   = (config.getProperty("torture.generator.segment", "true").toLowerCase == "true")
+    val loop      = (config.getProperty("torture.generator.loop", "true").toLowerCase == "true")
     val loop_size = config.getProperty("torture.generator.loop_size", "256").toInt
-    generate(nseqs, memsize, fprnd, mix, vec, use_amo, use_mul, use_div, outFileName, segment, loop, loop_size)
+    generate(nseqs, memsize, fprnd, mix, vec, use_amo, use_mul, use_div, outFileName, segment, loop, loop_size, rv_vmem_unit,rv_vmem_const,rv_vmem_vect,rv_vmem_zvlsseg,rv_vinteger,rv_vfixed,rv_vfloat, rv_vreduce,rv_vmask,rv_vpermute,rv_vamo,rv_wide,rv_narrow, vlen, lmul, sew, nr, nf, mask, multi_config) 
   }
 
-  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String, segment : Boolean, loop : Boolean, loop_size : Int): String = {
+  def generate(nseqs: Int, memsize: Int, fprnd : Int, mix: Map[String,Int], veccfg: Map[String,String], use_amo: Boolean, use_mul: Boolean, use_div: Boolean, outFileName: String, segment : Boolean, loop : Boolean, loop_size : Int, rv_vmem_unit: Boolean, rv_vmem_const: Boolean, rv_vmem_vect: Boolean,rv_vmem_zvlsseg : Boolean, rv_vinteger: Boolean, rv_vfixed: Boolean, rv_vfloat: Boolean, rv_vreduce: Boolean, rv_vmask: Boolean, rv_vpermute: Boolean, rv_vamo: Boolean , rv_wide: Boolean, rv_narrow: Boolean, vlen: Int, lmul: String, sew: Int, nr: Int, nf: Int, mask:Boolean, multi_config: Boolean): String =
+  {
     assert (mix.values.sum == 100, println("The instruction mix specified in config does not add up to 100%"))
-    assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec") contains _), println("The instruction mix specified in config contains an unknown sequence type name"))
+    assert (mix.keys.forall(List("xmem","xbranch","xalu","fgen","fpmem","fax","fdiv","vec", "rvv") contains _), println("The instruction mix specified in config contains an unknown sequence type name"))
 
     val vmemsize = veccfg.getOrElse("memsize", "32").toInt
     val vnseq = veccfg.getOrElse("seq", "100").toInt
@@ -55,17 +82,18 @@ object Generator extends App
     val vecmix = veccfg.filterKeys(_ contains "mix.").map { case (k,v) => (k.split('.')(1), v.toInt) }.asInstanceOf[Map[String,Int]]
     assert (vecmix.values.sum == 100, println("The vector instruction mix specified in config does not add up to 100%"))
     assert (vecmix.keys.forall(List("vmem","valu","vpop","vonly") contains _), println("The vector instruction mix specified in config contains an unknown sequence type name"))
-
+	  val use_vec = mix.filterKeys(List("vec") contains _).values.reduce(_+_) > 0
     val prog = new Prog(memsize, veccfg, loop)
     ProgSeg.cnt = 0
     SeqVec.cnt = 0
-    val s = prog.generate(nseqs, fprnd, mix, veccfg, use_amo, use_mul, use_div, segment, loop, loop_size)
+    // Added RISC-V Vector functionality
+    val s = prog.generate(nseqs, fprnd, mix, veccfg, use_amo, use_mul, use_div, segment, loop, loop_size,rv_vmem_unit,rv_vmem_const,rv_vmem_vect,rv_vmem_zvlsseg,rv_vinteger,rv_vfixed,rv_vfloat, rv_vreduce,rv_vmask,rv_vpermute, rv_vamo, rv_wide,rv_narrow,vlen, lmul, sew, nr,nf,mask, multi_config)
 
     val oname = "output/" + outFileName + ".S"
     val fw = new FileWriter(oname)
     fw.write(s)
     fw.close()
-    val stats = prog.statistics(nseqs,fprnd,mix,vnseq,vmemsize,vfnum,vecmix,use_amo,use_mul,use_div)
+    val stats = prog.statistics(nseqs,fprnd,mix,vnseq,vmemsize,vfnum,vecmix,use_amo,use_mul,use_div,use_vec)
     val sname = "output/" + outFileName + ".stats"
     val fw2 = new FileWriter(sname)
     fw2.write(stats)
